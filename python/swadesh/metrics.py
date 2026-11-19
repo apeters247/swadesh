@@ -12,7 +12,20 @@ from __future__ import annotations
 import logging
 from typing import Any, List, Optional, Sequence
 
-import numpy as np
+
+
+class _LazyNumpy:
+    """numpy is only needed once statistics exist; importing it lazily keeps
+    `import swadesh` as cheap as `import sacrebleu` (which doesn't load numpy)."""
+
+    def __getattr__(self, name):
+        import numpy
+
+        globals()["np"] = numpy
+        return getattr(numpy, name)
+
+
+np = _LazyNumpy()
 from sacrebleu.metrics.bleu import BLEU as _SacreBLEU
 from sacrebleu.metrics.chrf import CHRF as _SacreCHRF
 from sacrebleu.metrics.ter import TER as _SacreTER

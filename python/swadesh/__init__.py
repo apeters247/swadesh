@@ -25,8 +25,6 @@ from sacrebleu.metrics.chrf import CHRFScore  # noqa: F401
 from sacrebleu.metrics.ter import TERScore  # noqa: F401
 
 from .metrics import BLEU, CHRF, TER, NATIVE_TOKENIZERS, mbr  # noqa: F401
-from .significance import PairedTest  # noqa: F401
-from . import significance as _significance
 
 __version__ = "0.1.0"
 SACREBLEU_COMPAT_VERSION = _sacrebleu.__version__
@@ -75,6 +73,8 @@ def patch() -> None:
     for mod, name, new in targets:
         _PATCHED[(mod, name)] = getattr(mod, name)
         setattr(mod, name, new)
+    from . import significance as _significance
+
     _PATCHED[("significance",)] = _significance.install()
     _PATCHED[("METRICS",)] = dict(m.METRICS)
     m.METRICS["BLEU"] = BLEU
@@ -90,6 +90,8 @@ def unpatch() -> None:
         return
     m.METRICS.clear()
     m.METRICS.update(_PATCHED.pop(("METRICS",)))
+    from . import significance as _significance
+
     _significance.uninstall(_PATCHED.pop(("significance",)))
     for (mod, name), old in list(_PATCHED.items()):
         setattr(mod, name, old)
@@ -103,3 +105,12 @@ def tokenize(line, tokenizer: str = "13a"):
     if isinstance(line, str):
         return _swadesh.tokenize(tokenizer, line)
     return _swadesh.tokenize_batch(tokenizer, list(line))
+
+
+def __getattr__(name):
+    # Lazy: significance testing pulls in numpy and sacrebleu.significance.
+    if name == "PairedTest":
+        from .significance import PairedTest
+
+        return PairedTest
+    raise AttributeError(f"module 'swadesh' has no attribute {name!r}")
