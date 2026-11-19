@@ -117,6 +117,9 @@ BLEU().corpus_score(hyps, [refs], n_bootstrap=1000)
 swadesh.PairedTest([("base", base), ("new", new)], {"BLEU": BLEU(references=[refs])}, None, test_type="bs")()
 ```
 
+- **MCP server for agents.** `pip install "swadesh[mcp]"`, then `claude mcp add swadesh -- swadesh-mcp`.
+  Agents get `corpus_score` (with sacreBLEU signatures and optional bootstrap CIs), `sentence_scores`,
+  `mbr_select` and `tokenize` tools, all returning sacreBLEU-identical numbers.
 - **Exact tokenizers.** `swadesh.tokenize(lines, "13a")` returns sacreBLEU's tokenization, in parallel.
 - **In the browser.** The CLI compiles to a 320 KB WebAssembly module; `docs/playground/` is a
   static page that runs it, with output byte-identical to the `sacrebleu` CLI.
