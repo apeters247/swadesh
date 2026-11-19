@@ -6,6 +6,47 @@
 //! float32 addition (verified empirically), which we reproduce exactly.
 
 
+/// Add the selected rows of `stats` into `acc` in order, with the accumulator
+/// held in registers for common widths (BLEU 10, chrF 18, chrF++ 24, TER 2...).
+/// Each column is still a sequential f32 sum in the same order, so results are
+/// unchanged; only the loop shape differs.
+#[inline]
+fn accumulate(acc: &mut [f32], stats: &[f32], width: usize, mut next: impl FnMut() -> usize, count: usize) {
+    #[inline(always)]
+    fn fixed<const W: usize>(acc: &mut [f32], stats: &[f32], next: &mut impl FnMut() -> usize, count: usize) {
+        let mut a = [0f32; W];
+        a.copy_from_slice(acc);
+        for _ in 0..count {
+            let i = next();
+            let r: &[f32; W] = stats[i * W..(i + 1) * W].try_into().unwrap();
+            for j in 0..W {
+                a[j] += r[j];
+            }
+        }
+        acc.copy_from_slice(&a);
+    }
+    match width {
+        2 => fixed::<2>(acc, stats, &mut next, count),
+        3 => fixed::<3>(acc, stats, &mut next, count),
+        4 => fixed::<4>(acc, stats, &mut next, count),
+        6 => fixed::<6>(acc, stats, &mut next, count),
+        8 => fixed::<8>(acc, stats, &mut next, count),
+        10 => fixed::<10>(acc, stats, &mut next, count),
+        12 => fixed::<12>(acc, stats, &mut next, count),
+        18 => fixed::<18>(acc, stats, &mut next, count),
+        24 => fixed::<24>(acc, stats, &mut next, count),
+        _ => {
+            for _ in 0..count {
+                let i = next();
+                let r = &stats[i * width..(i + 1) * width];
+                for (a, &x) in acc.iter_mut().zip(r) {
+                    *a += x;
+                }
+            }
+        }
+    }
+}
+
 /// For every sample row of `idxs` (`n_samples x n`), sum the selected rows of
 /// `stats` (`n x width`, already cast to f32) sequentially in f32.
 pub fn bootstrap_sums_f32(stats: &[f32], width: usize, idxs: &[i64], n: usize) -> Vec<f32> {
@@ -14,14 +55,9 @@ pub fn bootstrap_sums_f32(stats: &[f32], width: usize, idxs: &[i64], n: usize) -
     crate::par::for_each_chunk(&mut out, width.max(1), |(s, acc)| {
         let row_idx = &idxs[s * n..(s + 1) * n];
         // numpy starts the reduction from the first element (no 0.0 + x),
-        // which is equal for finite values (0.0 + x == x, including -0.0 → 0.0
-        // differences that cannot occur for non-negative stats).
-        for &i in row_idx {
-            let r = &stats[i as usize * width..(i as usize + 1) * width];
-            for (a, &x) in acc.iter_mut().zip(r) {
-                *a += x;
-            }
-        }
+        // which is equal for finite non-negative values.
+        let mut it = row_idx.iter();
+        accumulate(acc, stats, width, || *it.next().unwrap() as usize, n);
     });
     out
 }
@@ -68,13 +104,7 @@ pub fn bootstrap_sums_f32_seeded(stats: &[f32], width: usize, n: usize, n_sample
     // Single thread: fuse drawing and summing; no index matrix at all.
     let mut out = vec![0f32; n_samples * width];
     for acc in out.chunks_mut(width.max(1)) {
-        for _ in 0..n {
-            let i = rng.next_below(n as u64) as usize;
-            let r = &stats[i * width..(i + 1) * width];
-            for (a, &x) in acc.iter_mut().zip(r) {
-                *a += x;
-            }
-        }
+        accumulate(acc, stats, width, || rng.next_below(n as u64) as usize, n);
     }
     out
 }
