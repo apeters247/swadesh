@@ -376,8 +376,6 @@ def test_error_exit_codes_match(tmp_path, args, stdin):
     ["x.txt", "-i", "y.txt", "-tok", "ko-mecab"],
     ["x.txt", "-i", "y.txt", "-tok", "spm"],
     ["x.txt", "-i", "y.txt", "-l", "en-ja"],
-    ["x.txt", "-i", "y.txt", "-m", "ter"],
-    ["x.txt", "-i", "y.txt", "-m", "bleu", "ter"],
     ["x.txt", "-i", "y.txt", "--detail"],
     ["x.txt", "-i", "y.txt", "--list"],
     ["x.txt", "-i", "y.txt", "-e", "latin-1"],
@@ -510,3 +508,168 @@ def test_encoding_option_accepts_utf8(tmp_path, enc):
     hyp = tmp_path / "h.txt"
     hyp.write_text("ä ö\nü\n", encoding="utf-8")
     assert_same([str(refs), "-i", str(hyp), "-e", enc, "-f", "text"])
+
+
+# ---------------------------------------------------------------------- TER
+
+TER_FLAGS = ["--ter-case-sensitive", "--ter-asian-support", "--ter-no-punct", "--ter-normalized"]
+# All 16 subsets of the four TER flags.
+TER_FLAG_SUBSETS = [[f for i, f in enumerate(TER_FLAGS) if mask >> i & 1] for mask in range(16)]
+TER_ALL = TER_FLAGS
+TER_PAIRS = [("en-de", 200), ("zh-en", 200), ("en-zh", 200)]
+TER_VARIANTS = ["ref", "reorder", "drop", "case", "punct", "unicode", "empty", "short", "long", "spaces"]
+
+
+def reorder(refs: list[str], seed: int) -> list[str]:
+    """Hypotheses with word blocks rotated and moved, so TER has to find shifts."""
+    rng = random.Random(seed)
+    out = []
+    for line in refs:
+        words = line.split()
+        if len(words) < 4:
+            out.append(line)
+            continue
+        k = len(words) // 3
+        words = words[k:] + words[:k]  # rotate a block to the end
+        for _ in range(2):  # then move one or two blocks elsewhere
+            n = rng.randint(1, 3)
+            a = rng.randrange(len(words) - n + 1)
+            block, rest = words[a : a + n], words[:a] + words[a + n :]
+            b = rng.randrange(len(rest) + 1)
+            words = rest[:b] + block + rest[b:]
+        out.append(" ".join(words))
+    return out
+
+
+@pytest.fixture(scope="module")
+def ter_files(tmp_path_factory):
+    """Per pair: `<pair>.ref`, a second reference `<pair>.ref2`, and one hypothesis file per variant."""
+    base = tmp_path_factory.mktemp("ter")
+    for pair, n in TER_PAIRS:
+        refs = wmt(pair, "ref", n)
+        seed = sum(map(ord, pair))
+        (base / f"{pair}.ref").write_text("\n".join(refs) + "\n", encoding="utf-8")
+        hyps = {**perturb(refs, seed=seed), "reorder": reorder(refs, seed)}
+        (base / f"{pair}.ref2").write_text("\n".join(hyps["punct"]) + "\n", encoding="utf-8")
+        for name in TER_VARIANTS:
+            (base / f"{pair}.{name}.hyp").write_text("\n".join(hyps[name]) + "\n", encoding="utf-8")
+    return base
+
+
+def _ids(flags):
+    return " ".join(flags) or "default"
+
+
+@pytest.mark.parametrize("flags", TER_FLAG_SUBSETS, ids=_ids)
+@pytest.mark.parametrize("fmt", [["-f", "text"], ["-f", "json"], ["-b"]], ids=["text", "json", "score-only"])
+def test_ter_all_flag_subsets(ter_files, flags, fmt):
+    """All 16 combinations of the four TER flags on WMT22 en-de with block moves."""
+    assert assert_same([str(ter_files / "en-de.ref"), "-i", str(ter_files / "en-de.reorder.hyp"),
+                        "-m", "ter", *fmt, *flags]) == 0
+
+
+@pytest.mark.parametrize("flags", [[], TER_ALL], ids=["default", "all-flags"])
+@pytest.mark.parametrize("variant", TER_VARIANTS)
+@pytest.mark.parametrize("pair", [p for p, _ in TER_PAIRS])
+def test_ter_pairs_and_variants(ter_files, pair, variant, flags):
+    assert assert_same([str(ter_files / f"{pair}.ref"), "-i", str(ter_files / f"{pair}.{variant}.hyp"),
+                        "-m", "ter", "-f", "text", "-sh", *flags]) == 0
+
+
+@pytest.mark.parametrize("flags", [[], ["--ter-normalized", "--ter-asian-support"], ["--ter-no-punct"]],
+                         ids=_ids)
+def test_ter_multiple_reference_files(ter_files, flags):
+    assert assert_same([str(ter_files / "en-de.ref"), str(ter_files / "en-de.ref2"),
+                        "-i", str(ter_files / "en-de.reorder.hyp"), "-m", "ter", "-f", "text", *flags]) == 0
+
+
+@pytest.mark.parametrize("flags", [[], TER_ALL, ["--ter-normalized"]], ids=_ids)
+def test_ter_tab_separated_references(ter_files, tmp_path, flags):
+    """`-nr 2`: two references per line in one tab-separated file."""
+    refs = (ter_files / "en-de.ref").read_text(encoding="utf-8").split("\n")[:-1]
+    ref2 = (ter_files / "en-de.ref2").read_text(encoding="utf-8").split("\n")[:-1]
+    tab = tmp_path / "tab.ref"
+    tab.write_text("\n".join(f"{a}\t{b}" for a, b in zip(refs, ref2)) + "\n", encoding="utf-8")
+    for fmt in (["-f", "text"], ["-f", "json"], ["-sl", "-f", "text"]):
+        assert assert_same([str(tab), "-nr", "2", "-i", str(ter_files / "en-de.reorder.hyp"),
+                            "-m", "ter", *fmt, *flags]) == 0
+
+
+@pytest.mark.parametrize("flags", [
+    ["-m", "ter", "-sl", "-f", "text"],
+    ["-m", "ter", "-sl", "-b"],
+    ["-m", "ter", "-sl", "-sh", "-f", "text", "-w", "3"],
+    ["-m", "ter", "-sl", "-f", "json"],
+    ["-m", "ter", "-sl", "-b", "-w", "0"],
+    ["-m", "ter", "-sl", "--ter-normalized", "--ter-asian-support", "-f", "text"],
+    ["-m", "ter", "-sl", "--ter-no-punct", "--ter-case-sensitive", "-b", "-w", "2"],
+    ["-sl", "-m", "ter", "--ter-normalized", "--ter-no-punct", "-sh"],
+], ids=_ids)
+def test_ter_sentence_level(ter_files, flags):
+    assert assert_same([str(ter_files / "en-de.ref"), "-i", str(ter_files / "en-de.reorder.hyp"), *flags]) == 0
+
+
+@pytest.mark.parametrize("pair", [p for p, _ in TER_PAIRS])
+def test_ter_sentence_level_two_references(ter_files, pair):
+    assert assert_same([str(ter_files / f"{pair}.ref"), str(ter_files / f"{pair}.ref2"),
+                        "-i", str(ter_files / f"{pair}.reorder.hyp"), "-m", "ter", "-sl", "-f", "text",
+                        *TER_ALL]) == 0
+
+
+@pytest.mark.parametrize("flags", [
+    ["-m", "ter", "bleu", "chrf", "-f", "text", "-sh"],
+    ["-m", "bleu", "chrf", "ter", "-b"],
+    ["-m", "ter", "chrf", "-w", "3", "-f", "text"],
+    ["-m", "chrf", "ter", "-f", "text", "-w", "0"],
+    ["-m", "ter", "-f", "text", "-w", "0"],
+    ["-m", "ter", "-b", "-w", "4"],
+    ["-m", "ter", "-f", "latex"],
+    ["-m", "ter", "ter", "-f", "text"],
+    ["-m", "ter", "-s", "floor", "-sv", "0.3", "-lc", "-f", "text", "--chrf-whitespace"],
+    ["-m", "bleu", "chrf", "ter", "-f", "text", "-sh", "-w", "2", *TER_ALL],
+    ["-m", "bleu", "--ter-normalized", "-f", "text"],
+], ids=_ids)
+def test_ter_with_other_metrics(ter_files, flags):
+    assert assert_same([str(ter_files / "en-de.ref"), "-i", str(ter_files / "en-de.reorder.hyp"), *flags]) == 0
+
+
+@pytest.mark.parametrize("flags", [TER_FLAG_SUBSETS[0], TER_ALL, ["--ter-asian-support", "--ter-normalized"]],
+                         ids=_ids)
+def test_ter_stdin(ter_files, flags):
+    hyp = (ter_files / "zh-en.reorder.hyp").read_bytes()
+    assert assert_same([str(ter_files / "zh-en.ref"), "-m", "ter", "-f", "text", *flags], stdin=hyp) == 0
+
+
+@pytest.mark.parametrize("flags", TER_FLAG_SUBSETS, ids=_ids)
+def test_ter_edge_inputs(edge_files, flags):
+    """Empty lines, empty references, CJK, Turkish dotted I, final sigma, astral characters."""
+    refs, hyp = edge_files
+    assert assert_same([str(refs), "-i", str(hyp), "-m", "ter", "-f", "text", *flags]) == 0
+
+
+@pytest.mark.parametrize("flags", [["-sl", "-f", "text"], ["-sl", "-b"], [*TER_ALL, "-sl", "-f", "text"]],
+                         ids=_ids)
+def test_ter_edge_inputs_sentence_level(edge_files, flags):
+    refs, hyp = edge_files
+    assert assert_same([str(refs), "-i", str(hyp), "-m", "ter", *flags]) == 0
+
+
+def test_ter_all_empty_references(tmp_path):
+    """Zero reference words: 100 for an insertion-only hypothesis, 0 when both are empty."""
+    refs = tmp_path / "empty.ref"
+    refs.write_text("\n\n\n", encoding="utf-8")
+    for hyp_text in ["a b c\n\nd\n", "\n\n\n"]:
+        hyp = tmp_path / "h.txt"
+        hyp.write_text(hyp_text, encoding="utf-8")
+        for flags in ([], ["-sl", "-b"], ["-b"]):
+            assert assert_same([str(refs), "-i", str(hyp), "-m", "ter", "-f", "text", *flags]) == 0
+            assert assert_same([str(refs), "-i", str(hyp), "-m", "ter", *flags]) == 0
+
+
+def test_ter_sentence_level_with_other_metric_fails(ter_files):
+    """Sentence-level mode accepts one metric only, TER included."""
+    rc, out, err = run(SWADESH, ["-m", "ter", "chrf", "-sl", str(ter_files / "en-de.ref"),
+                                 "-i", str(ter_files / "en-de.ref2")])
+    assert rc == 1 and out == b"" and b"Only one metric" in err
+    assert assert_same([str(ter_files / "en-de.ref"), "-m", "ter", "chrf", "-sl",
+                        "-i", str(ter_files / "en-de.ref2")]) == 1

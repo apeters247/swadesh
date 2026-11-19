@@ -18,9 +18,9 @@ pub const TOKENIZE_CHOICES: &[&str] = &[
 ];
 
 pub const USAGE: &str = "\
-usage: swadesh [-h] [-V] [-m {bleu,chrf} ...] [-i INPUT] [options] [REF ...]
+usage: swadesh [-h] [-V] [-m {bleu,chrf,ter} ...] [-i INPUT] [options] [REF ...]
 
-Compute BLEU and/or chrF. Hypotheses are read from stdin unless -i is given.
+Compute BLEU, chrF and/or TER. Hypotheses are read from stdin unless -i is given.
 Output is byte-identical to `sacrebleu REF -i HYP` (sacreBLEU 2.6.0).
 
 positional arguments:
@@ -28,7 +28,7 @@ positional arguments:
 
 options:
   -i, --input FILE      hypothesis file (default: stdin)
-  -m, --metrics {bleu,chrf} ...
+  -m, --metrics {bleu,chrf,ter} ...
                         metrics to compute (default: bleu)
   -sl, --sentence-level
                         score each segment (text output, one metric)
@@ -60,6 +60,10 @@ options:
   -b, --score-only      print only the score
   -w, --width N         decimal places (default: 1)
   -sh, --short          shorter signature (text output)
+  --ter-case-sensitive  TER: case sensitive (default: lowercase)
+  --ter-asian-support   TER: special treatment of Asian characters
+  --ter-no-punct        TER: remove punctuation
+  --ter-normalized      TER: basic normalization and tokenization
   -q, --quiet           suppress informational messages
   -nc, --no-color       accepted for compatibility (no colors are used)
   -V, --version         print swadesh and sacreBLEU versions
@@ -138,10 +142,10 @@ const OPTS: &[Opt] = &[
     u("--paired-ar-n", "-parn", Nargs::One, "--paired-ar-n (paired significance) is not supported by swadesh yet; pip install swadesh"),
     u("--paired-bs-n", "-pbsn", Nargs::One, "--paired-bs-n (paired significance) is not supported by swadesh yet; pip install swadesh"),
     u("--paired-jobs", "-j", Nargs::One, "--paired-jobs (paired significance) is not supported by swadesh yet; pip install swadesh"),
-    u("--ter-case-sensitive", "", Nargs::Zero, "TER is not in swadesh yet (being ported); pip install swadesh or use sacrebleu"),
-    u("--ter-asian-support", "", Nargs::Zero, "TER is not in swadesh yet (being ported); pip install swadesh or use sacrebleu"),
-    u("--ter-no-punct", "", Nargs::Zero, "TER is not in swadesh yet (being ported); pip install swadesh or use sacrebleu"),
-    u("--ter-normalized", "", Nargs::Zero, "TER is not in swadesh yet (being ported); pip install swadesh or use sacrebleu"),
+    o("--ter-case-sensitive", "", Nargs::Zero, "ter_case_sensitive"),
+    o("--ter-asian-support", "", Nargs::Zero, "ter_asian_support"),
+    o("--ter-no-punct", "", Nargs::Zero, "ter_no_punct"),
+    o("--ter-normalized", "", Nargs::Zero, "ter_normalized"),
 ];
 
 /// Parsed settings, with argparse defaults already applied.
@@ -173,6 +177,10 @@ pub struct Cli {
     pub score_only: bool,
     pub width: i64,
     pub format: String,
+    pub ter_case_sensitive: bool,
+    pub ter_asian_support: bool,
+    pub ter_no_punct: bool,
+    pub ter_normalized: bool,
 }
 
 pub enum Action {
@@ -294,6 +302,10 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
         score_only: false,
         width: 1,
         format: "json".to_string(),
+        ter_case_sensitive: false,
+        ter_asian_support: false,
+        ter_no_punct: false,
+        ter_normalized: false,
     };
 
     let mut queue: VecDeque<String> = argv.iter().cloned().collect();
@@ -362,9 +374,6 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
             "metrics" => {
                 let mut ms = Vec::new();
                 for v in &values {
-                    if v == "ter" {
-                        return fail(2, "TER is not in swadesh yet (being ported); pip install swadesh or use sacrebleu");
-                    }
                     ms.push(choice("-m/--metrics", v, METRIC_CHOICES)?);
                 }
                 cli.metrics = ms;
@@ -400,6 +409,10 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
             "width" => cli.width = parse_int("-w/--width", &one())?,
             "no_color" => {}
             "format" => cli.format = choice("-f/--format", &one(), FORMAT_CHOICES)?,
+            "ter_case_sensitive" => cli.ter_case_sensitive = true,
+            "ter_asian_support" => cli.ter_asian_support = true,
+            "ter_no_punct" => cli.ter_no_punct = true,
+            "ter_normalized" => cli.ter_normalized = true,
             _ => {}
         }
     }

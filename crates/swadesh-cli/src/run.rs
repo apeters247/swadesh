@@ -6,8 +6,8 @@ use std::io::Write;
 use swadesh_core::stats::{bleu_segment, chrf_segment, BleuConfig, ChrfConfig};
 use swadesh_core::tokenize::Tokenizer;
 use swadesh_core::{
-    bleu_corpus_stats, chrf_corpus_stats, chrf_f_score, compute_bleu, BleuScoreConfig, Smooth,
-    SumMode,
+    bleu_corpus_stats, chrf_corpus_stats, chrf_f_score, compute_bleu, ter_corpus_stats,
+    ter_segment, BleuScoreConfig, Smooth, SumMode, TerConfig, TerError,
 };
 
 use crate::args::{Cli, TOKENIZE_CHOICES};
@@ -76,7 +76,7 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
     if cli.sentence_level {
         let metric = &names[0];
         let bleu_tok = if metric == "BLEU" { Some(bleu_tokenizer(cli)?) } else { None };
-        if metric != "BLEU" {
+        if metric == "CHRF" {
             check_chrf_orders(cli)?;
         }
         let mut lines = Vec::with_capacity(system.len());
@@ -90,6 +90,7 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
                     let refs_view: Vec<&str> = hyp_refs.iter().map(|c| c.as_ref()).collect();
                     bleu_sentence(cli, tok, &hyp, &refs_view, nrefs)
                 }
+                None if metric == "TER" => ter_sentence(cli, &system[i], &seg_refs, nrefs)?,
                 None => {
                     let hyp = maybe_lower(&system[i], cli.chrf_lowercase);
                     let hyp_refs: Vec<Cow<str>> = seg_refs.iter().map(|r| maybe_lower(r, cli.chrf_lowercase)).collect();
@@ -107,10 +108,10 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
 
     let mut results: Vec<String> = Vec::new();
     for name in &names {
-        let (score, sig) = if name == "BLEU" {
-            bleu_corpus(cli, bleu_tokenizer(cli)?, &system, &refs, nrefs)?
-        } else {
-            chrf_corpus(cli, &system, &refs, nrefs)?
+        let (score, sig) = match name.as_str() {
+            "BLEU" => bleu_corpus(cli, bleu_tokenizer(cli)?, &system, &refs, nrefs)?,
+            "TER" => ter_corpus(cli, &system, &refs, nrefs)?,
+            _ => chrf_corpus(cli, &system, &refs, nrefs)?,
         };
         // sacreBLEU: the short signature only applies outside JSON output.
         let short = !json && cli.short;
@@ -406,6 +407,86 @@ fn chrf_sentence(cli: &Cli, hyp: &str, refs: &[&str], nrefs: usize) -> Result<(S
     chrf_segment(&cfg, hyp, refs, &mut row);
     let score = chrf_f_score(&row, order, cfg.beta, cfg.eps_smoothing);
     Ok((Score { name: chrf_name(cli), score, verbose: None }, chrf_signature(cli, nrefs)))
+}
+
+// ------------------------------------------------------------------ TER
+
+fn ter_config(cli: &Cli) -> TerConfig {
+    TerConfig {
+        normalized: cli.ter_normalized,
+        no_punct: cli.ter_no_punct,
+        asian_support: cli.ter_asian_support,
+        case_sensitive: cli.ter_case_sensitive,
+    }
+}
+
+/// `TERSignature`: nrefs, case, tok (always `tercom`), norm, punct (yes unless
+/// --ter-no-punct), asian, version. The text is not lowercased here: TER's
+/// tokenizer does its own lowercasing.
+fn ter_signature(cli: &Cli, nrefs: usize) -> Signature {
+    Signature::new(
+        nrefs,
+        vec![
+            ("case", "c", if cli.ter_case_sensitive { "mixed" } else { "lc" }.to_string()),
+            ("tok", "t", "tercom".to_string()),
+            ("norm", "nr", if cli.ter_normalized { "yes" } else { "no" }.to_string()),
+            ("punct", "pn", if cli.ter_no_punct { "no" } else { "yes" }.to_string()),
+            ("asian", "as", if cli.ter_asian_support { "yes" } else { "no" }.to_string()),
+        ],
+    )
+}
+
+/// `TER._compute_score_from_stats`: `100 * edits / ref_len`, with the
+/// empty-reference rules (1.0 for edits without reference words, 0.0 for nothing).
+fn ter_score_value(edits: f64, ref_len: f64) -> f64 {
+    let ratio = if ref_len > 0.0 {
+        edits / ref_len
+    } else if edits > 0.0 {
+        1.0
+    } else {
+        0.0
+    };
+    100.0 * ratio
+}
+
+fn ter_err(e: TerError) -> Fail {
+    match e {
+        TerError::NoReferences => Fail {
+            code: 1,
+            msg: "ZeroDivisionError: division by zero (TER segment without references)".into(),
+        },
+    }
+}
+
+fn ter_corpus(cli: &Cli, system: &[String], refs: &[Vec<String>], nrefs: usize) -> Result<(Score, Signature), Fail> {
+    let cfg = ter_config(cli);
+    // The core tokenizer does not lowercase: sacreBLEU's TER lowercases the
+    // hypothesis and references first unless --ter-case-sensitive.
+    let lower = !cli.ter_case_sensitive;
+    let hyps: Vec<Cow<str>> = system.iter().map(|h| maybe_lower(h, lower)).collect();
+    let hyp_view: Vec<&str> = hyps.iter().map(|c| c.as_ref()).collect();
+    let seg_owned = segment_refs(refs, lower);
+    let seg_refs = as_views(&seg_owned);
+    let rows = ter_corpus_stats(&cfg, &hyp_view, &seg_refs).map_err(ter_err)?;
+    // `sum_of_lists`: sequential per-column sums of [num_edits, avg_ref_len].
+    let mut total = [0.0f64; 2];
+    for row in rows.chunks(2) {
+        total[0] += row[0];
+        total[1] += row[1];
+    }
+    let score = ter_score_value(total[0], total[1]);
+    Ok((Score { name: "TER".into(), score, verbose: None }, ter_signature(cli, nrefs)))
+}
+
+fn ter_sentence(cli: &Cli, hyp: &str, refs: &[&str], nrefs: usize) -> Result<(Score, Signature), Fail> {
+    let cfg = ter_config(cli);
+    let lower = !cli.ter_case_sensitive;
+    let hyp = maybe_lower(hyp, lower);
+    let refs_lower: Vec<Cow<str>> = refs.iter().map(|r| maybe_lower(r, lower)).collect();
+    let refs_view: Vec<&str> = refs_lower.iter().map(|c| c.as_ref()).collect();
+    let [edits, ref_len] = ter_segment(&cfg, &hyp, &refs_view).map_err(ter_err)?;
+    let score = ter_score_value(edits, ref_len);
+    Ok((Score { name: "TER".into(), score, verbose: None }, ter_signature(cli, nrefs)))
 }
 
 /// Per-segment reference lists (transposed from per-reference streams), lowercased if asked.
