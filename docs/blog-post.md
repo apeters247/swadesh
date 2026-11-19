@@ -2,7 +2,7 @@
 
 *sacreBLEU is the standard way to report BLEU and chrF in machine translation and LLM
 evaluation. swadesh is a re-implementation in Rust that returns exactly the same numbers,
-down to the last bit of every float, and is 11–65× faster on one core and up to 379× faster on a
+down to the last bit of every float, and is 22–45× faster on one core and 125–318× faster on a
 24-thread desktop. This post covers what "exactly the same" turned out to require.*
 
 ---

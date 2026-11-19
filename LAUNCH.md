@@ -48,8 +48,8 @@ RL rewards per sample, MBR decoding (n² sentence scores), data filtering, boots
 
 Swadesh is a drop-in replacement (`import swadesh as sacrebleu`, or `swadesh.patch()` for
 existing code) that returns *exactly* the same numbers: every float compares `==` and the
-signatures and CLI output are byte-identical. It is 11–65× faster on one core, and on a
-24-thread Ryzen 119× for corpus BLEU and 338× for chrF.
+signatures and CLI output are byte-identical. It is 22–45× faster on one core, and on a
+24-thread Ryzen 125× for corpus BLEU, 299× for chrF and 165× for TER.
 
 Getting to bit-identical was the interesting part:
 - sacreBLEU's Chinese tokenizer has `u'\u20000'` in a range table, which is a 2-char string,
@@ -66,7 +66,7 @@ Write-up: <link to blog post>. You can check it on your own data with `python -m
 
 ## r/MachineLearning draft
 
-**[P] swadesh: sacreBLEU (BLEU/chrF/chrF++), bit-exact, 11–379× faster (Rust + PyO3)**
+**[P] swadesh: sacreBLEU (BLEU/chrF/chrF++/TER), bit-exact, 22–318× faster (Rust + PyO3)**
 
 If you compute BLEU/chrF for RL rewards, MBR decoding, data filtering or significance tests, sacreBLEU's pure Python is probably
 your bottleneck. swadesh subclasses sacreBLEU and moves the n-gram statistics to Rust:
@@ -77,8 +77,8 @@ your bottleneck. swadesh subclasses sacreBLEU and moves the n-gram statistics to
 * extras: `sentence_scores()` for whole batches, `pairwise()`/`mbr()` matrices,
   TRL-compatible reward functions, native bootstrap and paired tests, a 650 KB standalone CLI
 
-Benchmarks (100k WMT22 segments, Ryzen 7900X): corpus BLEU 8.44 s → 0.071 s, chrF 27.96 s → 0.083 s.
-Single core: 22× (BLEU), 54× (chrF).
+Benchmarks (100k WMT22 segments, Ryzen 7900X): corpus BLEU 5.79 s → 0.046 s, chrF 17.94 s → 0.060 s.
+Single core: 25× (BLEU), 44× (chrF), 38× (TER).
 
 Fun finding: sacreBLEU isn't bit-reproducible across Python versions, because CPython 3.12
 changed float `sum()`. It's harmless at 2 decimals, but true.
@@ -88,7 +88,7 @@ changed float `sum()`. It's harmless at 2 decimals, but true.
 ## Thread draft (X / Bluesky)
 
 1/ We rewrote sacreBLEU in Rust without changing a single bit of output.
-Same BLEU/chrF scores (==), same signatures, same CLI. 11–65× faster per core, up to 379× on a desktop.
+Same BLEU/chrF scores (==), same signatures, same CLI. 22–45× faster per core, up to 318× on a desktop.
 `pip install swadesh`, then `import swadesh as sacrebleu` 🧵
 
 2/ Why: BLEU/chrF are now computed at a scale nobody planned for: RL rewards per sample,
