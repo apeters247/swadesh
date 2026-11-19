@@ -328,36 +328,91 @@ pub fn tokenize_unjoined(tok: Tokenizer, line: &str, out: &mut String) {
             out.clear();
             out.push_str(line);
         }
+        Tokenizer::Intl => tok_intl_unjoined(line, out),
         _ => tok.apply(line, out),
     }
 }
 
 /// sacreBLEU `TokenizerV14International.__call__`.
 pub fn tok_intl(line: &str, out: &mut String) {
-    let a: Vec<char> = line.chars().collect();
-    let mut b = Vec::with_capacity(a.len() * 2 + 8);
+    let mut s = String::new();
+    tok_intl_unjoined(line, &mut s);
+    join_split_str(&s, out);
+}
+
+const F_N: u8 = 1; // \p{N}
+const F_P: u8 = 2; // \p{P}
+const F_S: u8 = 4; // \p{S}
+
+#[inline]
+fn intl_flags(c: char) -> u8 {
+    static ASCII: std::sync::OnceLock<[u8; 128]> = std::sync::OnceLock::new();
+    if c.is_ascii() {
+        let t = ASCII.get_or_init(|| {
+            let mut t = [0u8; 128];
+            for (i, f) in t.iter_mut().enumerate() {
+                let ch = i as u8 as char;
+                *f = (is_number(ch) as u8) * F_N | (is_punct(ch) as u8) * F_P | (is_symbol(ch) as u8) * F_S;
+            }
+            t
+        });
+        t[c as usize]
+    } else {
+        (is_number(c) as u8) * F_N | (is_punct(c) as u8) * F_P | (is_symbol(c) as u8) * F_S
+    }
+}
+
+/// `intl` without the final join (same `py_split` tokens). Each character is
+/// classified once; the class flags travel with it through the three passes
+/// (inserted spaces are in none of N, P, S).
+pub fn tok_intl_unjoined(line: &str, out: &mut String) {
+    let a: Vec<(char, u8)> = line.chars().map(|c| (c, intl_flags(c))).collect();
+    if !a.iter().any(|&(_, f)| f & (F_P | F_S) != 0) {
+        out.clear();
+        out.push_str(line);
+        return;
+    }
+    const SP: (char, u8) = (' ', 0);
+    let mut b: Vec<(char, u8)> = Vec::with_capacity(a.len() * 2 + 8);
     // (\P{N})(\p{P}) -> \1 \2_
-    sub2(&a, &mut b, |x, y| !is_number(x) && is_punct(y), |x, y, o| {
-        o.push(x);
-        o.push(' ');
-        o.push(y);
-        o.push(' ');
-    });
-    let mut c = Vec::with_capacity(b.len() + 8);
+    let mut i = 0;
+    while i < a.len() {
+        if i + 1 < a.len() && a[i].1 & F_N == 0 && a[i + 1].1 & F_P != 0 {
+            b.extend_from_slice(&[a[i], SP, a[i + 1], SP]);
+            i += 2;
+        } else {
+            b.push(a[i]);
+            i += 1;
+        }
+    }
+    let mut c: Vec<(char, u8)> = Vec::with_capacity(b.len() + 8);
     // (\p{P})(\P{N}) -> _\1 \2
-    sub2(&b, &mut c, |x, y| is_punct(x) && !is_number(y), |x, y, o| {
-        o.push(' ');
-        o.push(x);
-        o.push(' ');
-        o.push(y);
-    });
+    let mut i = 0;
+    while i < b.len() {
+        if i + 1 < b.len() && b[i].1 & F_P != 0 && b[i + 1].1 & F_N == 0 {
+            c.extend_from_slice(&[SP, b[i], SP, b[i + 1]]);
+            i += 2;
+        } else {
+            c.push(b[i]);
+            i += 1;
+        }
+    }
     // (\p{S}) -> _\1_
-    sub1(&c, &mut b, is_symbol);
-    join_split_chars(&b, out);
+    out.clear();
+    out.reserve(c.len() + 8);
+    for &(ch, f) in &c {
+        if f & F_S != 0 {
+            out.push(' ');
+            out.push(ch);
+            out.push(' ');
+        } else {
+            out.push(ch);
+        }
+    }
 }
 
 /// sacreBLEU `TokenizerZh._is_chinese_char`, *including* its quirks: two of the
-/// ranges in sacreBLEU are written as `u' 0'` and `u'⾀0'`, which are
+/// ranges in sacreBLEU are written as `u'\u20000'` and `u'\u2f800'`, which are
 /// two-character strings in Python.  String comparison then makes those ranges
 /// effectively U+2001..=U+2A6D and U+2F81..=U+2FA1.  We replicate that exactly.
 pub fn is_chinese_char(c: char) -> bool {
