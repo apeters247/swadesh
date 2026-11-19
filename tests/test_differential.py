@@ -7,8 +7,10 @@ import random
 
 import pytest
 import sacrebleu
-from hypothesis import HealthCheck, given, settings
+from hypothesis import given
 from hypothesis import strategies as st
+
+from fuzzsupport import budget
 
 import swadesh
 
@@ -31,7 +33,7 @@ def corpus(min_size=1, max_size=6):
 
 TOKENIZERS = ["13a", "intl", "zh", "char", "none"]
 
-FAST = settings(max_examples=300, deadline=None, suppress_health_check=list(HealthCheck))
+FAST = budget(300)
 
 
 def _refs_like(hyps, data, n_refs, allow_none):
@@ -274,7 +276,7 @@ def _sacre_tok(name):
 
 
 @pytest.mark.parametrize("name", TOKENIZERS)
-@settings(max_examples=3000, deadline=None, suppress_health_check=list(HealthCheck))
+@budget(3000)
 @given(line=st.one_of(PUNCT_HEAVY, segment))
 def test_tokenizers_string_exact(name, line):
     ref = _sacre_tok(name)
@@ -305,7 +307,7 @@ def test_bootstrap_seeds(seed, monkeypatch):
 
 
 @pytest.mark.skipif(int(__import__("numpy").__version__.split(".")[0]) < 2, reason="NumPy >= 2 path")
-@settings(max_examples=2000, deadline=None, suppress_health_check=list(HealthCheck))
+@budget(2000)
 @given(data=st.data())
 def test_native_bootstrap_bleu_scoring_rowwise(data):
     import numpy as np
