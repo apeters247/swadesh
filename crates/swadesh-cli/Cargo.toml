@@ -7,9 +7,17 @@ license.workspace = true
 repository.workspace = true
 publish = false
 
+[lib]
+name = "swadesh_cli"
+path = "src/lib.rs"
+
 [[bin]]
 name = "swadesh"
 path = "src/main.rs"
 
 [dependencies]
-swadesh-core = { path = "../swadesh-core" }
+swadesh-core = { path = "../swadesh-core", default-features = false }
+
+[features]
+default = ["parallel"]
+parallel = ["swadesh-core/parallel"]

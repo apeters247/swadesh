@@ -5,11 +5,33 @@
 //! * Stdin is a `TextIOWrapper` with universal newlines: `\r\n` and a lone `\r`
 //!   also end lines. An empty stdin is one empty line (`readline()` returns "").
 
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::io::Read;
 
 use swadesh_core::unicode::py_rstrip;
 
 use crate::{fail, Fail};
+
+thread_local! {
+    /// In-memory files (used by the WebAssembly build, where there is no
+    /// filesystem). The key `"<stdin>"` stands for standard input.
+    static VIRTUAL_FILES: RefCell<HashMap<String, Vec<u8>>> = RefCell::new(HashMap::new());
+}
+
+/// Register an in-memory file; `path == "<stdin>"` sets standard input.
+pub fn set_virtual_file(path: &str, contents: Vec<u8>) {
+    VIRTUAL_FILES.with(|f| f.borrow_mut().insert(path.to_string(), contents));
+}
+
+/// Remove all in-memory files.
+pub fn clear_virtual_files() {
+    VIRTUAL_FILES.with(|f| f.borrow_mut().clear());
+}
+
+fn virtual_file(path: &str) -> Option<Vec<u8>> {
+    VIRTUAL_FILES.with(|f| f.borrow().get(path).cloned())
+}
 
 fn decode_utf8(bytes: Vec<u8>, what: &str) -> Result<String, Fail> {
     String::from_utf8(bytes).or_else(|e| {
@@ -37,9 +59,10 @@ pub fn file_lines(path: &str, encoding: &str) -> Result<Vec<String>, Fail> {
     if path.ends_with(".gz") {
         return fail(1, format!("gzip input ({path}) is not supported by swadesh; decompress it first"));
     }
-    let bytes = std::fs::read(path).or_else(|e| {
-        fail(1, format!("{path}: {}", e))
-    })?;
+    let bytes = match virtual_file(path) {
+        Some(b) => b,
+        None => std::fs::read(path).or_else(|e| fail(1, format!("{path}: {}", e)))?,
+    };
     let text = decode_utf8(bytes, path)?;
     Ok(text.split_inclusive('\n').map(|l| py_rstrip(l).to_string()).collect())
 }
@@ -47,11 +70,17 @@ pub fn file_lines(path: &str, encoding: &str) -> Result<Vec<String>, Fail> {
 /// Lines of stdin with universal newlines, rstripped.
 pub fn stdin_lines(encoding: &str) -> Result<Vec<String>, Fail> {
     check_encoding(encoding)?;
-    let mut bytes = Vec::new();
-    std::io::stdin()
-        .lock()
-        .read_to_end(&mut bytes)
-        .or_else(|e| fail(1, format!("reading stdin: {e}")))?;
+    let bytes = match virtual_file("<stdin>") {
+        Some(b) => b,
+        None => {
+            let mut bytes = Vec::new();
+            std::io::stdin()
+                .lock()
+                .read_to_end(&mut bytes)
+                .or_else(|e| fail(1, format!("reading stdin: {e}")))?;
+            bytes
+        }
+    };
     let text = decode_utf8(bytes, "stdin")?;
     if text.is_empty() {
         return Ok(vec![String::new()]);

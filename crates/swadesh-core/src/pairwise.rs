@@ -3,7 +3,6 @@
 //! sacreBLEU's `sentence_score(cands[i], [refs[j]]).score` exactly, but n-gram
 //! counts are built once per sentence instead of once per pair.
 
-use rayon::prelude::*;
 use rustc_hash::FxHashMap;
 
 use crate::ngram::{clipped_matches, count, AnyRuns};
@@ -52,7 +51,7 @@ pub fn chrf_matrix(cfg: &ChrfConfig, cands: &[&str], refs: &[&str]) -> Vec<f64> 
     let order = cfg.char_order + cfg.word_order;
     let m = refs.len();
     let mut out = vec![0f64; cands.len() * m];
-    out.par_chunks_mut(m.max(1)).enumerate().for_each(|(i, row)| {
+    crate::par::for_each_chunk(&mut out, m.max(1), |(i, row)| {
         let mut stats = Vec::with_capacity(3 * order);
         for (j, cell) in row.iter_mut().enumerate() {
             stats.clear();
@@ -90,7 +89,7 @@ pub fn bleu_matrix(tok: Tokenizer, scfg: &BleuScoreConfig, cands: &[&str], refs:
     let rp: Vec<Profile> = refs.iter().map(|s| bleu_profile(tok, n_max, s, &mut words)).collect();
     let m = refs.len();
     let mut out = vec![0f64; cands.len() * m];
-    out.par_chunks_mut(m.max(1)).enumerate().for_each(|(i, row)| {
+    crate::par::for_each_chunk(&mut out, m.max(1), |(i, row)| {
         let mut stats = vec![0f64; 2 + 2 * n_max];
         for (j, cell) in row.iter_mut().enumerate() {
             stats[0] = cp[i].len as f64;

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/swadesh-core", "crates/swadesh-cli", "crates/swadesh-py"]
+members = ["crates/swadesh-core", "crates/swadesh-cli", "crates/swadesh-py", "crates/swadesh-wasm"]
 
 [workspace.package]
 version = "0.1.0"

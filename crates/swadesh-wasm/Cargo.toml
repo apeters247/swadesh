@@ -1,0 +1,13 @@
+[package]
+name = "swadesh-wasm"
+description = "The swadesh (sacreBLEU-identical) CLI compiled to WebAssembly"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+swadesh-cli = { path = "../swadesh-cli", default-features = false }

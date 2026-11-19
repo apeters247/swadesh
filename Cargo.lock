@@ -226,6 +226,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "swadesh-wasm"
+version = "0.1.0"
+dependencies = [
+ "swadesh-cli",
+]
+
+[[package]]
 name = "syn"
 version = "3.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -2,6 +2,7 @@
 //! BLEU / chrF / chrF++ sufficient statistics and scoring.
 
 pub mod ngram;
+pub mod par;
 pub mod pairwise;
 pub mod resample;
 pub mod nprng;
@@ -12,7 +13,6 @@ pub mod tables;
 pub mod tokenize;
 pub mod unicode;
 
-use rayon::prelude::*;
 
 pub use score::{chrf_f_score, compute_bleu, BleuScoreConfig, Smooth, SumMode};
 pub use stats::{bleu_segment, chrf_segment, BleuConfig, ChrfConfig};
@@ -37,7 +37,7 @@ where
         }
     };
     if n >= PAR_THRESHOLD {
-        out.par_chunks_mut(width.max(1)).enumerate().for_each(run);
+        par::for_each_chunk(&mut out, width.max(1), run);
     } else {
         out.chunks_mut(width.max(1)).enumerate().for_each(run);
     }
