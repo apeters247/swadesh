@@ -554,7 +554,7 @@ fn _py_sum<'py>(py: Python<'py>, items: &Bound<'py, PyList>, mode: Option<&str>)
     })
 }
 
-#[pymodule]
+#[pymodule(gil_used = false)]
 fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(_sum_mode, m)?)?;
     m.add_function(wrap_pyfunction!(_py_sum, m)?)?;

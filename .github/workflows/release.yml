@@ -27,6 +27,12 @@ jobs:
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux }}
           args: --release --out dist
+      - name: Free-threaded CPython 3.14t wheel (no GIL; abi3 does not apply)
+        uses: PyO3/maturin-action@v1.49.4
+        with:
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux }}
+          args: --release --out dist -i python3.14t
       - uses: actions/upload-artifact@v4.6.2
         with:
           name: wheels-linux-${{ matrix.target }}-${{ matrix.manylinux }}

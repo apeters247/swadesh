@@ -122,6 +122,9 @@ swadesh.PairedTest([("base", base), ("new", new)], {"BLEU": BLEU(references=[ref
   static page that runs it, with output byte-identical to the `sacrebleu` CLI.
 - **Standalone binary.** `crates/swadesh-cli` is a 650 KB executable with no Python,
   for CI pipelines and agents. Its output is byte-identical to the sacreBLEU CLI for BLEU, chrF and TER.
+- **Free-threaded Python.** The extension declares `gil_used = false`; on CPython 3.14t with the
+  GIL disabled, concurrent threads score in parallel and stay bit-exact. (sacreBLEU's own `lxml`
+  import re-enables the GIL unless you run with `PYTHON_GIL=0`.)
 - **Rust crate.** `swadesh-core` gives tokenizers, statistics and score arithmetic for Rust programs.
 
 ## Coverage
