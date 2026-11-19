@@ -244,11 +244,14 @@ fn find_opt(tok: &str) -> Result<(&'static Opt, Option<String>), Fail> {
     if let Some(opt) = find_exact(tok) {
         return Ok((opt, None));
     }
-    // Attached value or bundled flags: "-sv0.5", "-qb".
+    // Attached value or bundled flags: "-sv0.5", "-qb". `get` rather than
+    // `split_at`: a multi-byte character straddling byte 2 ("-é") is an
+    // unrecognized argument, not a panic.
     if tok.len() > 2 {
-        let (head, tail) = tok.split_at(2);
-        if let Some(opt) = OPTS.iter().find(|o| o.short == head) {
-            return Ok((opt, Some(tail.to_string())));
+        if let (Some(head), Some(tail)) = (tok.get(..2), tok.get(2..)) {
+            if let Some(opt) = OPTS.iter().find(|o| o.short == head) {
+                return Ok((opt, Some(tail.to_string())));
+            }
         }
     }
     fail(2, format!("unrecognized arguments: {tok}"))

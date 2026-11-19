@@ -1,0 +1,93 @@
+[package]
+name = "swadesh-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+swadesh-core = { path = "../crates/swadesh-core" }
+swadesh-cli = { path = "../crates/swadesh-cli" }
+
+[[bin]]
+name = "tok_13a"
+path = "fuzz_targets/tok_13a.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "tok_intl"
+path = "fuzz_targets/tok_intl.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "tok_zh"
+path = "fuzz_targets/tok_zh.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "tok_char"
+path = "fuzz_targets/tok_char.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "tok_none"
+path = "fuzz_targets/tok_none.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "bleu_segment"
+path = "fuzz_targets/bleu_segment.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "chrf_segment"
+path = "fuzz_targets/chrf_segment.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ter_segment"
+path = "fuzz_targets/ter_segment.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "pairwise"
+path = "fuzz_targets/pairwise.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "resample"
+path = "fuzz_targets/resample.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "cli_argv"
+path = "fuzz_targets/cli_argv.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
