@@ -253,6 +253,7 @@ def main():
     S = "tokenize"
     from sacrebleu.metrics.bleu import _get_tokenizer
     for tok, lines in [("13a", ende_r), ("intl", deen_r), ("zh", zh_r), ("char", ja_r)]:
+        lines = list(dict.fromkeys(lines))  # unique lines: the corpus repeats, which would feed sacreBLEU's memo cache
         t = _get_tokenizer(tok)()
         cache = type(t).__call__  # sacreBLEU memoizes tokenization; clear it so every run is cold
 
@@ -262,7 +263,7 @@ def main():
                     fn.cache_clear()  # outer and inner (TokenizerRegexp) memoization
             return [t(l) for l in lines]
 
-        rep.add(S, f"tokenize {tok} (cold cache)", N, inc, lambda lines=lines, tok=tok: swadesh.tokenize(lines, tok),
+        rep.add(S, f"tokenize {tok} (cold cache, unique lines)", len(lines), inc, lambda lines=lines, tok=tok: swadesh.tokenize(lines, tok),
                 max_reps=3)
 
     # ---------------------------------------------------------------- CLI + process level
@@ -339,7 +340,8 @@ def render(meta, rows):
            f"Python {meta['python']} · numpy {meta['numpy']} · sacreBLEU {meta['sacrebleu']} · swadesh {meta['swadesh']} · "
            f"load {tuple(round(x, 2) for x in meta['load']) if meta['load'] else 'n/a'}\n",
            "Times are the best of up to 5 repetitions (1-2 for slow cases). \"Identical\" means the full results "
-           "(score objects, strings, CIs, p-values, matrices, CLI stdout) compare equal.\n"]
+           "(score objects, strings, CIs, p-values, matrices, CLI stdout) compare equal. The corpora cycle the WMT22 "
+           "test set, so sacreBLEU's tokenizer memo cache hits often: speedups are conservative.\n"]
     section = None
     for r in rows:
         if r["section"] != section:
