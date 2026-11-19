@@ -87,6 +87,11 @@ Source: [`bench/results/SUMMARY.md`](bench/results/SUMMARY.md) · reproduce with
 | BLEU + 1000 bootstrap resamples (5k) | 0.47 s | 0.011 s | **41×** | 0.021 s | 22.0× |
 
 The single-core column was measured on 20k segments against sacreBLEU's 20k timings in the same JSON file.
+A feature-by-feature comparison with sacreBLEU (52 rows: every tokenizer and metric option, sentence-level,
+significance tests, MBR, the three CLIs, import time and peak memory; all identical) is in
+[`bench/results/compare-macmini-m4-v2.md`](bench/results/compare-macmini-m4-v2.md); regenerate it with
+`python bench/compare.py`. Scaling to 10M segments, pathological inputs and concurrency are in
+[`docs/stress-report.md`](docs/stress-report.md).
 Earlier builds were also benchmarked on an ARM Cortex-X925 (GX10, up to 379× on chrF) and an
 Apple M4 (up to 242×); see [`bench/results/SUMMARY.md`](bench/results/SUMMARY.md).
 

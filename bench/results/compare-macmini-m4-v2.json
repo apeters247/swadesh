@@ -1,0 +1,542 @@
+{
+ "meta": {
+  "machine": "Andrews-Mac-mini.local",
+  "arch": "arm64",
+  "system": "macOS-26.5.1-arm64-arm-64bit",
+  "python": "3.11.15",
+  "numpy": "2.4.6",
+  "sacrebleu": "2.6.0",
+  "swadesh": "0.1.0",
+  "cpus": 10,
+  "lines": 20000,
+  "threads": "all",
+  "load": [
+   2.2255859375,
+   1.51513671875,
+   1.349609375
+  ],
+  "date": "2026-11-19 10:26:07"
+ },
+ "rows": [
+  {
+   "section": "corpus",
+   "case": "BLEU tok=13a",
+   "n": 20000,
+   "incumbent_s": 0.8749628749792464,
+   "swadesh_s": 0.011310792004223913,
+   "speedup": 77.3564640435877,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "corpus",
+   "case": "BLEU tok=intl",
+   "n": 20000,
+   "incumbent_s": 0.7699250419973396,
+   "swadesh_s": 0.01374125003349036,
+   "speedup": 56.030203956762875,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "corpus",
+   "case": "BLEU tok=zh",
+   "n": 20000,
+   "incumbent_s": 1.3705266250181012,
+   "swadesh_s": 0.011116750014480203,
+   "speedup": 123.28482904022415,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "corpus",
+   "case": "BLEU tok=char",
+   "n": 20000,
+   "incumbent_s": 1.2196384170092642,
+   "swadesh_s": 0.012180000019725412,
+   "speedup": 100.13451683366746,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "corpus",
+   "case": "BLEU tok=none",
+   "n": 20000,
+   "incumbent_s": 0.5034376249532215,
+   "swadesh_s": 0.007949749997351319,
+   "speedup": 63.327478866751264,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "corpus",
+   "case": "BLEU lowercase (13a)",
+   "n": 20000,
+   "incumbent_s": 0.8910507919499651,
+   "swadesh_s": 0.018149291980080307,
+   "speedup": 49.09562273437084,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "corpus",
+   "case": "BLEU 2 references",
+   "n": 20000,
+   "incumbent_s": 1.5775212500011548,
+   "swadesh_s": 0.0158817499759607,
+   "speedup": 99.32918301754898,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "corpus",
+   "case": "chrF",
+   "n": 20000,
+   "incumbent_s": 2.5852365409955382,
+   "swadesh_s": 0.013070666987914592,
+   "speedup": 197.7891827085719,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "corpus",
+   "case": "chrF++",
+   "n": 20000,
+   "incumbent_s": 2.9331687910016626,
+   "swadesh_s": 0.019132292014546692,
+   "speedup": 153.3098485414874,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "corpus",
+   "case": "chrF whitespace",
+   "n": 20000,
+   "incumbent_s": 2.8780557080172002,
+   "swadesh_s": 0.013546958041843027,
+   "speedup": 212.45033011305088,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "corpus",
+   "case": "chrF eps_smoothing",
+   "n": 20000,
+   "incumbent_s": 2.5656299590482377,
+   "swadesh_s": 0.012893416977021843,
+   "speedup": 198.98758906352023,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "corpus",
+   "case": "chrF lowercase",
+   "n": 20000,
+   "incumbent_s": 2.5665211669984274,
+   "swadesh_s": 0.020168542047031224,
+   "speedup": 127.25367857594918,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "corpus",
+   "case": "chrF zh",
+   "n": 20000,
+   "incumbent_s": 1.0822269580094144,
+   "swadesh_s": 0.006813500018324703,
+   "speedup": 158.83568725307074,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "corpus",
+   "case": "TER",
+   "n": 5000,
+   "incumbent_s": 2.689752208010759,
+   "swadesh_s": 0.019735667039640248,
+   "speedup": 136.28889272443814,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "corpus",
+   "case": "TER normalized",
+   "n": 5000,
+   "incumbent_s": 5.129662082996219,
+   "swadesh_s": 0.03428308299044147,
+   "speedup": 149.626627349309,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "corpus",
+   "case": "TER case_sensitive",
+   "n": 5000,
+   "incumbent_s": 2.6937184589914978,
+   "swadesh_s": 0.015105541970115155,
+   "speedup": 178.3265019104086,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "corpus",
+   "case": "TER no_punct",
+   "n": 5000,
+   "incumbent_s": 2.7430922079947777,
+   "swadesh_s": 0.019465083023533225,
+   "speedup": 140.92373532023407,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "corpus",
+   "case": "TER normalized+asian_support zh",
+   "n": 5000,
+   "incumbent_s": 1.906430166971404,
+   "swadesh_s": 0.023913290991913527,
+   "speedup": 79.72261817146284,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "corpus",
+   "case": "corpus_bleu() compat function",
+   "n": 20000,
+   "incumbent_s": 0.9395033339969814,
+   "swadesh_s": 0.010654332989361137,
+   "speedup": 88.18039899213969,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "sentence",
+   "case": "BLEU batch (sentence_scores vs loop)",
+   "n": 5000,
+   "incumbent_s": 0.1367131249862723,
+   "swadesh_s": 0.002726250037085265,
+   "speedup": 50.14695025274988,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "sentence",
+   "case": "BLEU sentence_score() in a loop",
+   "n": 5000,
+   "incumbent_s": 0.1324671670445241,
+   "swadesh_s": 0.027170499961357564,
+   "speedup": 4.875404104927093,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "sentence",
+   "case": "chrF batch (sentence_scores vs loop)",
+   "n": 5000,
+   "incumbent_s": 0.5603713340242393,
+   "swadesh_s": 0.002776583016384393,
+   "speedup": 201.82048608578717,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "sentence",
+   "case": "chrF sentence_score() in a loop",
+   "n": 5000,
+   "incumbent_s": 0.562133957981132,
+   "swadesh_s": 0.026814875018317252,
+   "speedup": 20.963512140076656,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "sentence",
+   "case": "chrF++ batch (sentence_scores vs loop)",
+   "n": 5000,
+   "incumbent_s": 0.638200708955992,
+   "swadesh_s": 0.004262000031303614,
+   "speedup": 149.74207045249273,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "sentence",
+   "case": "chrF++ sentence_score() in a loop",
+   "n": 5000,
+   "incumbent_s": 0.640939790988341,
+   "swadesh_s": 0.03809154097689316,
+   "speedup": 16.826302495274312,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "sentence",
+   "case": "TER sentence_score() in a loop",
+   "n": 2000,
+   "incumbent_s": 1.0596354170120321,
+   "swadesh_s": 0.05899991700425744,
+   "speedup": 17.959947586630822,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "sentence",
+   "case": "sentence_bleu() compat function x1000",
+   "n": 1000,
+   "incumbent_s": 0.05742933397414163,
+   "swadesh_s": 0.0072228339849971235,
+   "speedup": 7.951080433723204,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "significance",
+   "case": "BLEU bootstrap CI (1000 resamples)",
+   "n": 5000,
+   "incumbent_s": 0.33040299999993294,
+   "swadesh_s": 0.007870790956076235,
+   "speedup": 41.97837318304871,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "significance",
+   "case": "chrF bootstrap CI (1000 resamples)",
+   "n": 5000,
+   "incumbent_s": 0.6962115000351332,
+   "swadesh_s": 0.008783584053162485,
+   "speedup": 79.26280386472374,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "significance",
+   "case": "TER bootstrap CI (200 resamples)",
+   "n": 2000,
+   "incumbent_s": 1.0634450829820707,
+   "swadesh_s": 0.008101415995042771,
+   "speedup": 131.26656915689668,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "significance",
+   "case": "paired bootstrap, 3 systems, BLEU+chrF",
+   "n": 5000,
+   "incumbent_s": 2.6663324999972247,
+   "swadesh_s": 0.126992582983803,
+   "speedup": 20.995970294873807,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "significance",
+   "case": "paired approx. randomization (2000)",
+   "n": 5000,
+   "incumbent_s": 3.735943584004417,
+   "swadesh_s": 0.13266175001626834,
+   "speedup": 28.16142244125588,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "mbr",
+   "case": "chrF 32x32 matrix",
+   "n": 1024,
+   "incumbent_s": 0.09417837497312576,
+   "swadesh_s": 0.0010371250100433826,
+   "speedup": 90.80715830889692,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "mbr",
+   "case": "BLEU 32x32 matrix",
+   "n": 1024,
+   "incumbent_s": 0.020535500021651387,
+   "swadesh_s": 0.00034733302891254425,
+   "speedup": 59.123372418527076,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "mbr",
+   "case": "chrF 128x128 matrix",
+   "n": 16384,
+   "incumbent_s": 1.4569080419605598,
+   "swadesh_s": 0.008139540965203196,
+   "speedup": 178.99142570679223,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "mbr",
+   "case": "BLEU 128x128 matrix",
+   "n": 16384,
+   "incumbent_s": 0.3065305839991197,
+   "swadesh_s": 0.0015818329993635416,
+   "speedup": 193.78188729306686,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "tokenize",
+   "case": "tokenize 13a (cold cache, unique lines)",
+   "n": 1896,
+   "incumbent_s": 0.024802250030916184,
+   "swadesh_s": 0.0006518330192193389,
+   "speedup": 38.05000559901114,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "tokenize",
+   "case": "tokenize intl (cold cache, unique lines)",
+   "n": 1978,
+   "incumbent_s": 0.015766749973408878,
+   "swadesh_s": 0.0006118339952081442,
+   "speedup": 25.769653364954124,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "tokenize",
+   "case": "tokenize zh (cold cache, unique lines)",
+   "n": 1895,
+   "incumbent_s": 0.04490924999117851,
+   "swadesh_s": 0.0006177500472404063,
+   "speedup": 72.69809236242993,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "tokenize",
+   "case": "tokenize char (cold cache, unique lines)",
+   "n": 1982,
+   "incumbent_s": 0.0026985830045305192,
+   "swadesh_s": 0.00047374999849125743,
+   "speedup": 5.696217441951757,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "cli",
+   "case": "python CLI: -m bleu chrf",
+   "n": 20000,
+   "incumbent_s": 3.528551333001815,
+   "swadesh_s": 0.11409779102541506,
+   "speedup": 30.925676135270987,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "cli",
+   "case": "rust binary: -m bleu chrf",
+   "n": 20000,
+   "incumbent_s": 3.5285965829971246,
+   "swadesh_s": 0.03882091597188264,
+   "speedup": 90.8942124279816,
+   "exact": true,
+   "note": "includes interpreter/process start-up"
+  },
+  {
+   "section": "cli",
+   "case": "python CLI: -m ter",
+   "n": 20000,
+   "incumbent_s": 9.818217666004784,
+   "swadesh_s": 0.16710470896214247,
+   "speedup": 58.75488325244682,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "cli",
+   "case": "rust binary: -m ter",
+   "n": 20000,
+   "incumbent_s": 9.79919599997811,
+   "swadesh_s": 0.08367408299818635,
+   "speedup": 117.11148361423345,
+   "exact": true,
+   "note": "includes interpreter/process start-up"
+  },
+  {
+   "section": "cli",
+   "case": "python CLI: -m bleu chrf ter -f text",
+   "n": 20000,
+   "incumbent_s": 14.419873458042275,
+   "swadesh_s": 0.19413600000552833,
+   "speedup": 74.27717403073952,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "cli",
+   "case": "rust binary: -m bleu chrf ter -f text",
+   "n": 20000,
+   "incumbent_s": 14.420651874970645,
+   "swadesh_s": 0.103710959025193,
+   "speedup": 139.04655795794582,
+   "exact": true,
+   "note": "includes interpreter/process start-up"
+  },
+  {
+   "section": "cli",
+   "case": "python CLI: --confidence (BLEU)",
+   "n": 20000,
+   "incumbent_s": 1.2935301249963231,
+   "swadesh_s": 0.12417770799947903,
+   "speedup": 10.416765986707937,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "cli",
+   "case": "python CLI: --paired-bs, 2 systems",
+   "n": 20000,
+   "incumbent_s": 7.397218124999199,
+   "swadesh_s": 0.3691470419871621,
+   "speedup": 20.038676417882428,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "section": "process",
+   "case": "interpreter + import",
+   "n": 1,
+   "incumbent_s": 0.0517500409623608,
+   "swadesh_s": 0.07185058400500566,
+   "speedup": 0.7202452377945251,
+   "exact": true,
+   "note": "swadesh imports sacrebleu too"
+  },
+  {
+   "section": "memory",
+   "case": "peak RSS MB: BLEU",
+   "n": 20000,
+   "incumbent_s": 224.140625,
+   "swadesh_s": 53.328125,
+   "speedup": 4.203047172575447,
+   "exact": true,
+   "note": "values are MB, ratio = incumbent/swadesh"
+  },
+  {
+   "section": "memory",
+   "case": "peak RSS MB: CHRF",
+   "n": 20000,
+   "incumbent_s": 866.125,
+   "swadesh_s": 55.6875,
+   "speedup": 15.55331088664422,
+   "exact": true,
+   "note": "values are MB, ratio = incumbent/swadesh"
+  },
+  {
+   "section": "memory",
+   "case": "peak RSS MB: BLEU,n_bootstrap=1000",
+   "n": 5000,
+   "incumbent_s": 302.890625,
+   "swadesh_s": 82.1875,
+   "speedup": 3.685361216730038,
+   "exact": true,
+   "note": "values are MB, ratio = incumbent/swadesh"
+  }
+ ]
+}
