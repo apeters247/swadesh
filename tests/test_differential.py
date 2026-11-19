@@ -290,3 +290,15 @@ def test_tokenize_batch_real_data():
     for name in TOKENIZERS:
         ref = _sacre_tok(name)
         assert swadesh.tokenize(lines, name) == [ref(l) for l in lines]
+
+
+@pytest.mark.parametrize("seed", ["12345", "0", "1", "987654321987654321", "none"])
+def test_bootstrap_seeds(seed, monkeypatch):
+    monkeypatch.setenv("SACREBLEU_SEED", seed)
+    hyps, refs = _rand_corpus(3, 700)
+    a = swadesh.BLEU().corpus_score(hyps, refs, n_bootstrap=200)
+    b = sacrebleu.BLEU().corpus_score(hyps, refs, n_bootstrap=200)
+    if seed == "none":  # OS entropy: only the format can be compared
+        assert a.score == b.score
+    else:
+        assert str(a) == str(b) and a._mean == b._mean and a._ci == b._ci

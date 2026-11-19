@@ -43,9 +43,16 @@ def _resampled_sums(stats, idxs: np.ndarray) -> np.ndarray:
 def _bootstrap_resample(stats, metric, n_samples: int = 1000):
     """Drop-in for ``sacrebleu.significance._bootstrap_resample``."""
     seed, _seed = _seed_from_env()
-    rng = np.random.default_rng(_seed)
-    idxs = rng.choice(len(stats), size=(n_samples, len(stats)), replace=True)
-    sums = _resampled_sums(stats, idxs)
+    n = len(stats)
+    if _seed is not None and 0 <= _seed < 2**128 and n > 0:
+        # Native draw: exact emulation of numpy's default_rng(seed).choice(...)
+        s32 = np.ascontiguousarray(np.array(stats, dtype="float32"))
+        buf = _swadesh.bootstrap_sums_f32_seeded(s32.tobytes(), s32.shape[1], n, n_samples, _seed)
+        sums = np.frombuffer(buf, dtype=np.float32).reshape(n_samples, s32.shape[1]).copy()
+    else:
+        rng = np.random.default_rng(_seed)
+        idxs = rng.choice(n, size=(n_samples, n), replace=True)
+        sums = _resampled_sums(stats, idxs)
     scores = [metric._compute_score_from_stats(_s) for _s in sums]
     return str(seed).lower(), scores
 

@@ -49,3 +49,16 @@ pub fn ar_sums_i64(bl: &[i64], sys: &[i64], width: usize, sel: &[u8], n: usize) 
     fill(&mut b, 0);
     (a, b)
 }
+
+/// Like [`bootstrap_sums_f32`], but draws the resampling indices itself with an
+/// exact emulation of `np.random.default_rng(seed).choice(n, (n_samples, n))`
+/// (verified against numpy in `tests/nprng.rs`), so no index matrix has to be
+/// passed in from Python.
+pub fn bootstrap_sums_f32_seeded(stats: &[f32], width: usize, n: usize, n_samples: usize, seed: u128) -> Vec<f32> {
+    if n == 0 || n_samples == 0 {
+        return Vec::new();
+    }
+    let mut rng = crate::nprng::default_rng(seed);
+    let idxs = rng.integers(0, n as i64, n_samples * n);
+    bootstrap_sums_f32(stats, width, &idxs, n)
+}

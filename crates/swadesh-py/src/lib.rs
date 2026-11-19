@@ -254,6 +254,15 @@ fn bootstrap_sums_f32<'py>(py: Python<'py>, stats: &[u8], width: usize, idxs: &[
     PyBytes::new(py, bytes)
 }
 
+/// Seeded bootstrap row sums: draws `default_rng(seed).choice(n, (n_samples, n))` natively.
+#[pyfunction]
+fn bootstrap_sums_f32_seeded<'py>(py: Python<'py>, stats: &[u8], width: usize, n: usize, n_samples: usize, seed: u128) -> Bound<'py, PyBytes> {
+    let s = f32_vec(stats);
+    let out = py.detach(|| swadesh_core::resample::bootstrap_sums_f32_seeded(&s, width, n, n_samples, seed));
+    let bytes: &[u8] = unsafe { std::slice::from_raw_parts(out.as_ptr() as *const u8, out.len() * 4) };
+    PyBytes::new(py, bytes)
+}
+
 /// Paired approximate randomization sums (exact int64). Returns (a, b) bytes.
 #[pyfunction]
 fn ar_sums_i64<'py>(
@@ -452,6 +461,7 @@ fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(chrf_sentence_scores, m)?)?;
     m.add_function(wrap_pyfunction!(bootstrap_sums_f32, m)?)?;
     m.add_function(wrap_pyfunction!(ar_sums_i64, m)?)?;
+    m.add_function(wrap_pyfunction!(bootstrap_sums_f32_seeded, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_matrix, m)?)?;
     m.add_function(wrap_pyfunction!(bleu_stats_one, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_stats_one, m)?)?;
