@@ -1,0 +1,18 @@
+[package]
+name = "langbench"
+version = "0.1.0"
+edition = "2021"
+description = "Rust side of the swadesh Rust-vs-C-vs-asm micro-benchmarks (docs/language-choice.md)"
+license = "Apache-2.0"
+publish = false
+
+# Standalone crate: not a member of the swadesh workspace.
+[workspace]
+
+[dependencies]
+rayon = "1"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1

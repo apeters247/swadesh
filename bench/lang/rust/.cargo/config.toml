@@ -1,0 +1,3 @@
+# Same target as the C build (gcc -march=native).
+[build]
+rustflags = ["-C", "target-cpu=native"]
