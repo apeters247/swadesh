@@ -63,7 +63,7 @@ Four threads (rayon vs OpenMP), ns per segment, from the earlier full run
 
 | | Rust | C |
 |---|---|---|
-| Untrusted input (arbitrary Unicode from users and agents) | bounds-checked; `unsafe` limited to two audited spots | every buffer and index must be checked by hand |
+| Untrusted input (arbitrary Unicode from users and agents) | bounds-checked; `unsafe` confined to one spot in the core (an ASCII-only UTF-8 rebuild) plus FFI byte views in the bindings | every buffer and index must be checked by hand |
 | Python bindings | PyO3 + maturin; abi3 wheels for all platforms from one CI job | CPython C API or cffi; manual refcounting |
 | WebAssembly | `cargo build --target wasm32-unknown-unknown` (the playground) | possible via Emscripten/clang, with more setup |
 | Parallelism | rayon, data-race free by construction | OpenMP/pthreads |
