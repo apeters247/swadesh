@@ -4,6 +4,8 @@
 on one core 11–22× for BLEU and 29–65× for chrF; on a multi-core machine up to 119× for
 corpus BLEU and 379× for chrF.
 
+<p align="center"><img src="docs/img/benchmark.svg" alt="swadesh vs sacreBLEU: BLEU 119x, chrF 338x, chrF++ 353x faster on 100k segments, identical scores" width="720"></p>
+
 ```bash
 pip install swadesh
 ```

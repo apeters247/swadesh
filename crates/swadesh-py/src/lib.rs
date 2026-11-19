@@ -396,6 +396,17 @@ fn tokenize_batch<'py>(py: Python<'py>, name: &str, lines: &Bound<'py, PyAny>) -
     }))
 }
 
+/// Private diagnostic: cost of borrowing UTF-8 from a list of str.
+#[pyfunction]
+fn _extract_bench(lines: &Bound<'_, PyAny>) -> PyResult<usize> {
+    let objs = as_objs(lines)?;
+    let mut n = 0;
+    for o in &objs {
+        n += text(o, false)?.len();
+    }
+    Ok(n)
+}
+
 /// Private diagnostic: the `SumMode` this interpreter selects.
 #[pyfunction]
 fn _sum_mode(py: Python<'_>) -> &'static str {
@@ -446,6 +457,7 @@ fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(chrf_stats_one, m)?)?;
     m.add_function(wrap_pyfunction!(bleu_matrix, m)?)?;
     m.add_function(wrap_pyfunction!(tokenize, m)?)?;
+    m.add_function(wrap_pyfunction!(_extract_bench, m)?)?;
     m.add_function(wrap_pyfunction!(tokenize_batch, m)?)?;
     m.add("GENERATED_PYTHON", swadesh_core::tables::GENERATED_PYTHON)?;
     m.add("GENERATED_REGEX", swadesh_core::tables::GENERATED_REGEX)?;
