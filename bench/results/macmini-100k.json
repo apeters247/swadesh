@@ -1,0 +1,43 @@
+{
+ "lines": 100000,
+ "langpair": "en-de",
+ "cpus": 10,
+ "machine": "arm64",
+ "rows": [
+  {
+   "case": "BLEU corpus",
+   "sacrebleu_s": 8.980368292017374,
+   "swadesh_s": 0.1621932500274852,
+   "speedup": 55.368323222424884,
+   "exact": true
+  },
+  {
+   "case": "chrF corpus",
+   "sacrebleu_s": 27.261277208977845,
+   "swadesh_s": 0.17718374996911734,
+   "speedup": 153.85878904656556,
+   "exact": true
+  },
+  {
+   "case": "chrF++ corpus",
+   "sacrebleu_s": 36.30541529197944,
+   "swadesh_s": 0.24381908401846886,
+   "speedup": 148.90309115109864,
+   "exact": true
+  },
+  {
+   "case": "sentence BLEU x20000",
+   "sacrebleu_s": 1.9076185830053873,
+   "swadesh_s": 0.02356504200724885,
+   "speedup": 80.95120655497173,
+   "exact": true
+  },
+  {
+   "case": "sentence chrF x20000",
+   "sacrebleu_s": 4.216017916973215,
+   "swadesh_s": 0.01740879099816084,
+   "speedup": 242.17752498830149,
+   "exact": true
+  }
+ ]
+}

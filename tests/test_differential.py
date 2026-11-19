@@ -230,3 +230,35 @@ def test_rewards():
     b = bleu_reward()(completions=hyps, reference=[[x, x + " ja"] for x in refs])
     m = sacrebleu.BLEU(effective_order=True)
     assert b == [m.sentence_score(h, [x, x + " ja"]).score * 0.01 for h, x in zip(hyps, refs)]
+def _sum_same(a, b):
+    import math
+    import struct
+    if type(a) is not type(b):
+        return False
+    if isinstance(a, int):
+        return a == b
+    return struct.pack("<d", a) == struct.pack("<d", b) or (math.isnan(a) and math.isnan(b))
+
+
+def test_py_sum_matches_builtin_sum():
+    """The emulated builtin sum() must agree bit-for-bit on this interpreter.
+
+    CPython changed float summation in 3.12 and again in 3.14 (compensated ints),
+    so this test is what catches a wrong SumMode for a new interpreter.
+    """
+    import math
+    rnd = random.Random(7)
+    hard = [1e16, -1e16, 1.0, -1.0, 0.1, 0.2, 0.3, 3.0, 1e-300, 2.5, -7.25]
+    for _ in range(20000):
+        items = []
+        for _ in range(rnd.randint(0, 8)):
+            r = rnd.random()
+            if r < 0.15:
+                items.append(-9999999999)
+            elif r < 0.25:
+                items.append(rnd.randint(-5, 5))
+            elif r < 0.55:
+                items.append(rnd.choice(hard))
+            else:
+                items.append(math.log(rnd.uniform(1e-3, 100.0)))
+        assert _sum_same(sum(items), swadesh._swadesh._py_sum(items)), items

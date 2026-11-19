@@ -4,8 +4,9 @@ use std::borrow::Cow;
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyList, PyString};
+use pyo3::types::{PyBytes, PyFloat, PyList, PyString};
 
+use swadesh_core::score::{py_sum, PyNum};
 use swadesh_core::{
     bleu_corpus_stats, chrf_corpus_stats, chrf_f_score, compute_bleu, BleuConfig, BleuScoreConfig,
     ChrfConfig, Smooth, SumMode, Tokenizer,
@@ -367,8 +368,45 @@ fn chrf_stats_one(
     Ok(out)
 }
 
+/// Private diagnostic: the `SumMode` this interpreter selects.
+#[pyfunction]
+fn _sum_mode(py: Python<'_>) -> &'static str {
+    match sum_mode(py) {
+        SumMode::Naive => "naive",
+        SumMode::Neumaier => "neumaier",
+        SumMode::NeumaierInts => "neumaier_ints",
+    }
+}
+
+/// Private diagnostic: the Rust emulation of builtin `sum()` over ints and floats.
+/// `mode` is "naive", "neumaier", "neumaier_ints", or None for the mode this interpreter selects.
+#[pyfunction]
+#[pyo3(signature = (items, mode=None))]
+fn _py_sum<'py>(py: Python<'py>, items: &Bound<'py, PyList>, mode: Option<&str>) -> PyResult<Bound<'py, PyAny>> {
+    let mut nums = Vec::with_capacity(items.len());
+    for it in items.iter() {
+        match it.cast::<PyFloat>() {
+            Ok(f) => nums.push(PyNum::Float(f.value())),
+            Err(_) => nums.push(PyNum::Int(it.extract::<i64>()?)),
+        }
+    }
+    let mode = match mode {
+        None => sum_mode(py),
+        Some("naive") => SumMode::Naive,
+        Some("neumaier") => SumMode::Neumaier,
+        Some("neumaier_ints") => SumMode::NeumaierInts,
+        Some(other) => return Err(PyValueError::new_err(format!("unknown sum mode {other:?}"))),
+    };
+    Ok(match py_sum(&nums, mode) {
+        PyNum::Int(i) => i.into_pyobject(py)?.into_any(),
+        PyNum::Float(f) => f.into_pyobject(py)?.into_any(),
+    })
+}
+
 #[pymodule]
 fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(_sum_mode, m)?)?;
+    m.add_function(wrap_pyfunction!(_py_sum, m)?)?;
     m.add_function(wrap_pyfunction!(bleu_stats, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_stats, m)?)?;
     m.add_function(wrap_pyfunction!(bleu_sentence_scores, m)?)?;

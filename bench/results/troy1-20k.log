@@ -1,0 +1,8 @@
+20000 lines of WMT22 en-de, tokenizer=13a, 24 CPUs, x86_64
+case                                sacrebleu    swadesh  speedup  exact
+BLEU corpus                            1.735s    0.0176s    98.5x  yes
+chrF corpus                            3.695s    0.0141s   261.2x  yes
+chrF++ corpus                          4.303s    0.0139s   309.3x  yes
+sentence BLEU x20000                   1.013s    0.0095s   106.8x  yes
+sentence chrF x20000                   2.828s    0.0095s   297.8x  yes
+BLEU + bootstrap(1000) x5000           0.870s    0.0711s    12.2x  yes

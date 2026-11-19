@@ -384,7 +384,7 @@ pub fn tok_char(line: &str, out: &mut String) {
 }
 
 /// Convenience: tokenize then split into tokens (what BLEU consumes).
-pub fn tokens<'a>(tokenized: &'a str) -> impl Iterator<Item = &'a str> {
+pub fn tokens(tokenized: &str) -> impl Iterator<Item = &str> {
     py_split(tokenized)
 }
 

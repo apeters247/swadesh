@@ -1,0 +1,117 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wheels-linux:
+    name: Wheels linux ${{ matrix.target }} (${{ matrix.manylinux }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-24.04, target: x86_64, manylinux: auto }
+          - { runner: ubuntu-24.04-arm, target: aarch64, manylinux: auto }
+          - { runner: ubuntu-24.04, target: x86_64, manylinux: musllinux_1_2 }
+          - { runner: ubuntu-24.04-arm, target: aarch64, manylinux: musllinux_1_2 }
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: PyO3/maturin-action@v1.49.4
+        with:
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux }}
+          args: --release --out dist
+      - uses: actions/upload-artifact@v4.6.2
+        with:
+          name: wheels-linux-${{ matrix.target }}-${{ matrix.manylinux }}
+          path: dist/*.whl
+
+  wheels-macos:
+    name: Wheels macOS ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: macos-15-intel, target: x86_64 }
+          - { runner: macos-15, target: aarch64 }
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: PyO3/maturin-action@v1.49.4
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist
+      - uses: actions/upload-artifact@v4.6.2
+        with:
+          name: wheels-macos-${{ matrix.target }}
+          path: dist/*.whl
+
+  wheels-windows:
+    name: Wheels Windows x64
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: PyO3/maturin-action@v1.49.4
+        with:
+          target: x64
+          args: --release --out dist
+      - uses: actions/upload-artifact@v4.6.2
+        with:
+          name: wheels-windows-x64
+          path: dist/*.whl
+
+  sdist:
+    name: sdist
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: PyO3/maturin-action@v1.49.4
+        with:
+          command: sdist
+          args: --out dist
+      - uses: actions/upload-artifact@v4.6.2
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  publish-pypi:
+    name: Publish to PyPI (trusted publishing)
+    needs: [wheels-linux, wheels-macos, wheels-windows, sdist]
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi
+      url: https://pypi.org/p/swadesh
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4.3.0
+        with:
+          pattern: "*"
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+
+  publish-crates:
+    name: Publish swadesh-core to crates.io (trusted publishing)
+    needs: [publish-pypi]
+    runs-on: ubuntu-24.04
+    environment:
+      name: crates-io
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: dtolnay/rust-toolchain@1.90.0
+      - uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+      - run: cargo publish -p swadesh-core --locked
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}

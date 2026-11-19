@@ -1,0 +1,28 @@
+machine: gx10
+host: gx10-b61b  os: Linux 6.17.0-1021-nvidia aarch64
+CPU(s):                                  20
+Model name:                              Cortex-X925
+CPU(s) scaling MHz:                      100%
+Model name:                              Cortex-A725
+CPU(s) scaling MHz:                      100%
+python: 3.12.3 (main, Mar 23 2026, 19:04:32) [GCC 13.3.0]  sacrebleu 2.6.0  numpy 2.5.5
+free disk before: /dev/nvme0n1p2  916G  351G  519G  41% /
+
+== 20k
+uptime:  23:49:48 up 10 days,  4:03,  2 users,  load average: 2.03, 2.23, 2.08
+start: 2026-11-19T04:49:48Z
+end: 2026-11-19T04:50:35Z
+uptime after:  23:50:35 up 10 days,  4:04,  2 users,  load average: 2.10, 2.22, 2.08
+
+== 100k
+uptime:  23:50:35 up 10 days,  4:04,  2 users,  load average: 2.10, 2.22, 2.08
+start: 2026-11-19T04:50:35Z
+end: 2026-11-19T04:54:33Z
+uptime after:  23:54:33 up 10 days,  4:08,  2 users,  load average: 4.05, 2.88, 2.36
+
+== 20k-1thread
+uptime:  23:54:33 up 10 days,  4:08,  2 users,  load average: 4.05, 2.88, 2.36
+start: 2026-11-19T04:54:33Z
+end: 2026-11-19T04:55:18Z
+uptime after:  23:55:18 up 10 days,  4:09,  2 users,  load average: 3.54, 2.91, 2.39
+DONE
