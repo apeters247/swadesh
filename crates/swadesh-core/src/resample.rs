@@ -59,6 +59,22 @@ pub fn bootstrap_sums_f32_seeded(stats: &[f32], width: usize, n: usize, n_sample
         return Vec::new();
     }
     let mut rng = crate::nprng::default_rng(seed);
-    let idxs = rng.integers(0, n as i64, n_samples * n);
-    bootstrap_sums_f32(stats, width, &idxs, n)
+    #[cfg(feature = "parallel")]
+    if rayon::current_num_threads() > 1 {
+        // Draw sequentially (the stream is inherently serial), sum in parallel.
+        let idxs = rng.integers(0, n as i64, n_samples * n);
+        return bootstrap_sums_f32(stats, width, &idxs, n);
+    }
+    // Single thread: fuse drawing and summing; no index matrix at all.
+    let mut out = vec![0f32; n_samples * width];
+    for acc in out.chunks_mut(width.max(1)) {
+        for _ in 0..n {
+            let i = rng.next_below(n as u64) as usize;
+            let r = &stats[i * width..(i + 1) * width];
+            for (a, &x) in acc.iter_mut().zip(r) {
+                *a += x;
+            }
+        }
+    }
+    out
 }

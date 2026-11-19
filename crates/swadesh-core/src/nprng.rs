@@ -247,6 +247,13 @@ impl Generator {
             .collect()
     }
 
+    /// One value of `integers(0, n)`: uniform in `0..n`, consuming the stream
+    /// exactly as numpy does for that draw.
+    #[inline]
+    pub fn next_below(&mut self, n: u64) -> u64 {
+        bounded_u64(&mut self.bitgen, n - 1)
+    }
+
     /// `rng.choice(n, size=(rows, cols), replace=True)`, flattened in C order.
     /// Equivalent to `integers(0, n, size=(rows, cols))`.
     pub fn choice(&mut self, n: usize, rows: usize, cols: usize) -> Vec<usize> {
