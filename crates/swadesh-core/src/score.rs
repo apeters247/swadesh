@@ -328,15 +328,15 @@ impl NpVal {
         }
     }
     #[inline]
-    pub fn add(self, o: NpVal) -> NpVal {
+    pub fn plus(self, o: NpVal) -> NpVal {
         self.op(o, |a, b| a + b, |a, b| a + b)
     }
     #[inline]
-    pub fn mul(self, o: NpVal) -> NpVal {
+    pub fn times(self, o: NpVal) -> NpVal {
         self.op(o, |a, b| a * b, |a, b| a * b)
     }
     #[inline]
-    pub fn div(self, o: NpVal) -> NpVal {
+    pub fn over(self, o: NpVal) -> NpVal {
         self.op(o, |a, b| a / b, |a, b| a / b)
     }
     #[inline]
@@ -363,29 +363,29 @@ pub fn chrf_f_score_np2_f32(stats: &[f32], order: usize, beta: i64, eps_smoothin
         let (n_hyp, n_ref, n_match) = (stats[3 * i], stats[3 * i + 1], stats[3 * i + 2]);
         let prec = if n_hyp > 0.0 { F32(n_match / n_hyp) } else { eps };
         let rec = if n_ref > 0.0 { F32(n_match / n_ref) } else { eps };
-        let denom = factor.mul(prec).add(rec);
-        let term = if denom.as_f64() > 0.0 { one_plus.mul(prec).mul(rec).div(denom) } else { eps };
-        score = score.add(term);
+        let denom = factor.times(prec).plus(rec);
+        let term = if denom.as_f64() > 0.0 { one_plus.times(prec).times(rec).over(denom) } else { eps };
+        score = score.plus(term);
         if n_hyp > 0.0 && n_ref > 0.0 {
-            avg_prec = avg_prec.add(prec);
-            avg_rec = avg_rec.add(rec);
+            avg_prec = avg_prec.plus(prec);
+            avg_rec = avg_rec.plus(rec);
             effective_order += 1;
         }
     }
     if eps_smoothing {
-        return Py(100.0).mul(score).div(Py(order as f64));
+        return Py(100.0).times(score).over(Py(order as f64));
     }
     if effective_order == 0 {
         avg_prec = Py(0.0);
         avg_rec = Py(0.0);
     } else {
-        avg_prec = avg_prec.div(Py(effective_order as f64));
-        avg_rec = avg_rec.div(Py(effective_order as f64));
+        avg_prec = avg_prec.over(Py(effective_order as f64));
+        avg_rec = avg_rec.over(Py(effective_order as f64));
     }
-    if avg_prec.add(avg_rec).as_f64() != 0.0 {
-        let mut s = one_plus.mul(avg_prec).mul(avg_rec);
-        s = s.div(factor.mul(avg_prec).add(avg_rec));
-        Py(100.0).mul(s)
+    if avg_prec.plus(avg_rec).as_f64() != 0.0 {
+        let mut s = one_plus.times(avg_prec).times(avg_rec);
+        s = s.over(factor.times(avg_prec).plus(avg_rec));
+        Py(100.0).times(s)
     } else {
         Py(0.0)
     }
