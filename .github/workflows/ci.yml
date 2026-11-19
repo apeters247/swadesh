@@ -1,0 +1,82 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    name: Rust tests and clippy (swadesh-core)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: dtolnay/rust-toolchain@1.90.0
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2.8.0
+      - run: cargo test -p swadesh-core
+      - run: cargo clippy -p swadesh-core -- -D warnings
+
+  differential:
+    name: Differential tests (${{ matrix.os }}, py${{ matrix.python }}, numpy 2)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-2025]
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: dtolnay/rust-toolchain@1.90.0
+      - uses: Swatinem/rust-cache@v2.8.0
+      - name: Build wheel
+        uses: PyO3/maturin-action@v1.49.4
+        with:
+          command: build
+          args: --release --out dist
+      - name: Install wheel and test dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.whl "sacrebleu==2.6.0" "numpy>=2,<3" pytest hypothesis
+      - name: Differential suite
+        run: python -m pytest tests/test_differential.py -v
+      - name: Sum-semantics check
+        run: python tools/check_sum_semantics.py
+
+  numpy-1:
+    name: Differential tests (ubuntu, py${{ matrix.python }}, numpy 1.26)
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: dtolnay/rust-toolchain@1.90.0
+      - uses: Swatinem/rust-cache@v2.8.0
+      - name: Build wheel
+        uses: PyO3/maturin-action@v1.49.4
+        with:
+          command: build
+          args: --release --out dist
+      - name: Install wheel and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.whl "sacrebleu==2.6.0" "numpy==1.26.*" pytest hypothesis
+      - name: Differential suite
+        run: python -m pytest tests/test_differential.py -v

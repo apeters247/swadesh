@@ -2,23 +2,44 @@
 //! floating point semantics *operation by operation* so results are bit-identical.
 
 /// Which CPython `sum()` algorithm to emulate for float summation.
-/// CPython 3.12 switched `sum()` of floats to Neumaier compensated summation.
+///
+/// Verified empirically against builtin `sum()` (see `tools/check_sum_semantics.py`)
+/// and against the CPython source `Python/bltinmodule.c` at v3.12.12, v3.13.12, v3.14.3.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SumMode {
-    /// CPython <= 3.11: naive left-to-right.
+    /// CPython <= 3.11: naive left-to-right `f += x`, ints included.
     Naive,
-    /// CPython >= 3.12: Neumaier compensation for float items.
+    /// CPython 3.12 and 3.13: Neumaier compensation for float items. Int items
+    /// (in the float phase) are added naively, and the compensation is folded in
+    /// once at the end.
     Neumaier,
+    /// CPython >= 3.14: the float phase keeps a compensated (hi, lo) accumulator
+    /// and int items go through the same compensated add as floats.
+    NeumaierInts,
 }
 
 impl SumMode {
+    /// Maps a CPython `major.minor` to the summation algorithm it uses.
+    /// Versions newer than the last verified one (3.14) use `NeumaierInts`.
     pub fn for_python(major: u32, minor: u32) -> Self {
-        if (major, minor) >= (3, 12) {
-            SumMode::Neumaier
-        } else {
-            SumMode::Naive
+        match (major, minor) {
+            (m, n) if (m, n) >= (3, 14) => SumMode::NeumaierInts,
+            (m, n) if (m, n) >= (3, 12) => SumMode::Neumaier,
+            _ => SumMode::Naive,
         }
     }
+}
+
+/// One step of Neumaier's compensated summation (CPython `cs_add` / the float path).
+#[inline]
+fn neumaier_add(sum: &mut f64, comp: &mut f64, x: f64) {
+    let t = *sum + x;
+    if sum.abs() >= x.abs() {
+        *comp += (*sum - t) + x;
+    } else {
+        *comp += (x - t) + *sum;
+    }
+    *sum = t;
 }
 
 /// A Python number that is either an `int` or a `float`.
@@ -56,23 +77,15 @@ pub fn py_sum(items: &[PyNum], mode: SumMode) -> PyNum {
     }
     let mut c = 0.0f64;
     for item in it {
-        match *item {
-            PyNum::Float(x) => match mode {
-                SumMode::Naive => f_result += x,
-                SumMode::Neumaier => {
-                    let t = f_result + x;
-                    if f_result.abs() >= x.abs() {
-                        c += (f_result - t) + x;
-                    } else {
-                        c += (x - t) + f_result;
-                    }
-                    f_result = t;
-                }
-            },
-            PyNum::Int(v) => f_result += v as f64,
+        match (*item, mode) {
+            (PyNum::Float(x), SumMode::Naive) => f_result += x,
+            (PyNum::Float(x), _) => neumaier_add(&mut f_result, &mut c, x),
+            // Ints in the float phase: naive on 3.12/3.13, compensated on 3.14+.
+            (PyNum::Int(v), SumMode::NeumaierInts) => neumaier_add(&mut f_result, &mut c, v as f64),
+            (PyNum::Int(v), _) => f_result += v as f64,
         }
     }
-    if mode == SumMode::Neumaier && c != 0.0 && c.is_finite() {
+    if mode != SumMode::Naive && c != 0.0 && c.is_finite() {
         f_result += c;
     }
     PyNum::Float(f_result)
