@@ -325,3 +325,30 @@ def test_native_bootstrap_bleu_scoring_rowwise(data):
     ours = [s.score for s in _native_bleu_scores(m, sums)]
     theirs = [m._compute_score_from_stats(r.copy()).score for r in sums]
     assert ours == theirs
+
+
+@pytest.mark.skipif(int(__import__("numpy").__version__.split(".")[0]) < 2, reason="NumPy >= 2 path")
+@settings(max_examples=2000, deadline=None, suppress_health_check=list(HealthCheck))
+@given(data=st.data())
+def test_native_bootstrap_chrf_scoring_rowwise(data):
+    import numpy as np
+    from swadesh.significance import _native_bleu_scores
+    co = data.draw(st.integers(0, 7))
+    wo = data.draw(st.integers(0, 3))
+    if co + wo == 0:
+        co = 1
+    beta = data.draw(st.integers(0, 4))
+    eps = data.draw(st.booleans())
+    big = data.draw(st.sampled_from([5, 1000, 2**24 + 3, 2**31]))
+    rows = []
+    for _ in range(data.draw(st.integers(1, 8))):
+        row = []
+        for _ in range(co + wo):
+            h, r = data.draw(st.integers(0, big)), data.draw(st.integers(0, big))
+            row += [h, r, data.draw(st.integers(0, min(h, r)))]
+        rows.append(row)
+    sums = np.array(rows, dtype=np.float32)
+    m = sacrebleu.CHRF(char_order=co, word_order=wo, beta=beta, eps_smoothing=eps)
+    ours = [s.score for s in _native_bleu_scores(m, sums)]
+    theirs = [m._compute_score_from_stats(r.copy()).score for r in sums]
+    assert [(type(x), x) for x in ours] == [(type(x), x) for x in theirs]
