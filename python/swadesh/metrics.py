@@ -15,6 +15,7 @@ from typing import Any, List, Optional, Sequence
 import numpy as np
 from sacrebleu.metrics.bleu import BLEU as _SacreBLEU
 from sacrebleu.metrics.chrf import CHRF as _SacreCHRF
+from sacrebleu.metrics.ter import TER as _SacreTER
 
 from . import _swadesh
 
@@ -179,3 +180,32 @@ class CHRF(_FastMixin, _SacreCHRF):
         streams = _normalize_refs(references)
         hypotheses, streams = _truncate(hypotheses, streams)
         return _swadesh.chrf_sentence_scores(hypotheses, streams, *self._args())
+
+
+class TER(_FastMixin, _SacreTER):
+    """Bit-exact, accelerated ``sacrebleu.metrics.TER``.
+
+    Same constructor and API. Only the segment statistics (tercom shifts and the
+    beam edit distance) are native. Aggregation and scoring use sacreBLEU's own
+    ``sum_of_lists`` and score code on the same floats, so the results are identical.
+    """
+
+    def __init__(self, *args, references: Optional[Sequence[Sequence[str]]] = None, **kwargs):
+        super().__init__(*args, references=None, **kwargs)
+        if references is not None:
+            self._ref_cache = self._cache_references(references)
+
+    def _extract_corpus_statistics(self, hypotheses: Sequence[str], references) -> Any:
+        streams = self._resolve_refs(references)
+        hypotheses, streams = _truncate(hypotheses, streams)
+        buf, n, width = _swadesh.ter_stats(
+            hypotheses, streams, bool(self.normalized), bool(self.no_punct),
+            bool(self.asian_support), bool(self.case_sensitive),
+        )
+        return np.frombuffer(buf, dtype=np.float64).reshape(n, width).copy()
+
+    def _aggregate_and_compute(self, stats):
+        # sacreBLEU's own sum_of_lists (sequential float +=) on the same values.
+        if isinstance(stats, np.ndarray):
+            stats = stats.tolist()
+        return _SacreTER._aggregate_and_compute(self, stats)
