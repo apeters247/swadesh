@@ -128,7 +128,7 @@ swadesh.PairedTest([("base", base), ("new", new)], {"BLEU": BLEU(references=[ref
 - **In the browser.** The CLI compiles to a 320 KB WebAssembly module; `docs/playground/` is a
   static page that runs it, with output byte-identical to the `sacrebleu` CLI.
 - **Standalone binary.** `crates/swadesh-cli` is a 650 KB executable with no Python,
-  for CI pipelines and agents. Its output is byte-identical to the sacreBLEU CLI for BLEU and chrF.
+  for CI pipelines and agents. Its output is byte-identical to the sacreBLEU CLI for BLEU, chrF and TER.
 - **Rust crate.** `swadesh-core` gives tokenizers, statistics and score arithmetic for Rust programs.
 
 ## Coverage
@@ -139,7 +139,7 @@ swadesh.PairedTest([("base", base), ("new", new)], {"BLEU": BLEU(references=[ref
 | BLEU: `ja-mecab`, `ko-mecab`, `spm`, `flores101/200`, `spBLEU-1K` | tokenized by sacreBLEU in Python, then matched natively |
 | chrF, chrF++ (all options) | native |
 | bootstrap CIs, paired bootstrap, paired approximate randomization | native kernels, sacreBLEU's statistics |
-| TER (all options: normalized, no-punct, asian support, case-sensitive) | native (tercom shifts + beam edit distance), 48–52× faster |
+| TER (all options: normalized, no-punct, asian support, case-sensitive) | native (tercom shifts + beam edit distance), 43–52× faster |
 | `-t` test-set downloads, all other CLI features | sacreBLEU (the `swadesh` Python CLI *is* the sacreBLEU CLI, accelerated) |
 
 ## Why "swadesh"?
