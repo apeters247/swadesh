@@ -7,7 +7,7 @@ import random
 
 import pytest
 import sacrebleu
-from hypothesis import given
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from fuzzsupport import budget
