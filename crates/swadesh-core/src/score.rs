@@ -202,7 +202,9 @@ pub fn chrf_f_score(stats: &[i64], order: usize, beta: i64, eps_smoothing: bool)
     let eps = 1e-16f64;
     let mut score = 0.0f64;
     let mut effective_order = 0i64;
-    let factor = (beta * beta) as f64;
+    // beta^2 in i128: an i64 product overflows (a panic in debug builds) for
+    // |beta| > 3.0e9. Identical to the i64 product wherever that did not overflow.
+    let factor = ((beta as i128) * (beta as i128)) as f64;
     let (mut avg_prec, mut avg_rec) = (0.0f64, 0.0f64);
     for i in 0..order {
         let n_hyp = stats[3 * i];
