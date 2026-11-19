@@ -92,3 +92,12 @@ def unpatch() -> None:
     for (mod, name), old in list(_PATCHED.items()):
         setattr(mod, name, old)
     _PATCHED.clear()
+
+
+def tokenize(line, tokenizer: str = "13a"):
+    """Tokenize exactly like sacreBLEU's tokenizer ``tokenizer`` (13a, intl, zh, char, none).
+    Pass a list of strings to tokenize a batch in parallel."""
+    from . import _swadesh
+    if isinstance(line, str):
+        return _swadesh.tokenize(tokenizer, line)
+    return _swadesh.tokenize_batch(tokenizer, list(line))

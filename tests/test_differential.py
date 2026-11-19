@@ -262,3 +262,31 @@ def test_py_sum_matches_builtin_sum():
             else:
                 items.append(math.log(rnd.uniform(1e-3, 100.0)))
         assert _sum_same(sum(items), swadesh._swadesh._py_sum(items)), items
+
+
+PUNCT_HEAVY = st.lists(st.sampled_from(list(".,-0123456789 a.,-é中&;'\"()$\n\t ") + ["&amp;", "<skipped>", "-\n", "&quot;"]),
+                       max_size=40).map("".join)
+
+
+def _sacre_tok(name):
+    from sacrebleu.metrics.bleu import _get_tokenizer
+    return _get_tokenizer(name)()
+
+
+@pytest.mark.parametrize("name", TOKENIZERS)
+@settings(max_examples=3000, deadline=None, suppress_health_check=list(HealthCheck))
+@given(line=st.one_of(PUNCT_HEAVY, segment))
+def test_tokenizers_string_exact(name, line):
+    ref = _sacre_tok(name)
+    assert swadesh.tokenize(line, name) == ref(line)
+
+
+def test_tokenize_batch_real_data():
+    import os
+    path = os.path.join(os.path.dirname(__file__), "..", "bench", "data", "wmt22.en-de.ref")
+    if not os.path.exists(path):
+        pytest.skip("bench data not downloaded")
+    lines = [l.rstrip("\n") for l in open(path, encoding="utf-8")]
+    for name in TOKENIZERS:
+        ref = _sacre_tok(name)
+        assert swadesh.tokenize(lines, name) == [ref(l) for l in lines]

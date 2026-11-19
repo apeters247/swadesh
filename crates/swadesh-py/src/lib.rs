@@ -368,6 +368,34 @@ fn chrf_stats_one(
     Ok(out)
 }
 
+/// Tokenize one line exactly like sacreBLEU's tokenizer of that name
+/// (`13a`, `intl`, `zh`, `char`, `none`), returning the same string.
+#[pyfunction]
+fn tokenize(name: &str, line: &str) -> PyResult<String> {
+    let mut out = String::new();
+    tokenizer(name)?.apply(line, &mut out);
+    Ok(out)
+}
+
+/// Tokenize many lines in parallel.
+#[pyfunction]
+fn tokenize_batch<'py>(py: Python<'py>, name: &str, lines: &Bound<'py, PyAny>) -> PyResult<Vec<String>> {
+    use rayon::prelude::*;
+    let tok = tokenizer(name)?;
+    let objs = as_objs(lines)?;
+    let strs: Vec<Cow<str>> = str_list(&objs, false)?;
+    let refs: Vec<&str> = strs.iter().map(|s| s.as_ref()).collect();
+    Ok(py.detach(|| {
+        refs.par_iter()
+            .map(|l| {
+                let mut o = String::new();
+                tok.apply(l, &mut o);
+                o
+            })
+            .collect()
+    }))
+}
+
 /// Private diagnostic: the `SumMode` this interpreter selects.
 #[pyfunction]
 fn _sum_mode(py: Python<'_>) -> &'static str {
@@ -417,6 +445,8 @@ fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(bleu_stats_one, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_stats_one, m)?)?;
     m.add_function(wrap_pyfunction!(bleu_matrix, m)?)?;
+    m.add_function(wrap_pyfunction!(tokenize, m)?)?;
+    m.add_function(wrap_pyfunction!(tokenize_batch, m)?)?;
     m.add("GENERATED_PYTHON", swadesh_core::tables::GENERATED_PYTHON)?;
     m.add("GENERATED_REGEX", swadesh_core::tables::GENERATED_REGEX)?;
     Ok(())

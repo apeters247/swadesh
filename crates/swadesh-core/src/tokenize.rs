@@ -156,28 +156,66 @@ pub fn tok_re_unjoined(input: &[u8], out: &mut String) {
     BUF.with(|cell| {
         let mut guard = cell.borrow_mut();
         let (b, c) = &mut *guard;
-        // pass 1: single char class
+        // pass 1: single char class -> " c ". A space maps to itself rather than
+        // "   ": spaces never take part in a later match except through
+        // adjacency, so collapsing a run of spaces cannot change any match.
         b.clear();
-        b.reserve(input.len() * 2);
-        for &x in input {
-            if is_13a_class1_b(x) {
+        b.reserve(input.len() + input.len() / 2 + 8);
+        let mut start = 0;
+        for (i, &x) in input.iter().enumerate() {
+            if x != b' ' && is_13a_class1_b(x) {
+                b.extend_from_slice(&input[start..i]);
                 b.extend_from_slice(&[b' ', x, b' ']);
-            } else {
-                b.push(x);
+                start = i + 1;
             }
         }
-        // pass 2: ([^0-9])([\.,]) -> \1 \2_
-        sub2b(b, c, |x, y| !x.is_ascii_digit() && (y == b'.' || y == b','), |x, y, o| o.extend_from_slice(&[x, b' ', y, b' ']));
-        // pass 3: ([\.,])([^0-9]) -> _\1 \2
-        sub2b(c, b, |x, y| (x == b'.' || x == b',') && !y.is_ascii_digit(), |x, y, o| o.extend_from_slice(&[b' ', x, b' ', y]));
-        // pass 4: ([0-9])(-) -> \1 \2_
-        sub2b(b, c, |x, y| x.is_ascii_digit() && y == b'-', |x, y, o| o.extend_from_slice(&[x, b' ', y, b' ']));
+        b.extend_from_slice(&input[start..]);
+        // pass 2: ([^0-9])([\.,]) -> \1 \2_   (matches can only end at '.' / ',')
+        c.clear();
+        c.reserve(b.len() + b.len() / 4 + 8);
+        let (mut copied, mut consumed) = (0usize, 0usize);
+        for p in memchr::memchr2_iter(b'.', b',', b) {
+            if p >= 1 && p - 1 >= consumed && !b[p - 1].is_ascii_digit() {
+                c.extend_from_slice(&b[copied..p - 1]);
+                c.extend_from_slice(&[b[p - 1], b' ', b[p], b' ']);
+                copied = p + 1;
+                consumed = p + 1;
+            }
+        }
+        c.extend_from_slice(&b[copied..]);
+        // pass 3: ([\.,])([^0-9]) -> _\1 \2   (matches can only start at '.' / ',')
+        b.clear();
+        b.reserve(c.len() + c.len() / 4 + 8);
+        let (mut copied, mut consumed) = (0usize, 0usize);
+        for p in memchr::memchr2_iter(b'.', b',', c) {
+            if p >= consumed && p + 1 < c.len() && !c[p + 1].is_ascii_digit() {
+                b.extend_from_slice(&c[copied..p]);
+                b.extend_from_slice(&[b' ', c[p], b' ', c[p + 1]]);
+                copied = p + 2;
+                consumed = p + 2;
+            }
+        }
+        b.extend_from_slice(&c[copied..]);
+        // pass 4: ([0-9])(-) -> \1 \2_   (matches can only end at '-')
+        c.clear();
+        c.reserve(b.len() + 8);
+        let (mut copied, mut consumed) = (0usize, 0usize);
+        for p in memchr::memchr_iter(b'-', b) {
+            if p >= 1 && p - 1 >= consumed && b[p - 1].is_ascii_digit() {
+                c.extend_from_slice(&b[copied..p - 1]);
+                c.extend_from_slice(&[b[p - 1], b' ', b'-', b' ']);
+                copied = p + 1;
+                consumed = p + 1;
+            }
+        }
+        c.extend_from_slice(&b[copied..]);
         out.clear();
         // SAFETY: only ASCII spaces were inserted, at UTF-8 character boundaries.
         out.push_str(unsafe { std::str::from_utf8_unchecked(c) });
     });
 }
 
+#[allow(dead_code)]
 #[inline(always)]
 fn sub2b(input: &[u8], out: &mut Vec<u8>, m: impl Fn(u8, u8) -> bool, emit: impl Fn(u8, u8, &mut Vec<u8>)) {
     out.clear();
