@@ -13,6 +13,9 @@ use swadesh_core::{
     BleuScoreConfig, ChrfConfig, Smooth, SumMode, TerConfig, TerError, Tokenizer,
 };
 
+/// Hypotheses and per-segment references, borrowed from Python where possible.
+type Texts<'py> = (Vec<Cow<'py, str>>, Vec<Vec<Cow<'py, str>>>);
+
 /// Strings borrowed from Python objects (or owned when lowercasing was needed).
 struct Corpus<'py> {
     hyps: Vec<Cow<'py, str>>,
@@ -133,7 +136,7 @@ fn ter_load<'py>(
     hyp_objs: &'py [Bound<'py, PyAny>],
     ref_objs: &'py [Vec<Bound<'py, PyAny>>],
     lowercase: bool,
-) -> PyResult<(Vec<Cow<'py, str>>, Vec<Vec<Cow<'py, str>>>)> {
+) -> PyResult<Texts<'py>> {
     let n = hyp_objs.len();
     let hyps = hyp_objs.iter().map(|h| ter_text(h, lowercase)).collect::<PyResult<Vec<_>>>()?;
     let mut refs: Vec<Vec<Cow<'py, str>>> = (0..n).map(|_| Vec::with_capacity(ref_objs.len())).collect();
@@ -311,11 +314,11 @@ fn chrf_sentence_scores<'py>(
 }
 
 fn f32_vec(b: &[u8]) -> Vec<f32> {
-    b.chunks_exact(4).map(|c| f32::from_ne_bytes([c[0], c[1], c[2], c[3]])).collect()
+    b.as_chunks::<4>().0.iter().map(|c| f32::from_ne_bytes(*c)).collect()
 }
 
 fn i64_vec(b: &[u8]) -> Vec<i64> {
-    b.chunks_exact(8).map(|c| i64::from_ne_bytes(c.try_into().unwrap())).collect()
+    b.as_chunks::<8>().0.iter().map(|c| i64::from_ne_bytes(*c)).collect()
 }
 
 /// Bootstrap row sums: `stats_f32[idxs].sum(1)` with numpy's exact float32

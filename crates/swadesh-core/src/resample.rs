@@ -9,7 +9,7 @@
 /// For every sample row of `idxs` (`n_samples x n`), sum the selected rows of
 /// `stats` (`n x width`, already cast to f32) sequentially in f32.
 pub fn bootstrap_sums_f32(stats: &[f32], width: usize, idxs: &[i64], n: usize) -> Vec<f32> {
-    let n_samples = if n == 0 { 0 } else { idxs.len() / n };
+    let n_samples = idxs.len().checked_div(n).unwrap_or(0);
     let mut out = vec![0f32; n_samples * width];
     crate::par::for_each_chunk(&mut out, width.max(1), |(s, acc)| {
         let row_idx = &idxs[s * n..(s + 1) * n];
@@ -29,7 +29,7 @@ pub fn bootstrap_sums_f32(stats: &[f32], width: usize, idxs: &[i64], n: usize) -
 /// Paired approximate randomization: for each trial (row of `sel`, length n),
 /// `a = sum(sel ? bl : sys)`, `b = sum(sel ? sys : bl)` (exact integers).
 pub fn ar_sums_i64(bl: &[i64], sys: &[i64], width: usize, sel: &[u8], n: usize) -> (Vec<i64>, Vec<i64>) {
-    let n_trials = if n == 0 { 0 } else { sel.len() / n };
+    let n_trials = sel.len().checked_div(n).unwrap_or(0);
     let mut a = vec![0i64; n_trials * width];
     let mut b = vec![0i64; n_trials * width];
     let fill = |out: &mut Vec<i64>, pick_bl_when: u8| {

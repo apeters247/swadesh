@@ -175,7 +175,7 @@ pub fn tok_re_unjoined(input: &[u8], out: &mut String) {
         c.reserve(b.len() + b.len() / 4 + 8);
         let (mut copied, mut consumed) = (0usize, 0usize);
         for p in memchr::memchr2_iter(b'.', b',', b) {
-            if p >= 1 && p - 1 >= consumed && !b[p - 1].is_ascii_digit() {
+            if p > consumed && !b[p - 1].is_ascii_digit() {
                 c.extend_from_slice(&b[copied..p - 1]);
                 c.extend_from_slice(&[b[p - 1], b' ', b[p], b' ']);
                 copied = p + 1;
@@ -201,7 +201,7 @@ pub fn tok_re_unjoined(input: &[u8], out: &mut String) {
         c.reserve(b.len() + 8);
         let (mut copied, mut consumed) = (0usize, 0usize);
         for p in memchr::memchr_iter(b'-', b) {
-            if p >= 1 && p - 1 >= consumed && b[p - 1].is_ascii_digit() {
+            if p > consumed && b[p - 1].is_ascii_digit() {
                 c.extend_from_slice(&b[copied..p - 1]);
                 c.extend_from_slice(&[b[p - 1], b' ', b'-', b' ']);
                 copied = p + 1;

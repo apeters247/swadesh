@@ -109,7 +109,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4.2.2
-      - uses: dtolnay/rust-toolchain@1.90.0
+      - uses: dtolnay/rust-toolchain@stable
       - uses: rust-lang/crates-io-auth-action@v1
         id: auth
       - run: cargo publish -p swadesh-core --locked
