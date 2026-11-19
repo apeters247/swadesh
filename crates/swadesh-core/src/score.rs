@@ -236,3 +236,70 @@ pub fn chrf_f_score(stats: &[i64], order: usize, beta: i64, eps_smoothing: bool)
         0.0
     }
 }
+
+/// sacreBLEU's `BLEU._compute_score_from_stats` applied to a **float32 numpy
+/// row** (as in bootstrap resampling), under NumPy >= 2 promotion rules
+/// (NEP 50: a Python scalar combined with a `np.float32` is cast to float32 and
+/// the operation happens in float32). Returns the score (a Python float).
+///
+/// Mirrors `BLEU.compute_bleu` line by line:
+/// * `sys_len = int(stats[0])`, `ref_len = int(stats[1])`, BP in float64;
+/// * add-k: `correct[n] += k` and `total[n] += k` in float32;
+/// * exp:   `100. / (smooth_mteval * total[n])`   -> float32 ops;
+/// * floor: `100. * k / total[n]` -> `(100.*k)` in float64, then float32 division;
+/// * else:  `100. * correct[n] / total[n]`        -> float32 ops;
+/// * `my_log(p)` = `math.log(float(p))` in float64, summed with CPython `sum()`.
+pub fn compute_bleu_np2_f32(stats: &[f32], cfg: &BleuScoreConfig) -> f64 {
+    let n = cfg.max_order;
+    let sys_len = stats[0].trunc() as f64;
+    let ref_len = stats[1].trunc() as f64;
+    let mut correct: Vec<f32> = stats[2..2 + n].to_vec();
+    let mut total: Vec<f32> = stats[2 + n..2 + 2 * n].to_vec();
+    let mut bp = 1.0f64;
+    if sys_len < ref_len {
+        bp = if sys_len > 0.0 { (1.0 - ref_len / sys_len).exp() } else { 0.0 };
+    }
+    if !correct.iter().any(|&c| c != 0.0) {
+        return 0.0;
+    }
+    // precisions start as Python 0.0 floats; set entries become float32.
+    let mut precisions = vec![0.0f64; n];
+    let mut smooth_mteval = 1.0f64;
+    let mut eff_order = n;
+    let sv = cfg.smooth_value;
+    for k in 1..=n {
+        if cfg.smooth == Smooth::AddK && k > 1 {
+            correct[k - 1] += sv as f32;
+            total[k - 1] += sv as f32;
+        }
+        if total[k - 1] == 0.0 {
+            break;
+        }
+        if cfg.effective_order {
+            eff_order = k;
+        }
+        if correct[k - 1] == 0.0 {
+            match cfg.smooth {
+                Smooth::Exp => {
+                    smooth_mteval *= 2.0;
+                    let denom = (smooth_mteval as f32) * total[k - 1];
+                    precisions[k - 1] = (100.0f32 / denom) as f64;
+                }
+                Smooth::Floor => {
+                    let num = (100.0 * sv) as f32;
+                    precisions[k - 1] = (num / total[k - 1]) as f64;
+                }
+                _ => {}
+            }
+        } else {
+            precisions[k - 1] = ((100.0f32 * correct[k - 1]) / total[k - 1]) as f64;
+        }
+    }
+    let logs: Vec<PyNum> = precisions[..eff_order].iter().map(|&p| my_log(p)).collect();
+    let s = py_sum(&logs, cfg.sum_mode);
+    let mean = match s {
+        PyNum::Int(i) => (i as f64) / (eff_order as f64),
+        PyNum::Float(f) => f / (eff_order as f64),
+    };
+    bp * mean.exp()
+}

@@ -341,6 +341,31 @@ fn bootstrap_sums_f32_seeded<'py>(py: Python<'py>, stats: &[u8], width: usize, n
     PyBytes::new(py, bytes)
 }
 
+/// BLEU scores of float32 bootstrap rows under NumPy >= 2 semantics.
+#[pyfunction]
+#[pyo3(signature = (sums, width, max_order, smooth_method, smooth_value, effective_order))]
+fn bleu_scores_np2_f32(
+    py: Python<'_>,
+    sums: &[u8],
+    width: usize,
+    max_order: usize,
+    smooth_method: &str,
+    smooth_value: Option<f64>,
+    effective_order: bool,
+) -> PyResult<Vec<f64>> {
+    let smooth = Smooth::from_name(smooth_method)
+        .ok_or_else(|| PyValueError::new_err(format!("unknown smooth_method {smooth_method:?}")))?;
+    let cfg = BleuScoreConfig {
+        smooth,
+        smooth_value: smooth_value.unwrap_or(smooth.default_value()),
+        effective_order,
+        max_order,
+        sum_mode: sum_mode(py),
+    };
+    let v = f32_vec(sums);
+    Ok(v.chunks(width.max(1)).map(|row| swadesh_core::score::compute_bleu_np2_f32(row, &cfg)).collect())
+}
+
 /// Paired approximate randomization sums (exact int64). Returns (a, b) bytes.
 #[pyfunction]
 fn ar_sums_i64<'py>(
@@ -541,6 +566,7 @@ fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(bootstrap_sums_f32, m)?)?;
     m.add_function(wrap_pyfunction!(ar_sums_i64, m)?)?;
     m.add_function(wrap_pyfunction!(bootstrap_sums_f32_seeded, m)?)?;
+    m.add_function(wrap_pyfunction!(bleu_scores_np2_f32, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_matrix, m)?)?;
     m.add_function(wrap_pyfunction!(bleu_stats_one, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_stats_one, m)?)?;

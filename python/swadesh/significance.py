@@ -53,8 +53,41 @@ def _bootstrap_resample(stats, metric, n_samples: int = 1000):
         rng = np.random.default_rng(_seed)
         idxs = rng.choice(n, size=(n_samples, n), replace=True)
         sums = _resampled_sums(stats, idxs)
+    native = _native_bleu_scores(metric, sums)
+    if native is not None:
+        return str(seed).lower(), native
     scores = [metric._compute_score_from_stats(_s) for _s in sums]
     return str(seed).lower(), scores
+
+
+class _Score:
+    """Minimal stand-in for a bootstrap `Score`: callers only read `.score`."""
+
+    __slots__ = ("score",)
+
+    def __init__(self, score):
+        self.score = score
+
+
+_NUMPY2 = int(np.__version__.split(".")[0]) >= 2
+
+
+def _native_bleu_scores(metric, sums: np.ndarray):
+    """Score float32 bootstrap rows natively for plain BLEU under NumPy >= 2,
+    where the float32/Python-scalar promotion rules (NEP 50) are fixed and
+    emulated exactly in Rust. Returns None to fall back to sacreBLEU's code."""
+    from sacrebleu.metrics.bleu import BLEU as _SB
+
+    if not _NUMPY2 or not isinstance(metric, _SB):
+        return None
+    if type(metric)._compute_score_from_stats is not _SB._compute_score_from_stats \
+            or type(metric).compute_bleu is not _SB.compute_bleu:
+        return None
+    sv = metric.smooth_value
+    vals = _swadesh.bleu_scores_np2_f32(
+        np.ascontiguousarray(sums, dtype=np.float32).tobytes(), sums.shape[1], metric.max_ngram_order,
+        metric.smooth_method, None if sv is None else float(sv), bool(metric.effective_order))
+    return [_Score(v) for v in vals]
 
 
 def _ar_shuffle(bl_stats, sys_stats, pos_sel):

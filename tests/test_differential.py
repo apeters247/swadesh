@@ -302,3 +302,26 @@ def test_bootstrap_seeds(seed, monkeypatch):
         assert a.score == b.score
     else:
         assert str(a) == str(b) and a._mean == b._mean and a._ci == b._ci
+
+
+@pytest.mark.skipif(int(__import__("numpy").__version__.split(".")[0]) < 2, reason="NumPy >= 2 path")
+@settings(max_examples=2000, deadline=None, suppress_health_check=list(HealthCheck))
+@given(data=st.data())
+def test_native_bootstrap_bleu_scoring_rowwise(data):
+    import numpy as np
+    from swadesh.significance import _native_bleu_scores
+    order = data.draw(st.integers(1, 6))
+    smooth = data.draw(st.sampled_from(["exp", "floor", "add-k", "none"]))
+    sv = data.draw(st.sampled_from([None, 0.1, 0.5, 1, 2, 0.01]))
+    eff = data.draw(st.booleans())
+    big = data.draw(st.sampled_from([10, 1000, 2**24 + 7, 2**30]))
+    rows = []
+    for _ in range(data.draw(st.integers(1, 8))):
+        total = [data.draw(st.integers(0, big)) for _ in range(order)]
+        correct = [data.draw(st.integers(0, t)) for t in total]
+        rows.append([data.draw(st.integers(0, big)), data.draw(st.integers(0, big))] + correct + total)
+    sums = np.array(rows, dtype=np.float32)
+    m = sacrebleu.BLEU(smooth_method=smooth, smooth_value=sv, max_ngram_order=order, effective_order=eff)
+    ours = [s.score for s in _native_bleu_scores(m, sums)]
+    theirs = [m._compute_score_from_stats(r.copy()).score for r in sums]
+    assert ours == theirs
