@@ -1,0 +1,10 @@
+[package]
+name = "swadesh-core"
+description = "Bit-exact, parallel sacreBLEU (BLEU, chrF, chrF++) in Rust"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+rayon = "1"

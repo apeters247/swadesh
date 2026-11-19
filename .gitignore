@@ -1,0 +1,10 @@
+target/
+.venv*/
+bench/.sacrebleu/
+bench/data/
+__pycache__/
+*.so
+.hypothesis/
+.pytest_cache/
+*.egg-info/
+dist/

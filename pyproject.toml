@@ -1,0 +1,28 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "swadesh"
+description = "Bit-exact sacreBLEU, 20-200x faster. Drop-in BLEU / chrF / chrF++ in Rust."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+dependencies = ["sacrebleu==2.6.0", "numpy>=1.24"]
+dynamic = ["version"]
+classifiers = [
+  "Programming Language :: Rust",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Text Processing :: Linguistic",
+]
+keywords = ["bleu", "chrf", "sacrebleu", "machine-translation", "evaluation", "nlp", "llm"]
+
+[project.scripts]
+swadesh = "swadesh.cli:main"
+
+[tool.maturin]
+manifest-path = "crates/swadesh-py/Cargo.toml"
+python-source = "python"
+module-name = "swadesh._swadesh"
+features = ["pyo3/extension-module"]
