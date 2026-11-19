@@ -134,17 +134,17 @@ yet (section 3.6).
 ### 3.1 The `zh` tokenizer's two-character ranges
 
 sacreBLEU's `TokenizerZh` keeps a table of Unicode ranges as Python strings. Two
-of its entries are written as `u' 0'` and `u'⾀0'`. Those are not single
-code points. Python reads ` ` as one character, so `u' 0'` is the
-two-character string `" " + "0"`. The same holds for `u'⾀0'`.
+of its entries are written as `u'\u20000'` and `u'\u2f800'`. Those are not single
+code points. Python reads `\u2000` as one character, so `u'\u20000'` is the
+two-character string `"\u2000" + "0"`. The same holds for `u'\u2f800'`.
 
 The membership test compares a one-character string against each range with
 `<=` and `>=`. A one-character string is ordered before any longer string with the
 same prefix, so the two-character bounds act as range endpoints just outside
 the codepoints they name:
 
-- the lower bound `" " + "0"` admits U+2001 and above, and excludes U+2000;
-- the upper bound `"⩭" + "6"` admits U+2A6D and below, and excludes U+2A6E.
+- the lower bound `"\u2000" + "0"` admits U+2001 and above, and excludes U+2000;
+- the upper bound `"\u2a6d" + "6"` admits U+2A6D and below, and excludes U+2A6E.
 
 The result is an effective range of U+2001 to U+2A6D. Astral code points are
 outside it, because U+20000 is numerically greater than U+2A6D. The same

@@ -52,7 +52,7 @@ signatures and CLI output are byte-identical. It is 11–65× faster on one core
 24-thread Ryzen 119× for corpus BLEU and 338× for chrF.
 
 Getting to bit-identical was the interesting part:
-- sacreBLEU's Chinese tokenizer has `u' 0'` in a range table, which is a 2-char string,
+- sacreBLEU's Chinese tokenizer has `u'\u20000'` in a range table, which is a 2-char string,
   so U+2001–U+2A6D (arrows, math, currency…) count as "Chinese". We reproduce it.
 - CPython 3.12 changed `sum()` of floats to compensated summation, and 3.14 changed it again,
   so sacreBLEU's own BLEU scores differ in the last bits between Python versions (15.8% of
@@ -95,7 +95,7 @@ Same BLEU/chrF scores (==), same signatures, same CLI. 11–65× faster per core
 MBR decoding (n² comparisons), bootstrap significance tests. MBR over 128 candidates:
 4.9 s → 31 ms.
 
-3/ "Bit-exact" meant keeping sacreBLEU's quirks. Its Chinese tokenizer has `u' 0'`, which in
+3/ "Bit-exact" meant keeping sacreBLEU's quirks. Its Chinese tokenizer has `u'\u20000'`, which in
 Python is TWO characters, so arrows, math symbols and € count as Chinese.
 Every published tok:zh score includes this, so we kept it.
 

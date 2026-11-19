@@ -1,11 +1,9 @@
 # swadesh
 
 **sacreBLEU, bit for bit, in Rust.** BLEU, chrF, chrF++ and TER with the same scores, the same signatures
-and the same CLI, and much faster:
-on one core 11–22× for BLEU and 29–65× for chrF; on a multi-core machine up to 119× for
-corpus BLEU and 379× for chrF.
+and the same CLI, and much faster: 22–45× on one core and 125–318× on a 24-thread desktop for BLEU, chrF and TER.
 
-<p align="center"><img src="docs/img/benchmark.svg" alt="swadesh vs sacreBLEU: BLEU 119x, chrF 338x, chrF++ 353x faster on 100k segments, identical scores" width="720"></p>
+<p align="center"><img src="docs/img/benchmark.svg" alt="swadesh vs sacreBLEU on 100k segments: BLEU 125x, chrF 299x, chrF++ 291x faster, identical scores" width="720"></p>
 
 ```bash
 pip install swadesh
@@ -54,8 +52,8 @@ python -m swadesh.verify -r ref.txt -i hyp.txt
 
 Bit-exact means reproducing sacreBLEU's quirks too. Some of them:
 
-* The `zh` tokenizer's range table contains `u' 0'`, which in Python is the
-  two-character string `' ' + '0'`. String comparison therefore treats
+* The `zh` tokenizer's range table contains `u'\u20000'`, which in Python is the
+  two-character string `'\u2000' + '0'`. String comparison therefore treats
   U+2001–U+2A6D (general punctuation, arrows, math symbols…) as "Chinese characters". swadesh does too.
 * The `intl` tokenizer's `\p{P}`/`\p{S}`/`\p{N}` classes come from tables generated from
   the `regex` module itself, and Python's `str.split()` whitespace set is reproduced exactly.
@@ -73,29 +71,23 @@ How this works is described in [docs/how-its-exact.md](docs/how-its-exact.md).
 
 Hypotheses are perturbed WMT22 en-de references (word drops, swaps and reversals, fixed seed).
 Every swadesh result below was checked `==` against sacreBLEU 2.6.0 on the same machine.
-Times are best of 3 (corpus) or a single run (sentence-level and bootstrap).
+Times are best of 3 (BLEU/chrF corpus) or a single run (TER, sentence-level, bootstrap).
 Source: [`bench/results/SUMMARY.md`](bench/results/SUMMARY.md) · reproduce with `bench/get_data.sh && python bench/bench.py`.
 
-**AMD Ryzen 9 7900X (24 threads), 100k segments**
+**AMD Ryzen 9 7900X, idle machine** (`bench/results/final-troy1-*.json`)
 
-| | sacreBLEU | swadesh | speedup |
-|---|---:|---:|---:|
-| corpus BLEU | 8.44 s | 0.071 s | **119×** |
-| corpus chrF | 27.96 s | 0.083 s | **338×** |
-| corpus chrF++ | 29.84 s | 0.085 s | **353×** |
-| sentence BLEU ×20k | 1.12 s | 0.011 s | **100×** |
-| sentence chrF ×20k | 3.07 s | 0.014 s | **213×** |
+| | sacreBLEU | swadesh, 24 threads | speedup | swadesh, 1 core | speedup |
+|---|---:|---:|---:|---:|---:|
+| corpus BLEU (100k) | 5.79 s | 0.046 s | **125×** | | 25.7× (20k) |
+| corpus chrF (100k) | 17.94 s | 0.060 s | **299×** | | 44.9× (20k) |
+| corpus chrF++ (100k) | 20.66 s | 0.071 s | **291×** | | 36.0× (20k) |
+| corpus TER (10k) | 6.34 s | 0.038 s | **165×** | 0.165 s | 38.8× |
+| sentence BLEU ×20k | 0.97 s | 0.0072 s | **134×** | 0.044 s | 22.5× |
+| sentence chrF ×20k | 2.71 s | 0.0085 s | **318×** | 0.073 s | 37.3× |
+| BLEU + 1000 bootstrap resamples (5k) | 0.48 s | 0.015 s | **31×** | 0.036 s | 13.3× |
 
-**Single core (`RAYON_NUM_THREADS=1`), 20k segments**
-
-| | Ryzen 9 7900X | ARM Cortex-X925 (GX10) | Apple M4 |
-|---|---:|---:|---:|
-| corpus BLEU | 22.1× | 16.4× | 14.5× |
-| corpus chrF | 54.4× | 65.5× | 30.3× |
-| corpus chrF++ | 41.6× | 57.9× | 28.9× |
-| sentence BLEU | 15.0× | 10.7× | 14.0× |
-| sentence chrF | 33.5× | 39.6× | 37.3× |
-| BLEU + 1000 bootstrap resamples (5k) | 11.3× | 9.8× | 6.8× |
+Earlier builds were also benchmarked on an ARM Cortex-X925 (GX10, up to 379× on chrF) and an
+Apple M4 (up to 242×); see [`bench/results/SUMMARY.md`](bench/results/SUMMARY.md).
 
 The corpus repeats the 2,037 WMT22 references, which helps sacreBLEU's tokenizer
 `lru_cache`, so these numbers understate the speedup on non-repetitive data.
@@ -139,7 +131,7 @@ swadesh.PairedTest([("base", base), ("new", new)], {"BLEU": BLEU(references=[ref
 | BLEU: `ja-mecab`, `ko-mecab`, `spm`, `flores101/200`, `spBLEU-1K` | tokenized by sacreBLEU in Python, then matched natively |
 | chrF, chrF++ (all options) | native |
 | bootstrap CIs, paired bootstrap, paired approximate randomization | native kernels, sacreBLEU's statistics |
-| TER (all options: normalized, no-punct, asian support, case-sensitive) | native (tercom shifts + beam edit distance), 43–52× faster |
+| TER (all options: normalized, no-punct, asian support, case-sensitive) | native (tercom shifts + beam edit distance) |
 | `-t` test-set downloads, all other CLI features | sacreBLEU (the `swadesh` Python CLI *is* the sacreBLEU CLI, accelerated) |
 
 ## Why "swadesh"?

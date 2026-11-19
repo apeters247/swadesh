@@ -45,13 +45,13 @@ sacreBLEU's Chinese tokenizer decides what counts as a Chinese character using a
 Two of the entries look like this:
 
 ```python
-(u' 0', u'⩭6'),  # (UTF16) CJK Unified Ideographs Extension B, release 3.1
-(u'⾀0', u'⾡d'),  # (UTF16) CJK Compatibility Supplement, release 3.1
+(u'\u20000', u'\u2a6d6'),  # (UTF16) CJK Unified Ideographs Extension B, release 3.1
+(u'\u2f800', u'\u2fa1d'),  # (UTF16) CJK Compatibility Supplement, release 3.1
 ```
 
-Python's `\u` escape takes exactly four hex digits, so `u' 0'` is the two-character string
-`' ' + '0'`. The check is `start <= char <= end` on strings, so for a single
-character `c` it becomes `c > ' ' and c <= '⩭'`. The tokenizer therefore treats **U+2001–U+2A6D**
+Python's `\u` escape takes exactly four hex digits, so `u'\u20000'` is the two-character string
+`'\u2000' + '0'`. The check is `start <= char <= end` on strings, so for a single
+character `c` it becomes `c > '\u2000' and c <= '\u2a6d'`. The tokenizer therefore treats **U+2001–U+2A6D**
 as Chinese characters: general punctuation, currency symbols, arrows, mathematical operators,
 box drawing. Every `€` or `→` in a `zh`-tokenized hypothesis is split out as if it were a Han character.
 
