@@ -96,10 +96,23 @@ pub fn bootstrap_sums_f32_seeded(stats: &[f32], width: usize, n: usize, n_sample
     }
     let mut rng = crate::nprng::default_rng(seed);
     #[cfg(feature = "parallel")]
-    if rayon::current_num_threads() > 1 {
-        // Draw sequentially (the stream is inherently serial), sum in parallel.
-        let idxs = rng.integers(0, n as i64, n_samples * n);
-        return bootstrap_sums_f32(stats, width, &idxs, n);
+    if crate::par::num_threads() > 1 {
+        // Draw sequentially (the stream is inherently serial), sum in parallel,
+        // in batches of at most MAX_IDX indices so memory stays bounded
+        // (a 10M-segment corpus x 1000 resamples would otherwise need 80 GB).
+        const MAX_IDX: usize = 1 << 24;
+        let batch = (MAX_IDX / n).max(1);
+        let mut out = Vec::with_capacity(n_samples * width);
+        let mut done = 0;
+        let mut idxs: Vec<i64> = Vec::with_capacity(batch.min(n_samples) * n);
+        while done < n_samples {
+            let rows = batch.min(n_samples - done);
+            idxs.clear();
+            idxs.extend((0..rows * n).map(|_| rng.next_below(n as u64) as i64));
+            out.extend(bootstrap_sums_f32(stats, width, &idxs, n));
+            done += rows;
+        }
+        return out;
     }
     // Single thread: fuse drawing and summing; no index matrix at all.
     let mut out = vec![0f32; n_samples * width];

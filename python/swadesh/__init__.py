@@ -113,4 +113,8 @@ def __getattr__(name):
         from .significance import PairedTest
 
         return PairedTest
+    if name in ("significance", "rewards", "verify", "mcp_server"):
+        import importlib
+
+        return importlib.import_module(f".{name}", __name__)
     raise AttributeError(f"module 'swadesh' has no attribute {name!r}")
