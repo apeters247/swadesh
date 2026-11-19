@@ -95,6 +95,13 @@ def _matrix(buf: bytes, n: int, width: int) -> np.ndarray:
     return np.frombuffer(buf, dtype=np.int64).reshape(n, width).copy()
 
 
+def _set_num_refs_like_loop(metric, streams, n):
+    """``sentence_scores`` is defined as a loop of ``sentence_score`` calls, and each of
+    those sets ``num_refs`` to the segment's number of references; leave the same state."""
+    if n:
+        metric.num_refs = sum(1 for s in streams if s[n - 1] is not None)
+
+
 class _FastMixin:
     """Shared plumbing between the accelerated metrics."""
 
@@ -243,11 +250,13 @@ class BLEU(_FastMixin, _SacreBLEU):
         streams = _normalize_refs(references)
         hypotheses, streams = _truncate(hypotheses, streams)
         hyps, streams, tok, lc, _ = self._prepare(hypotheses, streams)
-        return _swadesh.bleu_sentence_scores(
+        out = _swadesh.bleu_sentence_scores(
             hyps, streams, tok, lc, self.max_ngram_order,
             self.smooth_method, None if self.smooth_value is None else float(self.smooth_value),
             bool(self.effective_order),
         )
+        _set_num_refs_like_loop(self, streams, len(hyps))
+        return out
 
     def pairwise(self, candidates: Sequence[str], references: Optional[Sequence[str]] = None) -> np.ndarray:
         """Sentence-BLEU matrix ``M[i, j] = sentence_score(candidates[i], [references[j]]).score``.
@@ -326,7 +335,9 @@ class CHRF(_FastMixin, _SacreCHRF):
         """Sentence-level chrF for every segment, computed in parallel."""
         streams = _normalize_refs(references)
         hypotheses, streams = _truncate(hypotheses, streams)
-        return _swadesh.chrf_sentence_scores(hypotheses, streams, *self._args())
+        out = _swadesh.chrf_sentence_scores(hypotheses, streams, *self._args())
+        _set_num_refs_like_loop(self, streams, len(hypotheses))
+        return out
 
     def pairwise(self, candidates: Sequence[str], references: Optional[Sequence[str]] = None) -> np.ndarray:
         """chrF matrix ``M[i, j] = sentence_score(candidates[i], [references[j]]).score``.

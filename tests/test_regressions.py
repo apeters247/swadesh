@@ -10,12 +10,6 @@ import sacrebleu
 import swadesh
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="BLEU.sentence_scores() (batch) does not update num_refs; sacreBLEU's per-segment "
-           "sentence_score() sets it to the non-None reference count of the last segment, so "
-           "get_signature() differs afterwards. The scores themselves match.",
-)
 def test_sentence_scores_signature_state_matches_sacrebleu():
     hyps = ["a b", "c d"]
     refs = [["a b", "c d"], [None, "c d"]]
