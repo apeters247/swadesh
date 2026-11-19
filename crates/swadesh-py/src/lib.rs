@@ -132,7 +132,7 @@ fn bleu_stats<'py>(
     Ok((i64_bytes(py, &stats), hs.len(), width, c.nrefs_min, c.nrefs_max, c.tok_count))
 }
 
-/// Returns (stats_bytes, n_rows, width, nrefs_min, nrefs_max).
+/// Returns (stats_bytes, n_rows, width, nrefs_min, nrefs_max, tok_count).
 #[pyfunction]
 #[pyo3(signature = (hyps, refs, char_order, word_order, beta, lowercase, whitespace, eps_smoothing))]
 #[allow(clippy::too_many_arguments)]
@@ -146,7 +146,7 @@ fn chrf_stats<'py>(
     lowercase: bool,
     whitespace: bool,
     eps_smoothing: bool,
-) -> PyResult<(Bound<'py, PyBytes>, usize, usize, usize, usize)> {
+) -> PyResult<(Bound<'py, PyBytes>, usize, usize, usize, usize, usize)> {
     let hyp_objs = as_objs(hyps)?;
     let ref_objs = ref_streams(refs)?;
     let c = load(&hyp_objs, &ref_objs, lowercase)?;
@@ -155,7 +155,7 @@ fn chrf_stats<'py>(
     let cfg = ChrfConfig { char_order, word_order, beta, whitespace, eps_smoothing };
     let stats = py.detach(|| chrf_corpus_stats(&cfg, &hs, &rs));
     let width = 3 * (char_order + word_order);
-    Ok((i64_bytes(py, &stats), hs.len(), width, c.nrefs_min, c.nrefs_max))
+    Ok((i64_bytes(py, &stats), hs.len(), width, c.nrefs_min, c.nrefs_max, c.tok_count))
 }
 
 /// Segment-level BLEU for many (hyp, refs) pairs at once. Bit-identical to

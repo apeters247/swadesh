@@ -218,9 +218,9 @@ class CHRF(_FastMixin, _SacreCHRF):
     def _extract_corpus_statistics(self, hypotheses: Sequence[str], references) -> Any:
         streams = self._resolve_refs(references)
         hypotheses, streams = _truncate(hypotheses, streams)
+        buf, n, width, _nmin, _nmax, tok_count = _swadesh.chrf_stats(hypotheses, streams, *self._args())
         if not self._force:
-            _tok_warning(sum(1 for h in hypotheses if h.endswith(" .")))
-        buf, n, width, _nmin, _nmax = _swadesh.chrf_stats(hypotheses, streams, *self._args())
+            _tok_warning(tok_count)
         return _matrix(buf, n, width)
 
     def sentence_score(self, hypothesis: str, references: Sequence[str]):

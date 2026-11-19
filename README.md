@@ -123,6 +123,9 @@ BLEU().corpus_score(hyps, [refs], n_bootstrap=1000)
 swadesh.PairedTest([("base", base), ("new", new)], {"BLEU": BLEU(references=[refs])}, None, test_type="bs")()
 ```
 
+- **Exact tokenizers.** `swadesh.tokenize(lines, "13a")` returns sacreBLEU's tokenization, in parallel.
+- **In the browser.** The CLI compiles to a 320 KB WebAssembly module; `docs/playground/` is a
+  static page that runs it, with output byte-identical to the `sacrebleu` CLI.
 - **Standalone binary.** `crates/swadesh-cli` is a 650 KB executable with no Python,
   for CI pipelines and agents. Its output is byte-identical to the sacreBLEU CLI for BLEU and chrF.
 - **Rust crate.** `swadesh-core` gives tokenizers, statistics and score arithmetic for Rust programs.
