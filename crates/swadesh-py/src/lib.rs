@@ -324,21 +324,33 @@ fn i64_vec(b: &[u8]) -> Vec<i64> {
 /// Bootstrap row sums: `stats_f32[idxs].sum(1)` with numpy's exact float32
 /// summation order, without materializing the 3-D tensor. Returns f32 bytes.
 #[pyfunction]
-fn bootstrap_sums_f32<'py>(py: Python<'py>, stats: &[u8], width: usize, idxs: &[u8], n: usize) -> Bound<'py, PyBytes> {
+fn bootstrap_sums_f32<'py>(py: Python<'py>, stats: &[u8], width: usize, idxs: &[u8], n: usize) -> PyResult<Bound<'py, PyBytes>> {
     let s = f32_vec(stats);
     let ix = i64_vec(idxs);
+    // `n` is the length of each index row (the resampled corpus size); the
+    // stats table may have a different number of rows (sacreBLEU allows that).
+    if width == 0 || n == 0 || stats.len() % (width * 4) != 0 || idxs.len() % 8 != 0 || ix.len() % n != 0 {
+        return Err(PyValueError::new_err("bootstrap_sums_f32: stats must be rows x width float32 and idxs k x n int64"));
+    }
+    let rows = stats.len() / (width * 4);
+    if ix.iter().any(|&i| i < 0 || i as usize >= rows) {
+        return Err(PyValueError::new_err("bootstrap_sums_f32: index out of range"));
+    }
     let out = py.detach(|| swadesh_core::resample::bootstrap_sums_f32(&s, width, &ix, n));
     let bytes: &[u8] = unsafe { std::slice::from_raw_parts(out.as_ptr() as *const u8, out.len() * 4) };
-    PyBytes::new(py, bytes)
+    Ok(PyBytes::new(py, bytes))
 }
 
 /// Seeded bootstrap row sums: draws `default_rng(seed).choice(n, (n_samples, n))` natively.
 #[pyfunction]
-fn bootstrap_sums_f32_seeded<'py>(py: Python<'py>, stats: &[u8], width: usize, n: usize, n_samples: usize, seed: u128) -> Bound<'py, PyBytes> {
+fn bootstrap_sums_f32_seeded<'py>(py: Python<'py>, stats: &[u8], width: usize, n: usize, n_samples: usize, seed: u128) -> PyResult<Bound<'py, PyBytes>> {
+    if width == 0 || n == 0 || stats.len() != n * width * 4 {
+        return Err(PyValueError::new_err("bootstrap_sums_f32_seeded: stats must be n x width float32"));
+    }
     let s = f32_vec(stats);
     let out = py.detach(|| swadesh_core::resample::bootstrap_sums_f32_seeded(&s, width, n, n_samples, seed));
     let bytes: &[u8] = unsafe { std::slice::from_raw_parts(out.as_ptr() as *const u8, out.len() * 4) };
-    PyBytes::new(py, bytes)
+    Ok(PyBytes::new(py, bytes))
 }
 
 /// BLEU scores of float32 bootstrap rows under NumPy >= 2 semantics.
@@ -362,8 +374,27 @@ fn bleu_scores_np2_f32(
         max_order,
         sum_mode: sum_mode(py),
     };
+    if max_order == 0 || width != 2 + 2 * max_order || sums.len() % (4 * width) != 0 {
+        return Err(PyValueError::new_err("bleu_scores_np2_f32: rows must have 2 + 2 * max_order float32 values"));
+    }
     let v = f32_vec(sums);
-    Ok(v.chunks(width.max(1)).map(|row| swadesh_core::score::compute_bleu_np2_f32(row, &cfg)).collect())
+    Ok(v.chunks(width).map(|row| swadesh_core::score::compute_bleu_np2_f32(row, &cfg)).collect())
+}
+
+/// chrF scores of float32 bootstrap rows under NumPy >= 2 semantics.
+/// Returns (values, is_float32 flags).
+#[pyfunction]
+fn chrf_scores_np2_f32(sums: &[u8], width: usize, order: usize, beta: i64, eps_smoothing: bool) -> PyResult<(Vec<f64>, Vec<bool>)> {
+    if order == 0 || width != 3 * order || sums.len() % (4 * width) != 0 {
+        return Err(PyValueError::new_err("chrf_scores_np2_f32: rows must have 3 * order float32 values"));
+    }
+    let v = f32_vec(sums);
+    Ok(v.chunks(width)
+        .map(|row| match swadesh_core::score::chrf_f_score_np2_f32(row, order, beta, eps_smoothing) {
+            swadesh_core::score::NpVal::F32(x) => (x as f64, true),
+            swadesh_core::score::NpVal::Py(x) => (x, false),
+        })
+        .unzip())
 }
 
 /// Paired approximate randomization sums (exact int64). Returns (a, b) bytes.
@@ -375,10 +406,13 @@ fn ar_sums_i64<'py>(
     width: usize,
     sel: &[u8],
     n: usize,
-) -> (Bound<'py, PyBytes>, Bound<'py, PyBytes>) {
+) -> PyResult<(Bound<'py, PyBytes>, Bound<'py, PyBytes>)> {
+    if width == 0 || n == 0 || bl.len() != n * width * 8 || sys.len() != bl.len() || sel.len() % n != 0 {
+        return Err(PyValueError::new_err("ar_sums_i64: bl and sys must be n x width int64 and sel k x n"));
+    }
     let (b1, s1) = (i64_vec(bl), i64_vec(sys));
     let (a, b) = py.detach(|| swadesh_core::resample::ar_sums_i64(&b1, &s1, width, sel, n));
-    (i64_bytes(py, &a), i64_bytes(py, &b))
+    Ok((i64_bytes(py, &a), i64_bytes(py, &b)))
 }
 
 fn str_list<'py>(objs: &'py [Bound<'py, PyAny>], lowercase: bool) -> PyResult<Vec<Cow<'py, str>>> {
@@ -497,7 +531,7 @@ fn tokenize_batch<'py>(py: Python<'py>, name: &str, lines: &Bound<'py, PyAny>) -
     let objs = as_objs(lines)?;
     let strs: Vec<Cow<str>> = str_list(&objs, false)?;
     let refs: Vec<&str> = strs.iter().map(|s| s.as_ref()).collect();
-    Ok(py.detach(|| {
+    Ok(py.detach(|| swadesh_core::par::install(|| {
         refs.par_iter()
             .map(|l| {
                 let mut o = String::new();
@@ -505,7 +539,7 @@ fn tokenize_batch<'py>(py: Python<'py>, name: &str, lines: &Bound<'py, PyAny>) -
                 o
             })
             .collect()
-    }))
+    })))
 }
 
 /// Private diagnostic: cost of borrowing UTF-8 from a list of str.
@@ -567,6 +601,7 @@ fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(ar_sums_i64, m)?)?;
     m.add_function(wrap_pyfunction!(bootstrap_sums_f32_seeded, m)?)?;
     m.add_function(wrap_pyfunction!(bleu_scores_np2_f32, m)?)?;
+    m.add_function(wrap_pyfunction!(chrf_scores_np2_f32, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_matrix, m)?)?;
     m.add_function(wrap_pyfunction!(bleu_stats_one, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_stats_one, m)?)?;

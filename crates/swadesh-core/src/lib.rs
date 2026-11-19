@@ -63,10 +63,12 @@ pub fn ter_corpus_stats(cfg: &TerConfig, hyps: &[&str], refs: &[Vec<&str>]) -> R
     #[cfg(feature = "parallel")]
     let rows: Vec<[f64; 2]> = {
         use rayon::prelude::*;
-        (0..hyps.len())
-            .into_par_iter()
-            .map(|i| ter_segment(cfg, hyps[i], &refs[i]))
-            .collect::<Result<_, _>>()?
+        par::install(|| {
+            (0..hyps.len())
+                .into_par_iter()
+                .map(|i| ter_segment(cfg, hyps[i], &refs[i]))
+                .collect::<Result<_, _>>()
+        })?
     };
     #[cfg(not(feature = "parallel"))]
     let rows: Vec<[f64; 2]> = (0..hyps.len())

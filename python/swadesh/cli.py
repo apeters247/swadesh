@@ -1,4 +1,8 @@
-"""`swadesh` command line: the sacreBLEU CLI, accelerated. Same flags, same output."""
+"""`swadesh` command line: the sacreBLEU CLI, accelerated. Same flags, same output.
+
+The only intentional difference is the program name in usage and error lines,
+which is ``swadesh`` (sacreBLEU's is ``sacrebleu``).
+"""
 import sys
 
 
@@ -6,8 +10,8 @@ def main(argv=None):
     import swadesh
     swadesh.patch()
     from sacrebleu.sacrebleu import main as _main
-    if argv is not None:
-        sys.argv = [sys.argv[0]] + list(argv)
+    args = sys.argv[1:] if argv is None else list(argv)
+    sys.argv = ["swadesh"] + args
     return _main()
 
 

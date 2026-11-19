@@ -303,3 +303,88 @@ pub fn compute_bleu_np2_f32(stats: &[f32], cfg: &BleuScoreConfig) -> f64 {
     };
     bp * mean.exp()
 }
+
+/// A Python number as it flows through sacreBLEU's chrF arithmetic on a
+/// float32 numpy row: either a `np.float32` scalar or a Python `float`/`int`.
+/// NumPy >= 2 (NEP 50) promotion: Python scalars are "weak", so any operation
+/// involving a float32 is done in float32 (the Python operand is first cast to
+/// float32); Python-with-Python stays float64.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum NpVal {
+    F32(f32),
+    Py(f64),
+}
+
+impl NpVal {
+    #[inline]
+    fn op(self, o: NpVal, f32op: fn(f32, f32) -> f32, f64op: fn(f64, f64) -> f64) -> NpVal {
+        match (self, o) {
+            (NpVal::F32(a), NpVal::F32(b)) => NpVal::F32(f32op(a, b)),
+            (NpVal::F32(a), NpVal::Py(b)) => NpVal::F32(f32op(a, b as f32)),
+            (NpVal::Py(a), NpVal::F32(b)) => NpVal::F32(f32op(a as f32, b)),
+            (NpVal::Py(a), NpVal::Py(b)) => NpVal::Py(f64op(a, b)),
+        }
+    }
+    #[inline]
+    pub fn add(self, o: NpVal) -> NpVal {
+        self.op(o, |a, b| a + b, |a, b| a + b)
+    }
+    #[inline]
+    pub fn mul(self, o: NpVal) -> NpVal {
+        self.op(o, |a, b| a * b, |a, b| a * b)
+    }
+    #[inline]
+    pub fn div(self, o: NpVal) -> NpVal {
+        self.op(o, |a, b| a / b, |a, b| a / b)
+    }
+    #[inline]
+    pub fn as_f64(self) -> f64 {
+        match self {
+            NpVal::F32(v) => v as f64,
+            NpVal::Py(v) => v,
+        }
+    }
+}
+
+/// sacreBLEU `CHRF._compute_f_score` on a float32 numpy row under NumPy >= 2
+/// semantics, operation by operation (see [`NpVal`]). Returns the value and
+/// whether sacreBLEU's result is a `np.float32` (vs a Python float).
+pub fn chrf_f_score_np2_f32(stats: &[f32], order: usize, beta: i64, eps_smoothing: bool) -> NpVal {
+    use NpVal::{Py, F32};
+    let eps = Py(1e-16);
+    let factor = Py((beta * beta) as f64); // Python int (weak, exact)
+    let one_plus = Py((1 + beta * beta) as f64);
+    let mut score = Py(0.0);
+    let mut effective_order: i64 = 0;
+    let (mut avg_prec, mut avg_rec) = (Py(0.0), Py(0.0));
+    for i in 0..order {
+        let (n_hyp, n_ref, n_match) = (stats[3 * i], stats[3 * i + 1], stats[3 * i + 2]);
+        let prec = if n_hyp > 0.0 { F32(n_match / n_hyp) } else { eps };
+        let rec = if n_ref > 0.0 { F32(n_match / n_ref) } else { eps };
+        let denom = factor.mul(prec).add(rec);
+        let term = if denom.as_f64() > 0.0 { one_plus.mul(prec).mul(rec).div(denom) } else { eps };
+        score = score.add(term);
+        if n_hyp > 0.0 && n_ref > 0.0 {
+            avg_prec = avg_prec.add(prec);
+            avg_rec = avg_rec.add(rec);
+            effective_order += 1;
+        }
+    }
+    if eps_smoothing {
+        return Py(100.0).mul(score).div(Py(order as f64));
+    }
+    if effective_order == 0 {
+        avg_prec = Py(0.0);
+        avg_rec = Py(0.0);
+    } else {
+        avg_prec = avg_prec.div(Py(effective_order as f64));
+        avg_rec = avg_rec.div(Py(effective_order as f64));
+    }
+    if avg_prec.add(avg_rec).as_f64() != 0.0 {
+        let mut s = one_plus.mul(avg_prec).mul(avg_rec);
+        s = s.div(factor.mul(avg_prec).add(avg_rec));
+        Py(100.0).mul(s)
+    } else {
+        Py(0.0)
+    }
+}
