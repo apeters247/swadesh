@@ -18,6 +18,12 @@ classifiers = [
 ]
 keywords = ["bleu", "chrf", "sacrebleu", "machine-translation", "evaluation", "nlp", "llm"]
 
+[project.urls]
+Homepage = "https://github.com/apeters247/swadesh"
+Source = "https://github.com/apeters247/swadesh"
+Issues = "https://github.com/apeters247/swadesh/issues"
+Documentation = "https://github.com/apeters247/swadesh/blob/master/docs/guide.md"
+
 [project.scripts]
 swadesh = "swadesh.cli:main"
 

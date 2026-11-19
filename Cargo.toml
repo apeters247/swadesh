@@ -6,7 +6,8 @@ members = ["crates/swadesh-core", "crates/swadesh-cli", "crates/swadesh-py", "cr
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/swadesh-eval/swadesh"
+repository = "https://github.com/apeters247/swadesh"
+homepage = "https://github.com/apeters247/swadesh"
 
 [profile.release]
 lto = "fat"

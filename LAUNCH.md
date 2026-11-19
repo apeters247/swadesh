@@ -3,16 +3,12 @@
 Everything below is ready except the steps that need **your** accounts. Those are marked 🔑.
 
 ## 1. Publish the code
-1. 🔑 Create a public GitHub repo (suggested: `github.com/<you>/swadesh`), then:
-   ```bash
-   cd /var/www/llmeval
-   git remote add origin git@github.com:<you>/swadesh.git
-   git push -u origin master
-   ```
-2. Replace the placeholder `repository` URL in `Cargo.toml` (`[workspace.package]`) and add
-   `[project.urls]` to `pyproject.toml` (Homepage / Source / Issues).
-3. Check the pinned action versions in `.github/workflows/*.yml` (they were written without
-   network access to GitHub) and let CI run once.
+1. 🔑 Create an **empty** public repo at https://github.com/new (owner `apeters247`, name `swadesh`,
+   no README or license), then run `tools/publish_github.sh`. This VPS's SSH key is already
+   authorized for `apeters247`.
+2. Repository URLs already point at `github.com/apeters247/swadesh`. All pinned GitHub Actions
+   were verified to exist (2026-11-19), and clippy is clean, so CI should pass on the first push.
+3. Optional: enable GitHub Pages (master, `/docs`) to host `docs/playground/` as a live demo.
 
 ## 2. Publish packages
 1. 🔑 PyPI: create the project with **trusted publishing** (pypi.org → Publishing → add GitHub
