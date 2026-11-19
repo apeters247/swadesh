@@ -147,6 +147,19 @@ class BLEU(_FastMixin, _SacreBLEU):
             _tok_warning(native_tok_count if tok_count is None else tok_count)
         return _matrix(buf, n, width)
 
+    def sentence_score(self, hypothesis: str, references: Sequence[str]):
+        """Same as sacreBLEU's ``sentence_score`` (native statistics, no numpy round-trip)."""
+        if not self.effective_order:
+            sacrelogger.warning('It is recommended to enable `effective_order` for sentence-level BLEU.')
+        self._check_sentence_score_args(hypothesis, references)
+        tok = self._native_tokenizer
+        if tok is None:
+            return super().sentence_score(hypothesis, references)
+        refs = [r for r in references if r is not None]
+        self.num_refs = len(refs)
+        stats = _swadesh.bleu_stats_one(hypothesis, refs, tok, bool(self.lowercase), self.max_ngram_order)
+        return self._compute_score_from_stats(stats)
+
     def sentence_scores(self, hypotheses: Sequence[str], references: Sequence[Sequence[str]]) -> List[float]:
         """Sentence-level BLEU for every segment, computed in parallel.
 
@@ -209,6 +222,13 @@ class CHRF(_FastMixin, _SacreCHRF):
             _tok_warning(sum(1 for h in hypotheses if h.endswith(" .")))
         buf, n, width, _nmin, _nmax = _swadesh.chrf_stats(hypotheses, streams, *self._args())
         return _matrix(buf, n, width)
+
+    def sentence_score(self, hypothesis: str, references: Sequence[str]):
+        """Same as sacreBLEU's ``sentence_score`` (native statistics, no numpy round-trip)."""
+        self._check_sentence_score_args(hypothesis, references)
+        refs = [r for r in references if r is not None]
+        self.num_refs = len(refs)
+        return self._compute_score_from_stats(_swadesh.chrf_stats_one(hypothesis, refs, *self._args()))
 
     def sentence_scores(self, hypotheses: Sequence[str], references: Sequence[Sequence[str]]) -> List[float]:
         """Sentence-level chrF for every segment, computed in parallel."""

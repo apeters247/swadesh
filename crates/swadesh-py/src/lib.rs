@@ -331,6 +331,42 @@ fn bleu_matrix<'py>(
     Ok(PyBytes::new(py, bytes))
 }
 
+/// One segment's BLEU statistics as a Python list of ints (sentence_score fast path).
+#[pyfunction]
+fn bleu_stats_one(hyp: &Bound<'_, PyAny>, refs: &Bound<'_, PyAny>, tokenize: &str, lowercase: bool, max_order: usize) -> PyResult<Vec<i64>> {
+    let tok = tokenizer(tokenize)?;
+    let ro = as_objs(refs)?;
+    let h = text(hyp, lowercase)?;
+    let rs: Vec<Cow<str>> = ro.iter().filter(|r| !r.is_none()).map(|r| text(r, lowercase)).collect::<PyResult<_>>()?;
+    let rr: Vec<&str> = rs.iter().map(|s| s.as_ref()).collect();
+    let mut out = Vec::new();
+    swadesh_core::bleu_segment(&BleuConfig { tokenizer: tok, max_order }, &h, &rr, &mut out);
+    Ok(out)
+}
+
+/// One segment's chrF statistics as a Python list of ints.
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+fn chrf_stats_one(
+    hyp: &Bound<'_, PyAny>,
+    refs: &Bound<'_, PyAny>,
+    char_order: usize,
+    word_order: usize,
+    beta: i64,
+    lowercase: bool,
+    whitespace: bool,
+    eps_smoothing: bool,
+) -> PyResult<Vec<i64>> {
+    let ro = as_objs(refs)?;
+    let h = text(hyp, lowercase)?;
+    let rs: Vec<Cow<str>> = ro.iter().filter(|r| !r.is_none()).map(|r| text(r, lowercase)).collect::<PyResult<_>>()?;
+    let rr: Vec<&str> = rs.iter().map(|s| s.as_ref()).collect();
+    let mut out = Vec::new();
+    let cfg = ChrfConfig { char_order, word_order, beta, whitespace, eps_smoothing };
+    swadesh_core::chrf_segment(&cfg, &h, &rr, &mut out);
+    Ok(out)
+}
+
 #[pymodule]
 fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(bleu_stats, m)?)?;
@@ -340,6 +376,8 @@ fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(bootstrap_sums_f32, m)?)?;
     m.add_function(wrap_pyfunction!(ar_sums_i64, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_matrix, m)?)?;
+    m.add_function(wrap_pyfunction!(bleu_stats_one, m)?)?;
+    m.add_function(wrap_pyfunction!(chrf_stats_one, m)?)?;
     m.add_function(wrap_pyfunction!(bleu_matrix, m)?)?;
     m.add("GENERATED_PYTHON", swadesh_core::tables::GENERATED_PYTHON)?;
     m.add("GENERATED_REGEX", swadesh_core::tables::GENERATED_REGEX)?;

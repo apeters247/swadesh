@@ -217,3 +217,16 @@ def test_mbr():
     cands = ["the cat sat on the mat", "a cat sat on the mat", "the cat sat on a mat", "dogs are great"]
     best, util = swadesh.mbr(cands)
     assert best in (0, 1, 2) and util.shape == (4,)
+
+
+def test_rewards():
+    from swadesh.rewards import bleu_reward, chrf_reward
+    hyps = ["Das ist gut.", "Ein Hund bellt."]
+    refs = ["Das ist sehr gut.", "Der Hund bellt laut."]
+    r = chrf_reward()(completions=hyps, reference=refs)
+    assert r == [sacrebleu.CHRF().sentence_score(h, [x]).score * 0.01 for h, x in zip(hyps, refs)]
+    conv = [[{"role": "assistant", "content": h}] for h in hyps]
+    assert chrf_reward()(completions=conv, reference=refs) == r
+    b = bleu_reward()(completions=hyps, reference=[[x, x + " ja"] for x in refs])
+    m = sacrebleu.BLEU(effective_order=True)
+    assert b == [m.sentence_score(h, [x, x + " ja"]).score * 0.01 for h, x in zip(hyps, refs)]
