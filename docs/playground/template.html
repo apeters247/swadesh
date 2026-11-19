@@ -73,6 +73,7 @@ code { font: 13px var(--mono); }
       <div style="display:flex;gap:12px">
         <label class="check"><input type="checkbox" id="m-bleu" checked> BLEU</label>
         <label class="check"><input type="checkbox" id="m-chrf" checked> chrF</label>
+        <label class="check"><input type="checkbox" id="m-ter"> TER</label>
       </div></div>
     <div class="opt"><label for="tok">BLEU tokenizer</label>
       <select id="tok"><option>13a</option><option>intl</option><option>zh</option><option>char</option><option>none</option></select></div>
@@ -145,6 +146,7 @@ function args() {
   const a = ["ref.txt", "-i", "hyp.txt", "-m"];
   if ($("m-bleu").checked) a.push("bleu");
   if ($("m-chrf").checked) a.push("chrf");
+  if ($("m-ter").checked) a.push("ter");
   if ($("tok").value !== "13a") a.push("-tok", $("tok").value);
   if ($("lc").checked) a.push("-lc");
   const cw = parseInt($("cw").value || "0", 10); if (cw > 0) a.push("-cw", String(cw));
@@ -156,7 +158,7 @@ function score() {
   const a = args();
   $("cmd").textContent = "sacrebleu " + a.join(" ");
   if (!sw) return;
-  if (!$("m-bleu").checked && !$("m-chrf").checked) { $("status").textContent = "Pick at least one metric."; $("out").textContent = ""; return; }
+  if (!$("m-bleu").checked && !$("m-chrf").checked && !$("m-ter").checked) { $("status").textContent = "Pick at least one metric."; $("out").textContent = ""; return; }
   const strip = (t) => t.replace(/\n+$/, "");
   const files = { "ref.txt": strip($("refs").value) + "\n", "hyp.txt": strip($("hyps").value) + "\n" };
   const t0 = performance.now();
@@ -167,7 +169,7 @@ function score() {
   $("out").textContent = r.code ? r.stderr : r.stdout;
   $("status").textContent = r.code ? "The command failed (exit code " + r.code + ")." : n + " segment" + (n === 1 ? "" : "s") + " scored in " + ms.toFixed(1) + " ms";
 }
-for (const id of ["m-bleu", "m-chrf", "tok", "cw", "fmt", "lc", "sl"]) $(id).addEventListener("change", score);
+for (const id of ["m-bleu", "m-chrf", "m-ter", "tok", "cw", "fmt", "lc", "sl"]) $(id).addEventListener("change", score);
 $("run").addEventListener("click", score);
 let timer = null;
 for (const id of ["refs", "hyps"]) $(id).addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(score, 250); });
