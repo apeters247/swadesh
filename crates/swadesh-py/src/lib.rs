@@ -20,6 +20,20 @@ struct Corpus<'py> {
     tok_count: usize,
 }
 
+/// Characters whose `str.lower()` result is identical in CPython (any Unicode
+/// version >= 13) and Rust's `str::to_lowercase`. Excludes U+03A3 (Σ), whose
+/// lowercase depends on context (Final_Sigma) and could differ.
+#[inline]
+fn lower_is_stable(c: char) -> bool {
+    let cp = c as u32;
+    (cp < 0x0530 && cp != 0x03A3)
+        || (0x1E00..=0x1EFF).contains(&cp) // Latin Extended Additional (Vietnamese)
+        || (0x2000..=0x206F).contains(&cp) // General Punctuation (no case)
+        || (0x3000..=0x9FFF).contains(&cp) // CJK, kana (no case)
+        || (0xAC00..=0xD7A3).contains(&cp) // Hangul syllables (no case)
+        || (0xFF00..=0xFFEF).contains(&cp) // half/full-width forms
+}
+
 fn text<'py>(obj: &'py Bound<'py, PyAny>, lowercase: bool) -> PyResult<Cow<'py, str>> {
     let s = obj.cast::<PyString>()?;
     let raw: &str = s.to_str()?;
@@ -32,6 +46,10 @@ fn text<'py>(obj: &'py Bound<'py, PyAny>, lowercase: bool) -> PyResult<Cow<'py, 
         } else {
             Ok(Cow::Borrowed(raw))
         }
+    } else if raw.chars().all(lower_is_stable) {
+        // Case mappings in these blocks have been stable across all Unicode
+        // versions any supported CPython uses, so Rust's lowercasing is exact.
+        Ok(Cow::Owned(raw.to_lowercase()))
     } else {
         // Defer to CPython's own str.lower() for exact Unicode semantics.
         let lowered = s.call_method0("lower")?;
@@ -216,12 +234,48 @@ fn chrf_sentence_scores<'py>(
     PyList::new(py, scores)
 }
 
+fn f32_vec(b: &[u8]) -> Vec<f32> {
+    b.chunks_exact(4).map(|c| f32::from_ne_bytes([c[0], c[1], c[2], c[3]])).collect()
+}
+
+fn i64_vec(b: &[u8]) -> Vec<i64> {
+    b.chunks_exact(8).map(|c| i64::from_ne_bytes(c.try_into().unwrap())).collect()
+}
+
+/// Bootstrap row sums: `stats_f32[idxs].sum(1)` with numpy's exact float32
+/// summation order, without materializing the 3-D tensor. Returns f32 bytes.
+#[pyfunction]
+fn bootstrap_sums_f32<'py>(py: Python<'py>, stats: &[u8], width: usize, idxs: &[u8], n: usize) -> Bound<'py, PyBytes> {
+    let s = f32_vec(stats);
+    let ix = i64_vec(idxs);
+    let out = py.detach(|| swadesh_core::resample::bootstrap_sums_f32(&s, width, &ix, n));
+    let bytes: &[u8] = unsafe { std::slice::from_raw_parts(out.as_ptr() as *const u8, out.len() * 4) };
+    PyBytes::new(py, bytes)
+}
+
+/// Paired approximate randomization sums (exact int64). Returns (a, b) bytes.
+#[pyfunction]
+fn ar_sums_i64<'py>(
+    py: Python<'py>,
+    bl: &[u8],
+    sys: &[u8],
+    width: usize,
+    sel: &[u8],
+    n: usize,
+) -> (Bound<'py, PyBytes>, Bound<'py, PyBytes>) {
+    let (b1, s1) = (i64_vec(bl), i64_vec(sys));
+    let (a, b) = py.detach(|| swadesh_core::resample::ar_sums_i64(&b1, &s1, width, sel, n));
+    (i64_bytes(py, &a), i64_bytes(py, &b))
+}
+
 #[pymodule]
 fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(bleu_stats, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_stats, m)?)?;
     m.add_function(wrap_pyfunction!(bleu_sentence_scores, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_sentence_scores, m)?)?;
+    m.add_function(wrap_pyfunction!(bootstrap_sums_f32, m)?)?;
+    m.add_function(wrap_pyfunction!(ar_sums_i64, m)?)?;
     m.add("GENERATED_PYTHON", swadesh_core::tables::GENERATED_PYTHON)?;
     m.add("GENERATED_REGEX", swadesh_core::tables::GENERATED_REGEX)?;
     Ok(())

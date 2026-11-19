@@ -8,3 +8,4 @@ repository.workspace = true
 
 [dependencies]
 rayon = "1"
+rustc-hash = "2"

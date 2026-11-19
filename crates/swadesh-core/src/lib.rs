@@ -2,8 +2,10 @@
 //! BLEU / chrF / chrF++ sufficient statistics and scoring.
 
 pub mod ngram;
+pub mod resample;
 pub mod score;
 pub mod stats;
+pub mod table;
 pub mod tables;
 pub mod tokenize;
 pub mod unicode;

@@ -119,12 +119,84 @@ fn is_ascii_digit(c: char) -> bool {
 
 /// sacreBLEU `TokenizerRegexp.__call__`.
 pub fn tok_re(line: &str, out: &mut String) {
-    // ASCII-only fast path identical in semantics (all patterns are ASCII
-    // classes except "[^0-9]" which treats any non-digit the same).
-    let a: Vec<char> = line.chars().collect();
-    tok_re_chars(&a, out);
+    let mut s = String::new();
+    tok_re_unjoined(line.as_bytes(), &mut s);
+    join_split_str(&s, out);
 }
 
+/// `' '.join(s.split())` on a str.
+pub fn join_split_str(s: &str, out: &mut String) {
+    out.clear();
+    for (i, t) in py_split(s).enumerate() {
+        if i > 0 {
+            out.push(' ');
+        }
+        out.push_str(t);
+    }
+}
+
+#[inline(always)]
+fn is_13a_class1_b(b: u8) -> bool {
+    matches!(b, b'{'..=b'~' | b'['..=b'`' | b' '..=b'&' | b'('..=b'+' | b':'..=b'@' | b'/')
+}
+
+/// Byte-level `TokenizerRegexp` *without* the final whitespace join: the
+/// result has the same `py_split()` tokens as sacreBLEU's output.
+///
+/// Working on UTF-8 bytes is exact here: every pattern only tests ASCII
+/// classes, and `[^0-9]` treats any non-digit the same. A multi-byte
+/// character can only take part in a match through its last byte (as `\1` of
+/// `([^0-9])([.,])`) or its lead byte (as `\2` of `([.,])([^0-9])`), and in
+/// both cases the inserted spaces land on character boundaries, exactly where
+/// Python inserts them.
+pub fn tok_re_unjoined(input: &[u8], out: &mut String) {
+    thread_local! {
+        static BUF: std::cell::RefCell<(Vec<u8>, Vec<u8>)> = const { std::cell::RefCell::new((Vec::new(), Vec::new())) };
+    }
+    BUF.with(|cell| {
+        let mut guard = cell.borrow_mut();
+        let (b, c) = &mut *guard;
+        // pass 1: single char class
+        b.clear();
+        b.reserve(input.len() * 2);
+        for &x in input {
+            if is_13a_class1_b(x) {
+                b.extend_from_slice(&[b' ', x, b' ']);
+            } else {
+                b.push(x);
+            }
+        }
+        // pass 2: ([^0-9])([\.,]) -> \1 \2_
+        sub2b(b, c, |x, y| !x.is_ascii_digit() && (y == b'.' || y == b','), |x, y, o| o.extend_from_slice(&[x, b' ', y, b' ']));
+        // pass 3: ([\.,])([^0-9]) -> _\1 \2
+        sub2b(c, b, |x, y| (x == b'.' || x == b',') && !y.is_ascii_digit(), |x, y, o| o.extend_from_slice(&[b' ', x, b' ', y]));
+        // pass 4: ([0-9])(-) -> \1 \2_
+        sub2b(b, c, |x, y| x.is_ascii_digit() && y == b'-', |x, y, o| o.extend_from_slice(&[x, b' ', y, b' ']));
+        out.clear();
+        // SAFETY: only ASCII spaces were inserted, at UTF-8 character boundaries.
+        out.push_str(unsafe { std::str::from_utf8_unchecked(c) });
+    });
+}
+
+#[inline(always)]
+fn sub2b(input: &[u8], out: &mut Vec<u8>, m: impl Fn(u8, u8) -> bool, emit: impl Fn(u8, u8, &mut Vec<u8>)) {
+    out.clear();
+    out.reserve(input.len() + input.len() / 2 + 4);
+    let n = input.len();
+    let mut i = 0;
+    while i < n {
+        let x = input[i];
+        if i + 1 < n && m(x, input[i + 1]) {
+            emit(x, input[i + 1], out);
+            i += 2;
+        } else {
+            out.push(x);
+            i += 1;
+        }
+    }
+}
+
+#[allow(dead_code)]
 fn tok_re_chars(a: &[char], out: &mut String) {
     let mut b = Vec::with_capacity(a.len() * 2 + 8);
     sub1(a, &mut b, is_13a_class1);
@@ -164,11 +236,62 @@ pub fn tok_13a(line: &str, out: &mut String) {
         l = l.replace("&lt;", "<");
         l = l.replace("&gt;", ">");
     }
-    let mut a: Vec<char> = Vec::with_capacity(l.len() + 2);
-    a.push(' ');
-    a.extend(l.chars());
-    a.push(' ');
-    tok_re_chars(&a, out);
+    let mut s = String::new();
+    tok_13a_unjoined(&l, &mut s);
+    join_split_str(&s, out);
+}
+
+/// `13a` without the final join (same `py_split` tokens).
+pub fn tok_13a_unjoined(line: &str, out: &mut String) {
+    let needs_replace = line.contains('\n') || line.contains("<skipped>") || line.contains('&');
+    if !needs_replace {
+        let mut padded = Vec::with_capacity(line.len() + 2);
+        padded.push(b' ');
+        padded.extend_from_slice(line.as_bytes());
+        padded.push(b' ');
+        return tok_re_unjoined(&padded, out);
+    }
+    let mut l = line.replace("<skipped>", "");
+    l = l.replace("-\n", "");
+    l = l.replace('\n', " ");
+    if l.contains('&') {
+        l = l.replace("&quot;", "\"");
+        l = l.replace("&amp;", "&");
+        l = l.replace("&lt;", "<");
+        l = l.replace("&gt;", ">");
+    }
+    let mut padded = Vec::with_capacity(l.len() + 2);
+    padded.push(b' ');
+    padded.extend_from_slice(l.as_bytes());
+    padded.push(b' ');
+    tok_re_unjoined(&padded, out);
+}
+
+/// Tokenize into a buffer whose `py_split()` tokens equal sacreBLEU's tokens
+/// (skips the final `' '.join(...)`, which the n-gram code doesn't need).
+pub fn tokenize_unjoined(tok: Tokenizer, line: &str, out: &mut String) {
+    match tok {
+        Tokenizer::T13a => tok_13a_unjoined(line, out),
+        Tokenizer::Zh => {
+            let line = py_strip(line);
+            let mut s = String::with_capacity(line.len() * 2);
+            for ch in line.chars() {
+                if is_chinese_char(ch) {
+                    s.push(' ');
+                    s.push(ch);
+                    s.push(' ');
+                } else {
+                    s.push(ch);
+                }
+            }
+            tok_re_unjoined(s.as_bytes(), out);
+        }
+        Tokenizer::None => {
+            out.clear();
+            out.push_str(line);
+        }
+        _ => tok.apply(line, out),
+    }
 }
 
 /// sacreBLEU `TokenizerV14International.__call__`.
@@ -244,7 +367,8 @@ pub fn tok_zh(line: &str, out: &mut String) {
             a.push(ch);
         }
     }
-    tok_re_chars(&a, out);
+    let s: String = a.into_iter().collect();
+    tok_re(&s, out);
 }
 
 /// sacreBLEU `TokenizerChar.__call__`: `" ".join(line)`.

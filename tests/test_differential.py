@@ -145,3 +145,51 @@ def test_bootstrap_identical():
         a = M().corpus_score(hyps, refs, n_bootstrap=100)
         b = S().corpus_score(hyps, refs, n_bootstrap=100)
         assert str(a) == str(b) and a._mean == b._mean and a._ci == b._ci
+
+
+def _rand_corpus(seed, n, vocab=None):
+    rnd = random.Random(seed)
+    words = vocab or "the a cat dog sat on mat ran fast slow red blue , . big small house tree".split()
+    mk = lambda: " ".join(rnd.choices(words, k=rnd.randint(0, 25)))
+    return [mk() for _ in range(n)], [[mk() for _ in range(n)]]
+
+
+@pytest.mark.parametrize("metric", ["bleu", "bleu-addk", "bleu-floor", "chrf", "chrf++"])
+@pytest.mark.parametrize("n", [1, 2, 37, 1500])
+def test_bootstrap_exact(metric, n):
+    hyps, refs = _rand_corpus(n, n)
+    mk = {"bleu": lambda M: M.BLEU(), "bleu-addk": lambda M: M.BLEU(smooth_method="add-k"),
+          "bleu-floor": lambda M: M.BLEU(smooth_method="floor", effective_order=True),
+          "chrf": lambda M: M.CHRF(), "chrf++": lambda M: M.CHRF(word_order=2)}[metric]
+    a = mk(swadesh).corpus_score(hyps, refs, n_bootstrap=300)
+    b = mk(sacrebleu).corpus_score(hyps, refs, n_bootstrap=300)
+    assert str(a) == str(b)
+    assert a._mean == b._mean and a._ci == b._ci and type(a._mean) is type(b._mean)
+
+
+def test_bootstrap_float32_rounding_regime():
+    # > 2**24 total characters: float32 sums are no longer exact, so the
+    # summation order must match numpy's exactly.
+    rnd = random.Random(7)
+    words = ["supercalifragilistic" * 4, "antidisestablishment" * 4, "x"]
+    hyps = [" ".join(rnd.choices(words, k=40)) for _ in range(6000)]
+    refs = [[" ".join(rnd.choices(words, k=40)) for _ in range(6000)]]
+    a = swadesh.CHRF().corpus_score(hyps, refs, n_bootstrap=20)
+    b = sacrebleu.CHRF().corpus_score(hyps, refs, n_bootstrap=20)
+    assert a._mean == b._mean and a._ci == b._ci
+
+
+@pytest.mark.parametrize("test_type", ["bs", "ar"])
+def test_paired_tests_exact(test_type):
+    from sacrebleu.significance import PairedTest as SPT
+    hyps, refs = _rand_corpus(11, 400)
+    sys2, _ = _rand_corpus(12, 400)
+    sys3, _ = _rand_corpus(13, 400)
+    named = [("baseline", hyps), ("sys2", sys2), ("sys3", sys3)]
+    kw = dict(test_type=test_type, n_samples=0 if test_type == "bs" else 500, n_ar_confidence=200)
+    ours = swadesh.PairedTest(named, {"BLEU": swadesh.BLEU(references=refs), "chrF": swadesh.CHRF(references=refs)}, None, **kw)()
+    theirs = SPT(named, {"BLEU": sacrebleu.BLEU(references=refs), "chrF": sacrebleu.CHRF(references=refs)}, None, **kw)()
+    assert {k: str(v) for k, v in ours[0].items()} == {k: str(v) for k, v in theirs[0].items()}
+    for metric in theirs[1]:
+        for x, y in zip(ours[1][metric], theirs[1][metric]):
+            assert repr(x) == repr(y), (metric, x, y)

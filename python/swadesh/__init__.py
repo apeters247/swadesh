@@ -25,6 +25,8 @@ from sacrebleu.metrics.bleu import BLEUScore  # noqa: F401
 from sacrebleu.metrics.chrf import CHRFScore  # noqa: F401
 
 from .metrics import BLEU, CHRF, NATIVE_TOKENIZERS  # noqa: F401
+from .significance import PairedTest  # noqa: F401
+from . import significance as _significance
 
 __version__ = "0.1.0"
 SACREBLEU_COMPAT_VERSION = _sacrebleu.__version__
@@ -72,6 +74,7 @@ def patch() -> None:
     for mod, name, new in targets:
         _PATCHED[(mod, name)] = getattr(mod, name)
         setattr(mod, name, new)
+    _PATCHED[("significance",)] = _significance.install()
     _PATCHED[("METRICS",)] = dict(m.METRICS)
     m.METRICS["BLEU"] = BLEU
     m.METRICS["CHRF"] = CHRF
@@ -85,6 +88,7 @@ def unpatch() -> None:
         return
     m.METRICS.clear()
     m.METRICS.update(_PATCHED.pop(("METRICS",)))
+    _significance.uninstall(_PATCHED.pop(("significance",)))
     for (mod, name), old in list(_PATCHED.items()):
         setattr(mod, name, old)
     _PATCHED.clear()

@@ -88,6 +88,18 @@ class _FastMixin:
             return self._ref_cache.streams
         raise RuntimeError("No references provided and the cache is empty.")
 
+    def corpus_score(self, hypotheses, references, n_bootstrap: int = 1):
+        """Same as sacreBLEU's ``corpus_score``; bootstrap resampling is native."""
+        self._check_corpus_score_args(hypotheses, references)
+        stats = self._extract_corpus_statistics(hypotheses, references)
+        actual_score = self._aggregate_and_compute(stats)
+        if n_bootstrap > 1:
+            from .significance import _bootstrap_resample
+            self.n_bootstrap = n_bootstrap
+            self.seed, bs_scores = _bootstrap_resample(stats, self, n_bootstrap)
+            actual_score.estimate_ci(bs_scores)
+        return actual_score
+
     def _aggregate_and_compute(self, stats):
         if isinstance(stats, np.ndarray):
             if stats.ndim == 1:
