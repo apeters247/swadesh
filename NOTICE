@@ -1,0 +1,10 @@
+swadesh
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes software from sacreBLEU (https://github.com/mjpost/sacreBLEU),
+copyright Matt Post and contributors, licensed under the Apache License, Version 2.0.
+
+swadesh subclasses sacreBLEU's BLEU and CHRF classes, depends on sacreBLEU 2.6.0 at
+runtime, and computes corpus scores with sacreBLEU's own code. The tokenizer logic
+(13a, intl, zh, char) is a port of sacreBLEU's tokenizers, and the native TER work in
+progress is a port of sacreBLEU's TER implementation.
