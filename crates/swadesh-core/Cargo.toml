@@ -8,3 +8,5 @@ repository.workspace = true
 
 [dependencies]
 rayon = "1"
+num-bigint = "0.4"
+num-traits = "0.2"
