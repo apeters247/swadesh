@@ -1,0 +1,80 @@
+=== scaling start 2026-11-19T12:49:15Z 15.86 8.87 4.12 11/1453 2350803
+scale-1000                 swadesh   bleu       1refs     0.003s rss=    42MB exact=True ok 
+scale-1000                 sacrebleu bleu       1refs     0.092s rss=    42MB exact=True ok 
+scale-1000                 swadesh   chrf       1refs     0.006s rss=    43MB exact=True ok 
+scale-1000                 sacrebleu chrf       1refs     0.227s rss=    69MB exact=True ok 
+scale-1000                 swadesh   ter        1refs     0.009s rss=    66MB exact=True ok 
+scale-1000                 sacrebleu ter        1refs     0.803s rss=    42MB exact=True ok 
+scale-1000                 swadesh   bleu-bs    1refs     0.010s rss=    50MB exact=True ok 
+scale-1000                 sacrebleu bleu-bs    1refs     0.150s rss=   103MB exact=True ok 
+scale-10000                swadesh   bleu       1refs     0.012s rss=    52MB exact=True ok 
+scale-10000                sacrebleu bleu       1refs     1.039s rss=   140MB exact=True ok 
+scale-10000                swadesh   chrf       1refs     0.020s rss=    54MB exact=True ok 
+scale-10000                sacrebleu chrf       1refs     2.555s rss=   431MB exact=True ok 
+scale-10000                swadesh   ter        1refs     0.068s rss=   134MB exact=True ok 
+scale-10000                sacrebleu ter        1refs     9.221s rss=    89MB exact=True ok 
+scale-10000                swadesh   bleu-bs    1refs     0.064s rss=   128MB exact=True ok 
+scale-10000                sacrebleu bleu-bs    1refs     2.197s rss=   575MB exact=True ok 
+scale-100000               swadesh   bleu       1refs     0.111s rss=   134MB exact=True ok 
+scale-100000               sacrebleu bleu       1refs     9.556s rss=   954MB exact=True ok 
+scale-100000               swadesh   chrf       1refs     0.135s rss=   148MB exact=True ok 
+scale-100000               sacrebleu chrf       1refs    28.864s rss=  4063MB exact=True ok 
+scale-100000               swadesh   ter        1refs     0.498s rss=   253MB exact=True ok 
+scale-100000               sacrebleu ter        1refs    85.348s rss=   276MB exact=True ok 
+scale-100000               swadesh   bleu-bs    1refs     0.721s rss=   896MB exact=True ok 
+scale-100000               sacrebleu bleu-bs    1refs    32.472s rss=  5016MB exact=True ok 
+scale-1000000              swadesh   bleu       1refs     1.687s rss=   951MB exact=True ok 
+scale-1000000              sacrebleu bleu       1refs   106.704s rss=  8770MB exact=True ok 
+scale-1000000              swadesh   chrf       1refs     2.260s rss=  1074MB exact=True ok 
+scale-1000000              sacrebleu chrf       1refs   392.883s rss= 39643MB exact=True ok 
+scale-1000000              swadesh   ter        1refs     6.315s rss=  1200MB exact=True ok 
+scale-1000000              sacrebleu ter        1refs   859.120s rss=  2156MB exact=True ok 
+scale-1000000              swadesh   bleu-bs    1refs     6.101s rss=  8520MB exact=True ok 
+scale-1000000              sacrebleu bleu-bs    1refs   270.697s rss= 45601MB exact=True ok 
+scale-10000000             swadesh   bleu       1refs    10.775s rss=  9136MB exact=None ok 
+scale-10000000             sacrebleu bleu       1refs      crash rss=     0MB exact=None crash 
+scale-10000000             swadesh   chrf       1refs    15.675s rss= 10339MB exact=None ok 
+scale-10000000             swadesh   ter        1refs    56.219s rss= 10724MB exact=None ok 
+scale-10000000             swadesh   bleu-bs    1refs      crash rss=     0MB exact=None crash 
+DONE scaling
+=== scaling end 2026-11-19T13:32:25Z 26.91 23.67 19.82 12/1484 3237873
+=== pathological start 2026-11-19T13:32:25Z 26.91 23.67 19.82 11/1484 3237875
+path-oneline_1mb           swadesh   bleu       1refs     0.041s rss=    72MB exact=True ok 
+path-oneline_1mb           sacrebleu bleu       1refs     0.822s rss=   194MB exact=True ok 
+path-oneline_1mb           swadesh   chrf       1refs     0.136s rss=   120MB exact=True ok 
+path-oneline_1mb           sacrebleu chrf       1refs     1.757s rss=   231MB exact=True ok 
+path-oneline_1mb           swadesh   ter        1refs      crash rss=     0MB exact=None crash 
+path-oneline_1mb           sacrebleu ter        1refs      crash rss=     0MB exact=None crash 
+path-nospace_100k          swadesh   bleu       1refs     0.004s rss=    43MB exact=True ok 
+path-nospace_100k          sacrebleu bleu       1refs     0.086s rss=    35MB exact=True ok 
+path-nospace_100k          swadesh   chrf       1refs     0.086s rss=    52MB exact=True ok 
+path-nospace_100k          sacrebleu chrf       1refs     2.593s rss=   436MB exact=True ok 
+path-nospace_100k          swadesh   ter        1refs     0.004s rss=    48MB exact=True ok 
+path-nospace_100k          sacrebleu ter        1refs     0.004s rss=    34MB exact=True ok 
+path-tiny_1m               swadesh   bleu       1refs     0.536s rss=   439MB exact=True ok 
+path-tiny_1m               sacrebleu bleu       1refs     7.838s rss=   862MB exact=True ok 
+path-tiny_1m               swadesh   chrf       1refs     0.521s rss=   562MB exact=True ok 
+path-tiny_1m               sacrebleu chrf       1refs    23.612s rss=  1565MB exact=True ok 
+path-tiny_1m               swadesh   ter        1refs     1.020s rss=   358MB exact=True ok 
+path-tiny_1m               sacrebleu ter        1refs     9.135s rss=   665MB exact=True ok 
+path-ter1000w_50           swadesh   ter        1refs    16.122s rss=  4060MB exact=True ok 
+path-ter1000w_50           sacrebleu ter        1refs   509.868s rss=   167MB exact=True ok 
+path-ter1000w_200          swadesh   ter        1refs    53.383s rss=  4104MB exact=None ok 
+path-ter1000w_200          sacrebleu ter        1refs      crash rss=     0MB exact=None crash 
+path-identical_1m          swadesh   bleu       1refs      crash rss=     0MB exact=None crash 
+path-identical_1m          sacrebleu bleu       1refs      crash rss=     0MB exact=None crash 
+path-identical_1m          swadesh   chrf       1refs      crash rss=     0MB exact=None crash 
+path-identical_1m          sacrebleu chrf       1refs      crash rss=     0MB exact=None crash 
+path-identical_1m          swadesh   ter        1refs      crash rss=     0MB exact=None crash 
+path-identical_1m          sacrebleu ter        1refs      crash rss=     0MB exact=None crash 
+/home/andrew/swadesh-stress/chain.sh: line 4: 3237876 Killed                     nice -n 10 python bench/stress/run_all.py $ph
+=== pathological end 2026-11-19T13:48:15Z 28.04 24.44 22.70 16/27287 3530567
+=== memory start 2026-11-19T13:48:17Z 28.20 24.53 22.74 26/27268 3530641
+/home/andrew/swadesh-stress/chain.sh: line 4: 3530651 Killed                     nice -n 10 python bench/stress/run_all.py $ph
+=== memory end 2026-11-19T13:48:24Z 28.18 24.59 22.77 27/27261 3530783
+=== threads start 2026-11-19T13:48:28Z 28.33 24.68 22.80 19/27256 3530816
+/home/andrew/swadesh-stress/chain.sh: line 4: 3530819 Killed                     nice -n 10 python bench/stress/run_all.py $ph
+=== threads end 2026-11-19T13:48:40Z 26.98 24.60 22.82 13/27259 3530907
+=== concurrency start 2026-11-19T13:48:53Z
+python: can't open file '/home/andrew/swadesh-stress/bench/stress/concurrency.py': [Errno 2] No such file or directory
+=== ALL DONE 2026-11-19T13:49:17Z
