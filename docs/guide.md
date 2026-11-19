@@ -63,9 +63,8 @@ string per segment. This is the sacreBLEU layout, and it is the most common
 mistake when you first use the API.
 
 The module-level functions `corpus_bleu`, `raw_corpus_bleu`, `sentence_bleu`,
-`corpus_chrf` and `sentence_chrf` are sacreBLEU's functions rebound to swadesh's
-classes. `corpus_ter` and `sentence_ter` are sacreBLEU's, because TER is not
-native yet.
+`corpus_chrf`, `sentence_chrf`, `corpus_ter` and `sentence_ter` are sacreBLEU's
+functions rebound to swadesh's classes.
 
 ### 2. `swadesh.patch()` for existing code
 
@@ -400,8 +399,8 @@ bootstrap on the Mac mini. Measure on your own data with
 
 ## Limits
 
-- TER is sacreBLEU's Python implementation in this release. `swadesh.TER` and
-  the `-m ter` option of the CLI are not accelerated. A native TER is in progress.
+- `swadesh.TER` is native (tercom shifts and beam edit distance, bit-exact). The
+  standalone Rust CLI does not support `-m ter` yet; the Python `swadesh` CLI does.
 - Corpus scores are computed by sacreBLEU's Python code on the interpreter that
   runs them. So swadesh's corpus scores equal sacreBLEU's on any one
   interpreter, and they can differ in the last bits between CPython versions.
