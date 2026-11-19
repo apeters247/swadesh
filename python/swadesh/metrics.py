@@ -162,6 +162,30 @@ class BLEU(_FastMixin, _SacreBLEU):
             bool(self.effective_order),
         )
 
+    def pairwise(self, candidates: Sequence[str], references: Optional[Sequence[str]] = None) -> np.ndarray:
+        """Sentence-BLEU matrix ``M[i, j] = sentence_score(candidates[i], [references[j]]).score``.
+
+        With ``references=None`` the candidates are scored against each other
+        (MBR / consensus decoding). Computed natively and in parallel; n-grams
+        are extracted once per sentence instead of once per pair.
+        """
+        refs = candidates if references is None else references
+        cands, refs_l = list(candidates), list(refs)
+        tok = self._native_tokenizer or "none"
+        lc = bool(self.lowercase)
+        if self._native_tokenizer is None:
+            cands = [self._preprocess_segment(x) for x in cands]
+            refs_l = [self._preprocess_segment(x) for x in refs_l]
+            lc = False
+        buf = _swadesh.bleu_matrix(
+            cands, refs_l, tok, lc, self.max_ngram_order, self.smooth_method,
+            None if self.smooth_value is None else float(self.smooth_value), bool(self.effective_order))
+        return _as_matrix(buf, len(cands), len(refs_l))
+
+
+def _as_matrix(buf, n, m):
+    return np.frombuffer(buf, dtype=np.float64).reshape(n, m).copy()
+
 
 class CHRF(_FastMixin, _SacreCHRF):
     """Bit-exact, accelerated ``sacrebleu.metrics.CHRF`` (chrF and chrF++).
@@ -191,3 +215,30 @@ class CHRF(_FastMixin, _SacreCHRF):
         streams = _normalize_refs(references)
         hypotheses, streams = _truncate(hypotheses, streams)
         return _swadesh.chrf_sentence_scores(hypotheses, streams, *self._args())
+
+    def pairwise(self, candidates: Sequence[str], references: Optional[Sequence[str]] = None) -> np.ndarray:
+        """chrF matrix ``M[i, j] = sentence_score(candidates[i], [references[j]]).score``.
+
+        With ``references=None`` the candidates are scored against each other
+        (MBR / consensus decoding). Computed natively and in parallel.
+        """
+        refs = candidates if references is None else references
+        cands, refs_l = list(candidates), list(refs)
+        buf = _swadesh.chrf_matrix(cands, refs_l, *self._args())
+        return _as_matrix(buf, len(cands), len(refs_l))
+
+
+def mbr(candidates: Sequence[str], metric=None, exclude_self: bool = True):
+    """Minimum Bayes risk selection: return ``(best_index, expected_utility)``
+    where each candidate's utility is its mean score against all other
+    candidates used as pseudo-references. ``metric`` defaults to ``CHRF()``.
+    """
+    metric = CHRF() if metric is None else metric
+    m = metric.pairwise(candidates)
+    n = m.shape[0]
+    if exclude_self and n > 1:
+        util = (m.sum(1) - np.diag(m)) / (n - 1)
+    else:
+        util = m.mean(1)
+    best = int(np.argmax(util))
+    return best, util

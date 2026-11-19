@@ -24,7 +24,7 @@ from sacrebleu.metrics import TER  # noqa: F401  (native TER: work in progress)
 from sacrebleu.metrics.bleu import BLEUScore  # noqa: F401
 from sacrebleu.metrics.chrf import CHRFScore  # noqa: F401
 
-from .metrics import BLEU, CHRF, NATIVE_TOKENIZERS  # noqa: F401
+from .metrics import BLEU, CHRF, NATIVE_TOKENIZERS, mbr  # noqa: F401
 from .significance import PairedTest  # noqa: F401
 from . import significance as _significance
 

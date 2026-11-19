@@ -193,3 +193,27 @@ def test_paired_tests_exact(test_type):
     for metric in theirs[1]:
         for x, y in zip(ours[1][metric], theirs[1][metric]):
             assert repr(x) == repr(y), (metric, x, y)
+
+
+@FAST
+@given(data=st.data(), cands=corpus(1, 5), refs=corpus(1, 4))
+def test_pairwise_matrices(data, cands, refs):
+    lc = data.draw(st.booleans())
+    tok = data.draw(st.sampled_from(TOKENIZERS))
+    wo = data.draw(st.sampled_from([0, 2]))
+    for ours, theirs in [
+        (swadesh.CHRF(word_order=wo, lowercase=lc), sacrebleu.CHRF(word_order=wo, lowercase=lc)),
+        (swadesh.BLEU(tokenize=tok, lowercase=lc, effective_order=True),
+         sacrebleu.BLEU(tokenize=tok, lowercase=lc, effective_order=True)),
+    ]:
+        m = ours.pairwise(cands, refs)
+        exp = [[theirs.sentence_score(c, [r]).score for r in refs] for c in cands]
+        assert m.tolist() == exp
+    sq = swadesh.CHRF().pairwise(cands)
+    assert sq.shape == (len(cands), len(cands))
+
+
+def test_mbr():
+    cands = ["the cat sat on the mat", "a cat sat on the mat", "the cat sat on a mat", "dogs are great"]
+    best, util = swadesh.mbr(cands)
+    assert best in (0, 1, 2) and util.shape == (4,)

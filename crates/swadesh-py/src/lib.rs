@@ -268,6 +268,69 @@ fn ar_sums_i64<'py>(
     (i64_bytes(py, &a), i64_bytes(py, &b))
 }
 
+fn str_list<'py>(objs: &'py [Bound<'py, PyAny>], lowercase: bool) -> PyResult<Vec<Cow<'py, str>>> {
+    objs.iter().map(|o| text(o, lowercase)).collect()
+}
+
+/// chrF matrix (row-major f64 bytes, len(cands) x len(refs)).
+#[pyfunction]
+#[pyo3(signature = (cands, refs, char_order, word_order, beta, lowercase, whitespace, eps_smoothing))]
+#[allow(clippy::too_many_arguments)]
+fn chrf_matrix<'py>(
+    py: Python<'py>,
+    cands: &Bound<'py, PyAny>,
+    refs: &Bound<'py, PyAny>,
+    char_order: usize,
+    word_order: usize,
+    beta: i64,
+    lowercase: bool,
+    whitespace: bool,
+    eps_smoothing: bool,
+) -> PyResult<Bound<'py, PyBytes>> {
+    let (co, ro) = (as_objs(cands)?, as_objs(refs)?);
+    let (c, r) = (str_list(&co, lowercase)?, str_list(&ro, lowercase)?);
+    let cs: Vec<&str> = c.iter().map(|s| s.as_ref()).collect();
+    let rs: Vec<&str> = r.iter().map(|s| s.as_ref()).collect();
+    let cfg = ChrfConfig { char_order, word_order, beta, whitespace, eps_smoothing };
+    let m = py.detach(|| swadesh_core::pairwise::chrf_matrix(&cfg, &cs, &rs));
+    let bytes: &[u8] = unsafe { std::slice::from_raw_parts(m.as_ptr() as *const u8, m.len() * 8) };
+    Ok(PyBytes::new(py, bytes))
+}
+
+/// Sentence-BLEU matrix (row-major f64 bytes).
+#[pyfunction]
+#[pyo3(signature = (cands, refs, tokenize, lowercase, max_order, smooth_method, smooth_value, effective_order))]
+#[allow(clippy::too_many_arguments)]
+fn bleu_matrix<'py>(
+    py: Python<'py>,
+    cands: &Bound<'py, PyAny>,
+    refs: &Bound<'py, PyAny>,
+    tokenize: &str,
+    lowercase: bool,
+    max_order: usize,
+    smooth_method: &str,
+    smooth_value: Option<f64>,
+    effective_order: bool,
+) -> PyResult<Bound<'py, PyBytes>> {
+    let tok = tokenizer(tokenize)?;
+    let smooth = Smooth::from_name(smooth_method)
+        .ok_or_else(|| PyValueError::new_err(format!("unknown smooth_method {smooth_method:?}")))?;
+    let (co, ro) = (as_objs(cands)?, as_objs(refs)?);
+    let (c, r) = (str_list(&co, lowercase)?, str_list(&ro, lowercase)?);
+    let cs: Vec<&str> = c.iter().map(|s| s.as_ref()).collect();
+    let rs: Vec<&str> = r.iter().map(|s| s.as_ref()).collect();
+    let scfg = BleuScoreConfig {
+        smooth,
+        smooth_value: smooth_value.unwrap_or(smooth.default_value()),
+        effective_order,
+        max_order,
+        sum_mode: sum_mode(py),
+    };
+    let m = py.detach(|| swadesh_core::pairwise::bleu_matrix(tok, &scfg, &cs, &rs));
+    let bytes: &[u8] = unsafe { std::slice::from_raw_parts(m.as_ptr() as *const u8, m.len() * 8) };
+    Ok(PyBytes::new(py, bytes))
+}
+
 #[pymodule]
 fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(bleu_stats, m)?)?;
@@ -276,6 +339,8 @@ fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(chrf_sentence_scores, m)?)?;
     m.add_function(wrap_pyfunction!(bootstrap_sums_f32, m)?)?;
     m.add_function(wrap_pyfunction!(ar_sums_i64, m)?)?;
+    m.add_function(wrap_pyfunction!(chrf_matrix, m)?)?;
+    m.add_function(wrap_pyfunction!(bleu_matrix, m)?)?;
     m.add("GENERATED_PYTHON", swadesh_core::tables::GENERATED_PYTHON)?;
     m.add("GENERATED_REGEX", swadesh_core::tables::GENERATED_REGEX)?;
     Ok(())

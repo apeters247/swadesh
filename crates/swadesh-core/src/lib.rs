@@ -2,6 +2,7 @@
 //! BLEU / chrF / chrF++ sufficient statistics and scoring.
 
 pub mod ngram;
+pub mod pairwise;
 pub mod resample;
 pub mod nprng;
 pub mod score;
