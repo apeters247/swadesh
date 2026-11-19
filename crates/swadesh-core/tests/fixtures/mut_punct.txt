@@ -1,0 +1,22 @@
+word!	word	!
+(a),b	(	a),b
+a	a
+
+!!	!	!
+x.	x	.
+.x	.	x
+a-b-c	a-b-c
+(	(
+a.b	a.b
+a..	a.	.
+é.	é	.
+ab?c!	ab?c	!
+ab'c'	ab'c	'
+word.é	word.é
+x	x
+?x?	?x	?
+1.5,	1.5	,
+end.	end	.
+éé.	éé	.
+a b (c)	a	b	(c	)
+ x 	x

@@ -1,0 +1,50 @@
+crates/swadesh-core/src/ngram.rs:37:5: replace rle -> Runs<K> with Runs::from_iter([Default::default()])
+crates/swadesh-core/src/ngram.rs:37:5: replace rle -> Runs<K> with Runs::new(Default::default())
+crates/swadesh-core/src/ngram.rs:37:5: replace rle -> Runs<K> with Runs::from(Default::default())
+crates/swadesh-core/src/ngram.rs:50:5: replace count -> AnyRuns with Default::default()
+crates/swadesh-core/src/ngram.rs:97:5: replace max_merge_t -> Runs<K> with Runs::from_iter([Default::default()])
+crates/swadesh-core/src/ngram.rs:97:5: replace max_merge_t -> Runs<K> with Runs::new(Default::default())
+crates/swadesh-core/src/ngram.rs:97:5: replace max_merge_t -> Runs<K> with Runs::from(Default::default())
+crates/swadesh-core/src/ngram.rs:114:5: replace max_merge -> AnyRuns with Default::default()
+crates/swadesh-core/src/pairwise.rs:21:5: replace chrf_profile -> Profile with Default::default()
+crates/swadesh-core/src/pairwise.rs:71:5: replace bleu_profile -> Profile with Default::default()
+crates/swadesh-core/src/nprng.rs:235:9: replace Generator::bit_generator -> &mut Pcg64 with Box::leak(Box::new(Default::default()))
+crates/swadesh-core/src/nprng.rs:286:5: replace default_rng -> Generator with Default::default()
+crates/swadesh-core/src/nprng.rs:299:23: replace + with - in pairwise
+crates/swadesh-core/src/nprng.rs:299:23: replace + with * in pairwise
+crates/swadesh-core/src/nprng.rs:308:27: replace + with - in pairwise
+crates/swadesh-core/src/nprng.rs:308:27: replace + with * in pairwise
+crates/swadesh-core/src/nprng.rs:312:55: replace + with - in pairwise
+crates/swadesh-core/src/nprng.rs:312:55: replace + with * in pairwise
+crates/swadesh-core/src/nprng.rs:312:38: replace + with - in pairwise
+crates/swadesh-core/src/nprng.rs:312:38: replace + with * in pairwise
+crates/swadesh-core/src/nprng.rs:312:30: replace + with - in pairwise
+crates/swadesh-core/src/nprng.rs:312:30: replace + with * in pairwise
+crates/swadesh-core/src/nprng.rs:312:46: replace + with - in pairwise
+crates/swadesh-core/src/nprng.rs:312:46: replace + with * in pairwise
+crates/swadesh-core/src/nprng.rs:312:72: replace + with * in pairwise
+crates/swadesh-core/src/nprng.rs:312:72: replace + with - in pairwise
+crates/swadesh-core/src/nprng.rs:312:64: replace + with - in pairwise
+crates/swadesh-core/src/nprng.rs:312:64: replace + with * in pairwise
+crates/swadesh-core/src/nprng.rs:312:80: replace + with - in pairwise
+crates/swadesh-core/src/nprng.rs:312:80: replace + with * in pairwise
+crates/swadesh-core/src/nprng.rs:314:23: replace + with - in pairwise
+crates/swadesh-core/src/nprng.rs:314:23: replace + with * in pairwise
+crates/swadesh-core/src/nprng.rs:321:28: replace + with - in pairwise
+crates/swadesh-core/src/nprng.rs:321:28: replace + with * in pairwise
+crates/swadesh-core/src/nprng.rs:423:34: replace << with >> in statistics_mean
+crates/swadesh-core/src/score.rs:25:9: replace SumMode::for_python -> Self with Default::default()
+crates/swadesh-core/src/score.rs:64:5: replace py_sum -> PyNum with Default::default()
+crates/swadesh-core/src/score.rs:97:5: replace my_log -> PyNum with Default::default()
+crates/swadesh-core/src/score.rs:114:9: replace Smooth::from_name -> Option<Self> with Some(Default::default())
+crates/swadesh-core/src/score.rs:149:5: replace compute_bleu -> BleuResult with Default::default()
+crates/swadesh-core/src/ter.rs:345:5: replace row_at -> &'a[Cell] with Vec::leak(vec![Default::default()])
+crates/swadesh-core/src/tokenize.rs:24:9: replace Tokenizer::from_name -> Option<Self> with Some(Default::default())
+crates/swadesh-core/src/tokenize.rs:29:13: delete match arm "char" in Tokenizer::from_name
+crates/swadesh-core/src/tokenize.rs:36:9: replace Tokenizer::apply with ()
+crates/swadesh-core/src/tokenize.rs:49:5: replace preprocess_bleu with ()
+crates/swadesh-core/src/tokenize.rs:60:5: replace sub2 with ()
+crates/swadesh-core/src/tokenize.rs:63:13: replace < with == in sub2
+crates/swadesh-core/src/tokenize.rs:63:13: replace < with > in sub2
+crates/swadesh-core/src/tokenize.rs:64:22: replace && with || in sub2
+crates/swadesh-core/src/tokenize.rs:63:13: replace < with <= in sub2

@@ -788,3 +788,24 @@ mod tests {
         assert_eq!(ter_segment(&TerConfig::default(), "a", &[]), Err(TerError::NoReferences));
     }
 }
+
+#[cfg(test)]
+mod sacrebleu_tests {
+    use super::*;
+
+    /// Segment statistics from sacreBLEU 2.6.0 `TER._compute_segment_statistics` on generated
+    /// cases: shifts (distance > 50, repeated words, permutations), beam-width ratios from
+    /// very different lengths, multiple references and empty references.
+    #[test]
+    fn ter_matches_sacrebleu_on_generated_cases() {
+        for (k, line) in include_str!("../tests/fixtures/mut_ter.txt").lines().enumerate() {
+            let c: Vec<&str> = line.split('\t').collect();
+            let edits: f64 = c[0].parse().unwrap();
+            let avg: f64 = c[1].parse().unwrap();
+            let hyp = c[2];
+            let refs: Vec<&str> = c[3..].to_vec();
+            let got = ter_segment(&TerConfig::default(), hyp, &refs).unwrap();
+            assert_eq!(got, [edits, avg], "case {k}: hyp {hyp:?} refs {refs:?}");
+        }
+    }
+}

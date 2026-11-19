@@ -121,3 +121,124 @@ pub fn bootstrap_sums_f32_seeded(stats: &[f32], width: usize, n: usize, n_sample
     }
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Deterministic 26-bit counts: sums exceed 2^24, so float32 rounding is exercised.
+    fn counts(len: usize, seed: u64) -> Vec<f32> {
+        let mut x = seed;
+        (0..len)
+            .map(|_| {
+                x = x.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                ((x >> 33) as u32 & 0x03ff_ffff) as f32
+            })
+            .collect()
+    }
+
+    /// numpy's `stats[idxs].sum(0)` for each sample: rows added one at a time in float32.
+    fn naive_sums(stats: &[f32], width: usize, idxs: &[i64], n: usize) -> Vec<f32> {
+        let n_samples = if n == 0 { 0 } else { idxs.len() / n };
+        let mut out = vec![0f32; n_samples * width];
+        for s in 0..n_samples {
+            for &i in &idxs[s * n..(s + 1) * n] {
+                for j in 0..width {
+                    out[s * width + j] += stats[i as usize * width + j];
+                }
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn every_width_matches_sequential_f32_sum() {
+        // Specialized widths (2..24) and generic ones (1, 5, 7, 9, 11, 13, 25, ...).
+        for width in [1usize, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 18, 19, 23, 24, 25, 30] {
+            let rows = 37;
+            let n = 80; // more draws than rows, so rows repeat
+            let stats = counts(rows * width, width as u64 + 1);
+            let mut idxs = Vec::new();
+            let mut x = 99u64 + width as u64;
+            for _ in 0..(5 * n) {
+                x = x.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                idxs.push(((x >> 33) % rows as u64) as i64);
+            }
+            let got = bootstrap_sums_f32(&stats, width, &idxs, n);
+            let want = naive_sums(&stats, width, &idxs, n);
+            assert_eq!(got.len(), want.len());
+            for (k, (g, w)) in got.iter().zip(&want).enumerate() {
+                assert_eq!(g.to_bits(), w.to_bits(), "width {width} entry {k}");
+            }
+        }
+    }
+
+    #[test]
+    fn empty_draws_give_empty_result() {
+        assert!(bootstrap_sums_f32(&[1.0, 2.0], 2, &[], 3).is_empty());
+        assert!(bootstrap_sums_f32_seeded(&[], 2, 0, 3, 1).is_empty());
+        assert!(bootstrap_sums_f32_seeded(&[1.0, 2.0], 2, 2, 0, 1).is_empty());
+    }
+
+    #[test]
+    fn seeded_sums_match_drawn_indices() {
+        for (width, n, samples, seed) in [(3usize, 20usize, 9usize, 12345u128), (10, 7, 4, 0), (1, 1, 5, 9)] {
+            let stats = counts(n * width, seed as u64 + 5);
+            let idxs: Vec<i64> = crate::nprng::default_rng(seed)
+                .choice(n, samples, n)
+                .into_iter()
+                .map(|v| v as i64)
+                .collect();
+            let want = naive_sums(&stats, width, &idxs, n);
+            let got = bootstrap_sums_f32_seeded(&stats, width, n, samples, seed);
+            assert_eq!(got.len(), want.len());
+            for (k, (g, w)) in got.iter().zip(&want).enumerate() {
+                assert_eq!(g.to_bits(), w.to_bits(), "width {width} seed {seed} entry {k}");
+            }
+        }
+    }
+
+    #[test]
+    fn seeded_sums_batch_large_draws() {
+        // 17 * 2^20 indices exceed MAX_IDX (2^24), so the parallel path is split into batches.
+        let (width, n, samples, seed) = (1usize, 1usize << 20, 17usize, 4242u128);
+        let stats = counts(n * width, 7);
+        let idxs: Vec<i64> = crate::nprng::default_rng(seed)
+            .choice(n, samples, n)
+            .into_iter()
+            .map(|v| v as i64)
+            .collect();
+        let want = naive_sums(&stats, width, &idxs, n);
+        let got = bootstrap_sums_f32_seeded(&stats, width, n, samples, seed);
+        assert_eq!(got.len(), want.len());
+        for (k, (g, w)) in got.iter().zip(&want).enumerate() {
+            assert_eq!(g.to_bits(), w.to_bits(), "entry {k}");
+        }
+    }
+
+    #[test]
+    fn paired_sums_select_by_mask_exactly() {
+        for width in [1usize, 2, 3, 5] {
+            let n = 9;
+            let trials = 6;
+            let bl: Vec<i64> = (0..n * width).map(|i| (i as i64 * 37) % 101 - 50).collect();
+            let sys: Vec<i64> = (0..n * width).map(|i| (i as i64 * 53 + 7) % 97 - 40).collect();
+            let sel: Vec<u8> = (0..trials * n).map(|i| ((i * 7 + i / 3) % 2) as u8).collect();
+            let (a, b) = ar_sums_i64(&bl, &sys, width, &sel, n);
+            assert_eq!(a.len(), trials * width);
+            for t in 0..trials {
+                for j in 0..width {
+                    let (mut ea, mut eb) = (0i64, 0i64);
+                    for i in 0..n {
+                        let pick = sel[t * n + i] != 0;
+                        let (x, y) = (bl[i * width + j], sys[i * width + j]);
+                        ea += if pick { x } else { y };
+                        eb += if pick { y } else { x };
+                    }
+                    assert_eq!(a[t * width + j], ea, "a width {width} trial {t} col {j}");
+                    assert_eq!(b[t * width + j], eb, "b width {width} trial {t} col {j}");
+                }
+            }
+        }
+    }
+}

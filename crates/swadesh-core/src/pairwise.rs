@@ -103,3 +103,31 @@ pub fn bleu_matrix(tok: Tokenizer, scfg: &BleuScoreConfig, cands: &[&str], refs:
     });
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every cell equals sacreBLEU's `CHRF.sentence_score(cand, [ref]).score` bit for bit.
+    #[test]
+    fn chrf_matrix_cells_match_sacrebleu() {
+        for line in include_str!("../tests/fixtures/mut_chrf_pairs.txt").lines() {
+            let c: Vec<&str> = line.split('\t').collect();
+            let cfg = ChrfConfig {
+                char_order: c[0].parse().unwrap(),
+                word_order: c[1].parse().unwrap(),
+                beta: c[2].parse().unwrap(),
+                eps_smoothing: c[3] == "1",
+                whitespace: c[4] == "1",
+            };
+            let cands: Vec<&str> = c[5].split('|').collect();
+            let refs: Vec<&str> = c[6].split('|').collect();
+            let want: Vec<u64> = c[7].split_whitespace().map(|h| u64::from_str_radix(h, 16).unwrap()).collect();
+            let got = chrf_matrix(&cfg, &cands, &refs);
+            assert_eq!(got.len(), want.len(), "{line}");
+            for (g, w) in got.iter().zip(&want) {
+                assert_eq!(g.to_bits(), *w, "{line}");
+            }
+        }
+    }
+}
