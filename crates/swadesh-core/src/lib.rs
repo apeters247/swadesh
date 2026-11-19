@@ -9,6 +9,7 @@ pub mod nprng;
 pub mod score;
 pub mod stats;
 pub mod table;
+pub mod ter;
 pub mod tables;
 pub mod tokenize;
 pub mod unicode;
@@ -17,6 +18,7 @@ pub mod unicode;
 pub use score::{chrf_f_score, compute_bleu, BleuScoreConfig, Smooth, SumMode};
 pub use stats::{bleu_segment, chrf_segment, BleuConfig, ChrfConfig};
 pub use tokenize::Tokenizer;
+pub use ter::{ter_segment, TerConfig, TerError};
 
 /// Segments below this size are processed serially (thread overhead dominates).
 const PAR_THRESHOLD: usize = 2048;
@@ -52,4 +54,23 @@ pub fn bleu_corpus_stats(cfg: &BleuConfig, hyps: &[&str], refs: &[Vec<&str>]) ->
 pub fn chrf_corpus_stats(cfg: &ChrfConfig, hyps: &[&str], refs: &[Vec<&str>]) -> Vec<i64> {
     let width = 3 * (cfg.char_order + cfg.word_order);
     corpus_stats(hyps, refs, width, |h, r, o| chrf_segment(cfg, h, r, o))
+}
+
+/// Segment-level TER statistics `[num_edits, avg_ref_len]` per segment,
+/// flattened row-major (width 2). `refs[i]` holds the non-missing references of
+/// segment `i`. Errors if any segment has no references.
+pub fn ter_corpus_stats(cfg: &TerConfig, hyps: &[&str], refs: &[Vec<&str>]) -> Result<Vec<f64>, TerError> {
+    #[cfg(feature = "parallel")]
+    let rows: Vec<[f64; 2]> = {
+        use rayon::prelude::*;
+        (0..hyps.len())
+            .into_par_iter()
+            .map(|i| ter_segment(cfg, hyps[i], &refs[i]))
+            .collect::<Result<_, _>>()?
+    };
+    #[cfg(not(feature = "parallel"))]
+    let rows: Vec<[f64; 2]> = (0..hyps.len())
+        .map(|i| ter_segment(cfg, hyps[i], &refs[i]))
+        .collect::<Result<_, _>>()?;
+    Ok(rows.into_iter().flatten().collect())
 }

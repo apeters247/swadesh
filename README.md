@@ -1,6 +1,7 @@
 # swadesh
 
-**sacreBLEU, bit for bit, in Rust.** Same scores, same signatures, same CLI, and much faster:
+**sacreBLEU, bit for bit, in Rust.** BLEU, chrF, chrF++ and TER with the same scores, the same signatures
+and the same CLI, and much faster:
 on one core 11–22× for BLEU and 29–65× for chrF; on a multi-core machine up to 119× for
 corpus BLEU and 379× for chrF.
 
@@ -138,7 +139,7 @@ swadesh.PairedTest([("base", base), ("new", new)], {"BLEU": BLEU(references=[ref
 | BLEU: `ja-mecab`, `ko-mecab`, `spm`, `flores101/200`, `spBLEU-1K` | tokenized by sacreBLEU in Python, then matched natively |
 | chrF, chrF++ (all options) | native |
 | bootstrap CIs, paired bootstrap, paired approximate randomization | native kernels, sacreBLEU's statistics |
-| TER | sacreBLEU's Python implementation (native port in progress) |
+| TER (all options: normalized, no-punct, asian support, case-sensitive) | native (tercom shifts + beam edit distance), 48–52× faster |
 | `-t` test-set downloads, all other CLI features | sacreBLEU (the `swadesh` Python CLI *is* the sacreBLEU CLI, accelerated) |
 
 ## Why "swadesh"?

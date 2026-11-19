@@ -2,14 +2,15 @@
 
 use std::borrow::Cow;
 
-use pyo3::exceptions::PyValueError;
+use pyo3::exceptions::{PyValueError, PyZeroDivisionError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyFloat, PyList, PyString};
 
 use swadesh_core::score::{py_sum, PyNum};
+use swadesh_core::unicode::py_rstrip;
 use swadesh_core::{
-    bleu_corpus_stats, chrf_corpus_stats, chrf_f_score, compute_bleu, BleuConfig, BleuScoreConfig,
-    ChrfConfig, Smooth, SumMode, Tokenizer,
+    bleu_corpus_stats, chrf_corpus_stats, chrf_f_score, compute_bleu, ter_corpus_stats, BleuConfig,
+    BleuScoreConfig, ChrfConfig, Smooth, SumMode, TerConfig, TerError, Tokenizer,
 };
 
 /// Strings borrowed from Python objects (or owned when lowercasing was needed).
@@ -100,6 +101,53 @@ fn i64_bytes<'py>(py: Python<'py>, v: &[i64]) -> Bound<'py, PyBytes> {
     PyBytes::new(py, bytes)
 }
 
+fn f64_bytes<'py>(py: Python<'py>, v: &[f64]) -> Bound<'py, PyBytes> {
+    let bytes: &[u8] = unsafe { std::slice::from_raw_parts(v.as_ptr() as *const u8, v.len() * 8) };
+    PyBytes::new(py, bytes)
+}
+
+/// TER input text: right-stripped, then lowercased unless `lowercase` is false.
+/// This is `TercomTokenizer` applied to `sent.rstrip()`, in sacreBLEU's order.
+fn ter_text<'py>(obj: &'py Bound<'py, PyAny>, lowercase: bool) -> PyResult<Cow<'py, str>> {
+    let s = obj.cast::<PyString>()?;
+    let raw: &str = s.to_str()?;
+    let r = py_rstrip(raw);
+    if !lowercase {
+        return Ok(Cow::Borrowed(r));
+    }
+    if r.is_ascii() {
+        if r.bytes().any(|b| b.is_ascii_uppercase()) {
+            Ok(Cow::Owned(r.to_ascii_lowercase()))
+        } else {
+            Ok(Cow::Borrowed(r))
+        }
+    } else {
+        let lowered = PyString::new(obj.py(), r).call_method0("lower")?;
+        Ok(Cow::Owned(lowered.cast::<PyString>()?.to_str()?.to_owned()))
+    }
+}
+
+/// Like `load`, with TER's input normalization. Missing references are skipped
+/// (as sacreBLEU's `_cache_references` does).
+fn ter_load<'py>(
+    hyp_objs: &'py [Bound<'py, PyAny>],
+    ref_objs: &'py [Vec<Bound<'py, PyAny>>],
+    lowercase: bool,
+) -> PyResult<(Vec<Cow<'py, str>>, Vec<Vec<Cow<'py, str>>>)> {
+    let n = hyp_objs.len();
+    let hyps = hyp_objs.iter().map(|h| ter_text(h, lowercase)).collect::<PyResult<Vec<_>>>()?;
+    let mut refs: Vec<Vec<Cow<'py, str>>> = (0..n).map(|_| Vec::with_capacity(ref_objs.len())).collect();
+    for stream in ref_objs {
+        for (i, r) in stream.iter().enumerate().take(n) {
+            if r.is_none() {
+                continue;
+            }
+            refs[i].push(ter_text(r, lowercase)?);
+        }
+    }
+    Ok((hyps, refs))
+}
+
 fn tokenizer(name: &str) -> PyResult<Tokenizer> {
     Tokenizer::from_name(name).ok_or_else(|| PyValueError::new_err(format!("unsupported native tokenizer {name:?}")))
 }
@@ -156,6 +204,33 @@ fn chrf_stats<'py>(
     let stats = py.detach(|| chrf_corpus_stats(&cfg, &hs, &rs));
     let width = 3 * (char_order + word_order);
     Ok((i64_bytes(py, &stats), hs.len(), width, c.nrefs_min, c.nrefs_max, c.tok_count))
+}
+
+/// Returns (stats_bytes, n_rows, width=2): float64 `[num_edits, avg_ref_len]` per segment.
+#[pyfunction]
+#[pyo3(signature = (hyps, refs, normalized, no_punct, asian_support, case_sensitive))]
+#[allow(clippy::too_many_arguments)]
+fn ter_stats<'py>(
+    py: Python<'py>,
+    hyps: &Bound<'py, PyAny>,
+    refs: &Bound<'py, PyAny>,
+    normalized: bool,
+    no_punct: bool,
+    asian_support: bool,
+    case_sensitive: bool,
+) -> PyResult<(Bound<'py, PyBytes>, usize, usize)> {
+    let cfg = TerConfig { normalized, no_punct, asian_support, case_sensitive };
+    let hyp_objs = as_objs(hyps)?;
+    let ref_objs = ref_streams(refs)?;
+    let (hyps_t, refs_t) = ter_load(&hyp_objs, &ref_objs, !case_sensitive)?;
+    let hs: Vec<&str> = hyps_t.iter().map(|s| s.as_ref()).collect();
+    let rs: Vec<Vec<&str>> = refs_t.iter().map(|v| v.iter().map(|s| s.as_ref()).collect()).collect();
+    let stats = py
+        .detach(|| ter_corpus_stats(&cfg, &hs, &rs))
+        .map_err(|e| match e {
+            TerError::NoReferences => PyZeroDivisionError::new_err("division by zero"),
+        })?;
+    Ok((f64_bytes(py, &stats), hs.len(), 2))
 }
 
 /// Segment-level BLEU for many (hyp, refs) pairs at once. Bit-identical to
@@ -457,6 +532,7 @@ fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(_py_sum, m)?)?;
     m.add_function(wrap_pyfunction!(bleu_stats, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_stats, m)?)?;
+    m.add_function(wrap_pyfunction!(ter_stats, m)?)?;
     m.add_function(wrap_pyfunction!(bleu_sentence_scores, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_sentence_scores, m)?)?;
     m.add_function(wrap_pyfunction!(bootstrap_sums_f32, m)?)?;
