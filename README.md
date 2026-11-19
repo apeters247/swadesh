@@ -1,9 +1,9 @@
 # swadesh
 
 **sacreBLEU, bit for bit, in Rust.** BLEU, chrF, chrF++ and TER with the same scores, the same signatures
-and the same CLI, and much faster: 22–45× on one core and 125–318× on a 24-thread desktop for BLEU, chrF and TER.
+and the same CLI, and much faster: 22–46× on one core and 41–331× on a 24-thread desktop.
 
-<p align="center"><img src="docs/img/benchmark.svg" alt="swadesh vs sacreBLEU on 100k segments: BLEU 125x, chrF 299x, chrF++ 291x faster, identical scores" width="720"></p>
+<p align="center"><img src="docs/img/benchmark.svg" alt="swadesh vs sacreBLEU on 100k segments: BLEU 129x, chrF 331x, chrF++ 326x faster, identical scores" width="720"></p>
 
 ```bash
 pip install swadesh
@@ -74,19 +74,19 @@ Every swadesh result below was checked `==` against sacreBLEU 2.6.0 on the same 
 Times are best of 3 (BLEU/chrF corpus) or a single run (TER, sentence-level, bootstrap).
 Source: [`bench/results/SUMMARY.md`](bench/results/SUMMARY.md) · reproduce with `bench/get_data.sh && python bench/bench.py`.
 
-**AMD Ryzen 9 7900X, idle machine** (`bench/results/final-troy1-*.json`; bootstrap row from `final2-troy1-*`)
+**AMD Ryzen 9 7900X, idle machine** (`bench/results/final4-troy1-*.json`)
 
-| | sacreBLEU | swadesh, 24 threads | speedup | swadesh, 1 core | speedup |
+| | sacreBLEU | swadesh, 24 threads | speedup | swadesh, 1 core (20k) | speedup |
 |---|---:|---:|---:|---:|---:|
-| corpus BLEU (100k) | 5.79 s | 0.046 s | **125×** | | 25.7× (20k) |
-| corpus chrF (100k) | 17.94 s | 0.060 s | **299×** | | 44.9× (20k) |
-| corpus chrF++ (100k) | 20.66 s | 0.071 s | **291×** | | 36.0× (20k) |
-| corpus TER (10k) | 6.34 s | 0.038 s | **165×** | 0.165 s | 38.8× |
-| sentence BLEU ×20k | 0.97 s | 0.0072 s | **134×** | 0.044 s | 22.5× |
-| sentence chrF ×20k | 2.71 s | 0.0085 s | **318×** | 0.073 s | 37.3× |
-| BLEU + 1000 bootstrap resamples (5k) | 0.46 s | 0.016 s | **28×** | 0.030 s | 15.3× |
+| corpus BLEU (100k) | 5.94 s | 0.046 s | **129×** | 0.045 s | 25.9× |
+| corpus chrF (100k) | 20.10 s | 0.061 s | **331×** | 0.075 s | 45.8× |
+| corpus chrF++ (100k) | 22.87 s | 0.070 s | **326×** | 0.108 s | 36.4× |
+| corpus TER (10k) | 6.43 s | 0.039 s | **164×** | 0.163 s | 38.8× |
+| sentence BLEU ×20k | 0.97 s | 0.0073 s | **131×** | 0.044 s | 22.6× |
+| sentence chrF ×20k | 2.72 s | 0.0087 s | **312×** | 0.073 s | 37.8× |
+| BLEU + 1000 bootstrap resamples (5k) | 0.47 s | 0.011 s | **41×** | 0.021 s | 22.0× |
 
-Bootstrap is bounded by numpy's sequential random-number stream, which swadesh must reproduce draw for draw.
+The single-core column was measured on 20k segments against sacreBLEU's 20k timings in the same JSON file.
 Earlier builds were also benchmarked on an ARM Cortex-X925 (GX10, up to 379× on chrF) and an
 Apple M4 (up to 242×); see [`bench/results/SUMMARY.md`](bench/results/SUMMARY.md).
 

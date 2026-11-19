@@ -1,0 +1,57 @@
+{
+ "lines": 100000,
+ "langpair": "en-de",
+ "cpus": 24,
+ "machine": "x86_64",
+ "rows": [
+  {
+   "case": "BLEU corpus",
+   "sacrebleu_s": 5.93857488874346,
+   "swadesh_s": 0.04581782408058643,
+   "speedup": 129.61276551017414,
+   "exact": true
+  },
+  {
+   "case": "chrF corpus",
+   "sacrebleu_s": 20.095355252269655,
+   "swadesh_s": 0.06054663611575961,
+   "speedup": 331.89878978328676,
+   "exact": true
+  },
+  {
+   "case": "chrF++ corpus",
+   "sacrebleu_s": 22.871118223760277,
+   "swadesh_s": 0.06996215181425214,
+   "speedup": 326.9070151598904,
+   "exact": true
+  },
+  {
+   "case": "TER corpus x10000",
+   "sacrebleu_s": 6.430905451998115,
+   "swadesh_s": 0.03906073700636625,
+   "speedup": 164.63861014578356,
+   "exact": true
+  },
+  {
+   "case": "sentence BLEU x20000",
+   "sacrebleu_s": 0.9654347118921578,
+   "swadesh_s": 0.007319881115108728,
+   "speedup": 131.89213003739027,
+   "exact": true
+  },
+  {
+   "case": "sentence chrF x20000",
+   "sacrebleu_s": 2.7156924549490213,
+   "swadesh_s": 0.008704307023435831,
+   "speedup": 311.9941021883971,
+   "exact": true
+  },
+  {
+   "case": "BLEU + bootstrap(1000) x5000",
+   "sacrebleu_s": 0.4719465048983693,
+   "swadesh_s": 0.0113093052059412,
+   "speedup": 41.73081337043041,
+   "exact": true
+  }
+ ]
+}
