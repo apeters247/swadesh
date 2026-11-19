@@ -372,3 +372,18 @@ def test_paired_tests_exact_variants(test_type, variant):
     assert list(ours[1]) == list(theirs[1])
     for key in theirs[1]:
         assert [repr(x) for x in ours[1][key]] == [repr(y) for y in theirs[1][key]], key
+
+
+@pytest.mark.parametrize("tok", TOKENIZERS)
+@pytest.mark.parametrize("lowercase", [False, True])
+@settings(max_examples=150, deadline=None, suppress_health_check=list(HealthCheck))
+@given(data=st.data(), hyps=corpus(1, 6))
+def test_bleu_cached_references(tok, lowercase, data, hyps):
+    refs = _refs_like(hyps, data, data.draw(st.integers(1, 3)), allow_none=True)
+    ours = swadesh.BLEU(tokenize=tok, lowercase=lowercase, references=refs)
+    theirs = sacrebleu.BLEU(tokenize=tok, lowercase=lowercase, references=refs)
+    for sys_hyps in (hyps, list(reversed(hyps)), hyps):  # the cache is reused across systems
+        a = ours.corpus_score(sys_hyps, None)
+        b = theirs.corpus_score(sys_hyps, None)
+        assert_same_score(a, b)
+    assert str(ours.get_signature()) == str(theirs.get_signature())
