@@ -7,6 +7,7 @@ import asyncio
 import io
 import logging
 import os
+import contextlib
 import runpy
 import sys
 from contextlib import redirect_stdout
@@ -32,6 +33,32 @@ REFS_BY_CLASS = {swadesh.BLEU: REF_BLEU, swadesh.CHRF: REF_CHRF, swadesh.TER: RE
 
 
 # --------------------------------------------------------------------------- patch / unpatch
+
+
+@contextlib.contextmanager
+def _sacrebleu_stdout():
+    """sacreBLEU's CLI does ``sys.stdout = open(sys.stdout.fileno(), ...)``: a second file
+    object that owns fd 1 and closes it when garbage-collected, which breaks pytest's
+    fd capture for every later test. Hand it a duplicate fd instead, and close that
+    ourselves after flushing (the duplicate writes to the same captured file)."""
+    import os
+
+    saved = sys.stdout
+    saved.flush()
+    fd = os.dup(saved.fileno())
+    ours = open(fd, "w", encoding="utf-8", closefd=False)
+    sys.stdout = ours
+    try:
+        yield
+    finally:
+        cur = sys.stdout
+        cur.flush()
+        sys.stdout = saved
+        if cur is not ours:
+            cur.close()  # sacreBLEU's re-opened file owns the duplicate fd
+        else:
+            ours.close()
+            os.close(fd)
 
 def test_patch_swaps_classes_and_unpatch_restores():
     import sacrebleu.compat as sb_compat
@@ -280,11 +307,13 @@ def test_cli_main_output_matches_sacrebleu_cli(corpus_files, monkeypatch, capfd)
     argv = [str(ref), "-i", str(hyp), "-m", "bleu", "chrf", "ter", "-f", "json"]
     monkeypatch.setattr(sys, "argv", ["sacrebleu"] + argv)
     _fresh_stdin(monkeypatch)
-    sb_cli.main()
+    with _sacrebleu_stdout():
+        sb_cli.main()
     theirs = capfd.readouterr().out
     _fresh_stdin(monkeypatch)
     try:
-        swadesh.cli.main(argv)
+        with _sacrebleu_stdout():
+            swadesh.cli.main(argv)
     finally:
         swadesh.unpatch()
     ours = capfd.readouterr().out
@@ -296,7 +325,7 @@ def test_cli_module_entrypoint(corpus_files, monkeypatch, capfd):
     monkeypatch.setattr(sys, "argv", ["swadesh", str(ref), "-i", str(hyp), "-m", "bleu"])
     _fresh_stdin(monkeypatch)
     try:
-        with pytest.raises(SystemExit) as ei:
+        with pytest.raises(SystemExit) as ei, _sacrebleu_stdout():
             runpy.run_module("swadesh.cli", run_name="__main__")
     finally:
         swadesh.unpatch()
