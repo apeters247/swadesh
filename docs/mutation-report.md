@@ -145,3 +145,20 @@ CARGO_BUILD_JOBS=2 CARGO_PROFILE_RELEASE_LTO=off CARGO_PROFILE_RELEASE_CODEGEN_U
 ```
 
 Verification scratch files (probe crates, mutant copies) were kept outside the repository and removed after use.
+
+## Follow-up: float32 bootstrap scorers (added after the main run)
+
+`compute_bleu_np2_f32`, `chrf_f_score_np2_f32` and `NpVal` were added later the same day and were first
+checked only by Python differential tests. A Rust-only cargo-mutants run on them, after adding
+`crates/swadesh-core/tests/np2_scoring.rs` (8,000 bit-exact fixtures generated from sacreBLEU by
+`tools/gen_np2_fixtures.py`), gave: **138 mutants, 131 caught, 5 unviable, 2 missed (98.5%)**. Both
+survivors are equivalent:
+
+- `score.rs` `compute_bleu_np2_f32`: `sys_len > 0.0` → `>=`. At `sys_len == 0` with `ref_len > 0` the other
+  branch computes `exp(1 - ref_len / 0) = exp(-inf) = 0.0`, the same value.
+- `score.rs` `compute_bleu_np2_f32`: `/` → `*` in the integer-sum branch. That branch is only reached when
+  every log term is the int sentinel `-9999999999`, so the mean is a huge negative number either way and
+  `exp()` underflows to `0.0`, giving the same score.
+
+Command: `cargo mutants -j 3 --timeout 120 -F 'compute_bleu_np2_f32|chrf_f_score_np2_f32|NpVal'` under
+`systemd-run --user --scope -p MemoryMax=6G`.
