@@ -329,7 +329,7 @@ fn bootstrap_sums_f32<'py>(py: Python<'py>, stats: &[u8], width: usize, idxs: &[
     let ix = i64_vec(idxs);
     // `n` is the length of each index row (the resampled corpus size); the
     // stats table may have a different number of rows (sacreBLEU allows that).
-    if width == 0 || n == 0 || stats.len() % (width * 4) != 0 || idxs.len() % 8 != 0 || ix.len() % n != 0 {
+    if width == 0 || n == 0 || !stats.len().is_multiple_of(width * 4) || !idxs.len().is_multiple_of(8) || !ix.len().is_multiple_of(n) {
         return Err(PyValueError::new_err("bootstrap_sums_f32: stats must be rows x width float32 and idxs k x n int64"));
     }
     let rows = stats.len() / (width * 4);
@@ -374,7 +374,7 @@ fn bleu_scores_np2_f32(
         max_order,
         sum_mode: sum_mode(py),
     };
-    if max_order == 0 || width != 2 + 2 * max_order || sums.len() % (4 * width) != 0 {
+    if max_order == 0 || width != 2 + 2 * max_order || !sums.len().is_multiple_of(4 * width) {
         return Err(PyValueError::new_err("bleu_scores_np2_f32: rows must have 2 + 2 * max_order float32 values"));
     }
     let v = f32_vec(sums);
@@ -385,7 +385,7 @@ fn bleu_scores_np2_f32(
 /// Returns (values, is_float32 flags).
 #[pyfunction]
 fn chrf_scores_np2_f32(sums: &[u8], width: usize, order: usize, beta: i64, eps_smoothing: bool) -> PyResult<(Vec<f64>, Vec<bool>)> {
-    if order == 0 || width != 3 * order || sums.len() % (4 * width) != 0 {
+    if order == 0 || width != 3 * order || !sums.len().is_multiple_of(4 * width) {
         return Err(PyValueError::new_err("chrf_scores_np2_f32: rows must have 3 * order float32 values"));
     }
     let v = f32_vec(sums);
@@ -407,7 +407,7 @@ fn ar_sums_i64<'py>(
     sel: &[u8],
     n: usize,
 ) -> PyResult<(Bound<'py, PyBytes>, Bound<'py, PyBytes>)> {
-    if width == 0 || n == 0 || bl.len() != n * width * 8 || sys.len() != bl.len() || sel.len() % n != 0 {
+    if width == 0 || n == 0 || bl.len() != n * width * 8 || sys.len() != bl.len() || !sel.len().is_multiple_of(n) {
         return Err(PyValueError::new_err("ar_sums_i64: bl and sys must be n x width int64 and sel k x n"));
     }
     let (b1, s1) = (i64_vec(bl), i64_vec(sys));
