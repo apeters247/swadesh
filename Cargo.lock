@@ -153,6 +153,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "swadesh-cli"
+version = "0.1.0"
+dependencies = [
+ "swadesh-core",
+]
+
+[[package]]
 name = "swadesh-core"
 version = "0.1.0"
 dependencies = [

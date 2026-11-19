@@ -1,0 +1,15 @@
+[package]
+name = "swadesh-cli"
+description = "Standalone sacreBLEU-compatible BLEU and chrF command line (no Python needed)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "swadesh"
+path = "src/main.rs"
+
+[dependencies]
+swadesh-core = { path = "../swadesh-core" }
