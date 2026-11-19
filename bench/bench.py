@@ -71,6 +71,9 @@ def main():
         ("chrF corpus", lambda m: m.CHRF().corpus_score(hyps, refs).score, 3),
         ("chrF++ corpus", lambda m: m.CHRF(word_order=2).corpus_score(hyps, refs).score, 3),
     ]
+    nt = min(a.lines, 10000)
+    th, tr = hyps[:nt], [refs[0][:nt]]
+    cases.append((f"TER corpus x{nt}", lambda m: m.TER().corpus_score(th, tr).score, 1))
     n_sent = min(a.lines, 20000)
     sh, sr = hyps[:n_sent], [refs[0][:n_sent]]
 
