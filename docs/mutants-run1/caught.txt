@@ -1,0 +1,1037 @@
+crates/swadesh-core/src/lib.rs:32:5: replace corpus_stats -> Vec<i64> with vec![]
+crates/swadesh-core/src/lib.rs:50:5: replace bleu_corpus_stats -> Vec<i64> with vec![1]
+crates/swadesh-core/src/lib.rs:50:5: replace bleu_corpus_stats -> Vec<i64> with vec![-1]
+crates/swadesh-core/src/lib.rs:32:5: replace corpus_stats -> Vec<i64> with vec![1]
+crates/swadesh-core/src/lib.rs:32:5: replace corpus_stats -> Vec<i64> with vec![0]
+crates/swadesh-core/src/lib.rs:50:5: replace bleu_corpus_stats -> Vec<i64> with vec![]
+crates/swadesh-core/src/lib.rs:32:5: replace corpus_stats -> Vec<i64> with vec![-1]
+crates/swadesh-core/src/lib.rs:37:22: replace == with != in corpus_stats
+crates/swadesh-core/src/lib.rs:50:5: replace bleu_corpus_stats -> Vec<i64> with vec![0]
+crates/swadesh-core/src/lib.rs:50:19: replace + with - in bleu_corpus_stats
+crates/swadesh-core/src/lib.rs:50:23: replace * with + in bleu_corpus_stats
+crates/swadesh-core/src/lib.rs:50:19: replace + with * in bleu_corpus_stats
+crates/swadesh-core/src/lib.rs:50:23: replace * with / in bleu_corpus_stats
+crates/swadesh-core/src/lib.rs:55:5: replace chrf_corpus_stats -> Vec<i64> with vec![1]
+crates/swadesh-core/src/lib.rs:55:5: replace chrf_corpus_stats -> Vec<i64> with vec![0]
+crates/swadesh-core/src/lib.rs:55:5: replace chrf_corpus_stats -> Vec<i64> with vec![]
+crates/swadesh-core/src/lib.rs:55:5: replace chrf_corpus_stats -> Vec<i64> with vec![-1]
+crates/swadesh-core/src/lib.rs:55:19: replace * with + in chrf_corpus_stats
+crates/swadesh-core/src/lib.rs:55:19: replace * with / in chrf_corpus_stats
+crates/swadesh-core/src/lib.rs:55:37: replace + with - in chrf_corpus_stats
+crates/swadesh-core/src/lib.rs:55:37: replace + with * in chrf_corpus_stats
+crates/swadesh-core/src/ngram.rs:22:9: replace AnyRuns::total -> u64 with 0
+crates/swadesh-core/src/ngram.rs:22:9: replace AnyRuns::total -> u64 with 1
+crates/swadesh-core/src/ngram.rs:37:5: replace rle -> Runs<K> with Runs::new()
+crates/swadesh-core/src/ngram.rs:41:32: replace match guard *last == k with true in rle
+crates/swadesh-core/src/lib.rs:63:5: replace ter_corpus_stats -> Result<Vec<f64>, TerError> with Ok(vec![])
+crates/swadesh-core/src/lib.rs:63:5: replace ter_corpus_stats -> Result<Vec<f64>, TerError> with Ok(vec![1.0])
+crates/swadesh-core/src/lib.rs:63:5: replace ter_corpus_stats -> Result<Vec<f64>, TerError> with Ok(vec![0.0])
+crates/swadesh-core/src/ngram.rs:41:38: replace == with != in rle
+crates/swadesh-core/src/lib.rs:63:5: replace ter_corpus_stats -> Result<Vec<f64>, TerError> with Ok(vec![-1.0])
+crates/swadesh-core/src/ngram.rs:50:10: replace == with != in count
+crates/swadesh-core/src/ngram.rs:50:28: replace < with == in count
+crates/swadesh-core/src/ngram.rs:50:28: replace < with <= in count
+crates/swadesh-core/src/ngram.rs:50:28: replace < with > in count
+crates/swadesh-core/src/ngram.rs:53:19: replace * with + in count
+crates/swadesh-core/src/ngram.rs:53:26: replace <= with > in count
+crates/swadesh-core/src/ngram.rs:41:49: replace += with -= in rle
+crates/swadesh-core/src/ngram.rs:50:15: replace || with && in count
+crates/swadesh-core/src/ngram.rs:53:19: replace * with / in count
+crates/swadesh-core/src/ngram.rs:41:49: replace += with *= in rle
+crates/swadesh-core/src/ngram.rs:71:23: replace && with || in clipped_matches_t
+crates/swadesh-core/src/ngram.rs:70:5: replace clipped_matches_t -> u64 with 1
+crates/swadesh-core/src/ngram.rs:70:5: replace clipped_matches_t -> u64 with 0
+crates/swadesh-core/src/ngram.rs:71:13: replace < with > in clipped_matches_t
+crates/swadesh-core/src/ngram.rs:71:13: replace < with <= in clipped_matches_t
+crates/swadesh-core/src/ngram.rs:71:13: replace < with == in clipped_matches_t
+crates/swadesh-core/src/ngram.rs:71:28: replace < with == in clipped_matches_t
+crates/swadesh-core/src/ngram.rs:71:28: replace < with <= in clipped_matches_t
+crates/swadesh-core/src/ngram.rs:71:28: replace < with > in clipped_matches_t
+crates/swadesh-core/src/ngram.rs:73:33: replace += with -= in clipped_matches_t
+crates/swadesh-core/src/ngram.rs:58:33: replace | with & in count
+crates/swadesh-core/src/ngram.rs:58:24: replace << with >> in count
+crates/swadesh-core/src/ngram.rs:76:19: replace += with *= in clipped_matches_t
+crates/swadesh-core/src/ngram.rs:76:19: replace += with -= in clipped_matches_t
+crates/swadesh-core/src/ngram.rs:74:36: replace += with -= in clipped_matches_t
+crates/swadesh-core/src/ngram.rs:77:19: replace += with -= in clipped_matches_t
+crates/swadesh-core/src/ngram.rs:78:19: replace += with -= in clipped_matches_t
+crates/swadesh-core/src/ngram.rs:87:5: replace clipped_matches -> u64 with 1
+crates/swadesh-core/src/ngram.rs:87:5: replace clipped_matches -> u64 with 0
+crates/swadesh-core/src/ngram.rs:89:9: delete match arm (AnyRuns::Wide(a), AnyRuns::Wide(b)) in clipped_matches
+crates/swadesh-core/src/ngram.rs:97:5: replace max_merge_t -> Runs<K> with Runs::new()
+crates/swadesh-core/src/ngram.rs:97:20: replace == with != in max_merge_t
+crates/swadesh-core/src/ngram.rs:105:33: replace match guard *last == k with true in max_merge_t
+crates/swadesh-core/src/ngram.rs:105:39: replace == with != in max_merge_t
+crates/swadesh-core/src/ngram.rs:88:9: delete match arm (AnyRuns::Packed(a), AnyRuns::Packed(b)) in clipped_matches
+crates/swadesh-core/src/ngram.rs:124:20: delete ! in max_merge
+crates/swadesh-core/src/ngram.rs:130:8: delete ! in max_merge
+crates/swadesh-core/src/par.rs:11:5: replace for_each_chunk with ()
+crates/swadesh-core/src/pairwise.rs:24:31: delete ! in chrf_profile
+crates/swadesh-core/src/pairwise.rs:30:23: replace > with == in chrf_profile
+crates/swadesh-core/src/pairwise.rs:30:23: replace > with < in chrf_profile
+crates/swadesh-core/src/pairwise.rs:48:5: replace chrf_matrix -> Vec<f64> with vec![]
+crates/swadesh-core/src/pairwise.rs:48:5: replace chrf_matrix -> Vec<f64> with vec![1.0]
+crates/swadesh-core/src/pairwise.rs:48:5: replace chrf_matrix -> Vec<f64> with vec![0.0]
+crates/swadesh-core/src/pairwise.rs:48:5: replace chrf_matrix -> Vec<f64> with vec![-1.0]
+crates/swadesh-core/src/pairwise.rs:51:32: replace + with - in chrf_matrix
+crates/swadesh-core/src/pairwise.rs:51:32: replace + with * in chrf_matrix
+crates/swadesh-core/src/pairwise.rs:60:39: replace > with < in chrf_matrix
+crates/swadesh-core/src/pairwise.rs:60:39: replace > with == in chrf_matrix
+crates/swadesh-core/src/pairwise.rs:86:5: replace bleu_matrix -> Vec<f64> with vec![0.0]
+crates/swadesh-core/src/pairwise.rs:86:5: replace bleu_matrix -> Vec<f64> with vec![]
+crates/swadesh-core/src/pairwise.rs:86:5: replace bleu_matrix -> Vec<f64> with vec![1.0]
+crates/swadesh-core/src/pairwise.rs:98:25: replace + with - in bleu_matrix
+crates/swadesh-core/src/pairwise.rs:86:5: replace bleu_matrix -> Vec<f64> with vec![-1.0]
+crates/swadesh-core/src/pairwise.rs:98:25: replace + with * in bleu_matrix
+crates/swadesh-core/src/pairwise.rs:99:33: replace + with - in bleu_matrix
+crates/swadesh-core/src/pairwise.rs:99:33: replace + with * in bleu_matrix
+crates/swadesh-core/src/resample.rs:15:5: replace accumulate with ()
+crates/swadesh-core/src/resample.rs:17:9: replace accumulate::fixed with ()
+crates/swadesh-core/src/resample.rs:21:40: replace * with + in accumulate::fixed
+crates/swadesh-core/src/pairwise.rs:99:25: replace + with * in bleu_matrix
+crates/swadesh-core/src/pairwise.rs:99:25: replace + with - in bleu_matrix
+crates/swadesh-core/src/resample.rs:21:53: replace * with + in accumulate::fixed
+crates/swadesh-core/src/resample.rs:21:40: replace * with / in accumulate::fixed
+crates/swadesh-core/src/resample.rs:21:48: replace + with - in accumulate::fixed
+crates/swadesh-core/src/resample.rs:21:53: replace * with / in accumulate::fixed
+crates/swadesh-core/src/resample.rs:21:48: replace + with * in accumulate::fixed
+crates/swadesh-core/src/resample.rs:23:22: replace += with -= in accumulate::fixed
+crates/swadesh-core/src/resample.rs:23:22: replace += with *= in accumulate::fixed
+crates/swadesh-core/src/resample.rs:53:5: replace bootstrap_sums_f32 -> Vec<f32> with vec![]
+crates/swadesh-core/src/resample.rs:53:5: replace bootstrap_sums_f32 -> Vec<f32> with vec![1.0]
+crates/swadesh-core/src/resample.rs:53:5: replace bootstrap_sums_f32 -> Vec<f32> with vec![0.0]
+crates/swadesh-core/src/resample.rs:53:5: replace bootstrap_sums_f32 -> Vec<f32> with vec![-1.0]
+crates/swadesh-core/src/resample.rs:56:31: replace * with / in bootstrap_sums_f32
+crates/swadesh-core/src/resample.rs:56:31: replace * with + in bootstrap_sums_f32
+crates/swadesh-core/src/resample.rs:56:44: replace * with + in bootstrap_sums_f32
+crates/swadesh-core/src/resample.rs:56:44: replace * with / in bootstrap_sums_f32
+crates/swadesh-core/src/resample.rs:56:39: replace + with - in bootstrap_sums_f32
+crates/swadesh-core/src/resample.rs:56:39: replace + with * in bootstrap_sums_f32
+crates/swadesh-core/src/resample.rs:68:5: replace ar_sums_i64 -> (Vec<i64>, Vec<i64>) with (vec![], vec![0])
+crates/swadesh-core/src/resample.rs:68:5: replace ar_sums_i64 -> (Vec<i64>, Vec<i64>) with (vec![], vec![1])
+crates/swadesh-core/src/resample.rs:68:5: replace ar_sums_i64 -> (Vec<i64>, Vec<i64>) with (vec![], vec![])
+crates/swadesh-core/src/resample.rs:68:5: replace ar_sums_i64 -> (Vec<i64>, Vec<i64>) with (vec![0], vec![])
+crates/swadesh-core/src/resample.rs:68:5: replace ar_sums_i64 -> (Vec<i64>, Vec<i64>) with (vec![], vec![-1])
+crates/swadesh-core/src/resample.rs:68:5: replace ar_sums_i64 -> (Vec<i64>, Vec<i64>) with (vec![0], vec![0])
+crates/swadesh-core/src/resample.rs:68:5: replace ar_sums_i64 -> (Vec<i64>, Vec<i64>) with (vec![0], vec![1])
+crates/swadesh-core/src/resample.rs:68:5: replace ar_sums_i64 -> (Vec<i64>, Vec<i64>) with (vec![0], vec![-1])
+crates/swadesh-core/src/resample.rs:68:5: replace ar_sums_i64 -> (Vec<i64>, Vec<i64>) with (vec![1], vec![])
+crates/swadesh-core/src/resample.rs:68:5: replace ar_sums_i64 -> (Vec<i64>, Vec<i64>) with (vec![1], vec![0])
+crates/swadesh-core/src/resample.rs:68:5: replace ar_sums_i64 -> (Vec<i64>, Vec<i64>) with (vec![1], vec![1])
+crates/swadesh-core/src/resample.rs:68:5: replace ar_sums_i64 -> (Vec<i64>, Vec<i64>) with (vec![-1], vec![])
+crates/swadesh-core/src/resample.rs:68:5: replace ar_sums_i64 -> (Vec<i64>, Vec<i64>) with (vec![1], vec![-1])
+crates/swadesh-core/src/resample.rs:68:5: replace ar_sums_i64 -> (Vec<i64>, Vec<i64>) with (vec![-1], vec![1])
+crates/swadesh-core/src/resample.rs:68:5: replace ar_sums_i64 -> (Vec<i64>, Vec<i64>) with (vec![-1], vec![0])
+crates/swadesh-core/src/resample.rs:68:5: replace ar_sums_i64 -> (Vec<i64>, Vec<i64>) with (vec![-1], vec![-1])
+crates/swadesh-core/src/resample.rs:73:28: replace * with + in ar_sums_i64
+crates/swadesh-core/src/resample.rs:73:28: replace * with / in ar_sums_i64
+crates/swadesh-core/src/resample.rs:73:41: replace * with + in ar_sums_i64
+crates/swadesh-core/src/resample.rs:73:36: replace + with - in ar_sums_i64
+crates/swadesh-core/src/resample.rs:73:41: replace * with / in ar_sums_i64
+crates/swadesh-core/src/resample.rs:73:36: replace + with * in ar_sums_i64
+crates/swadesh-core/src/resample.rs:76:32: replace * with + in ar_sums_i64
+crates/swadesh-core/src/resample.rs:76:32: replace * with / in ar_sums_i64
+crates/swadesh-core/src/resample.rs:76:49: replace * with / in ar_sums_i64
+crates/swadesh-core/src/resample.rs:76:49: replace * with + in ar_sums_i64
+crates/swadesh-core/src/resample.rs:76:44: replace + with - in ar_sums_i64
+crates/swadesh-core/src/resample.rs:94:5: replace bootstrap_sums_f32_seeded -> Vec<f32> with vec![]
+crates/swadesh-core/src/resample.rs:94:5: replace bootstrap_sums_f32_seeded -> Vec<f32> with vec![0.0]
+crates/swadesh-core/src/resample.rs:94:5: replace bootstrap_sums_f32_seeded -> Vec<f32> with vec![1.0]
+crates/swadesh-core/src/resample.rs:94:5: replace bootstrap_sums_f32_seeded -> Vec<f32> with vec![-1.0]
+crates/swadesh-core/src/resample.rs:76:44: replace + with * in ar_sums_i64
+crates/swadesh-core/src/resample.rs:78:28: replace += with -= in ar_sums_i64
+crates/swadesh-core/src/resample.rs:78:28: replace += with *= in ar_sums_i64
+crates/swadesh-core/src/resample.rs:94:10: replace == with != in bootstrap_sums_f32_seeded
+crates/swadesh-core/src/resample.rs:94:28: replace == with != in bootstrap_sums_f32_seeded
+crates/swadesh-core/src/nprng.rs:36:5: replace hashmix -> u32 with 0
+crates/swadesh-core/src/nprng.rs:36:5: replace hashmix -> u32 with 1
+crates/swadesh-core/src/nprng.rs:36:23: replace ^ with | in hashmix
+crates/swadesh-core/src/nprng.rs:36:23: replace ^ with & in hashmix
+crates/swadesh-core/src/nprng.rs:39:7: replace ^ with | in hashmix
+crates/swadesh-core/src/nprng.rs:39:7: replace ^ with & in hashmix
+crates/swadesh-core/src/nprng.rs:39:12: replace >> with << in hashmix
+crates/swadesh-core/src/resample.rs:101:56: replace * with + in bootstrap_sums_f32_seeded
+crates/swadesh-core/src/nprng.rs:44:5: replace mix -> u32 with 0
+crates/swadesh-core/src/nprng.rs:44:5: replace mix -> u32 with 1
+crates/swadesh-core/src/nprng.rs:47:7: replace ^ with | in mix
+crates/swadesh-core/src/resample.rs:101:56: replace * with / in bootstrap_sums_f32_seeded
+crates/swadesh-core/src/nprng.rs:47:7: replace ^ with & in mix
+crates/swadesh-core/src/nprng.rs:47:12: replace >> with << in mix
+crates/swadesh-core/src/nprng.rs:91:9: replace SeedSequence::generate_state_u32 -> Vec<u32> with vec![]
+crates/swadesh-core/src/nprng.rs:91:9: replace SeedSequence::generate_state_u32 -> Vec<u32> with vec![0]
+crates/swadesh-core/src/nprng.rs:91:9: replace SeedSequence::generate_state_u32 -> Vec<u32> with vec![1]
+crates/swadesh-core/src/nprng.rs:94:54: replace ^ with | in SeedSequence::generate_state_u32
+crates/swadesh-core/src/nprng.rs:94:54: replace ^ with & in SeedSequence::generate_state_u32
+crates/swadesh-core/src/nprng.rs:94:41: replace % with / in SeedSequence::generate_state_u32
+crates/swadesh-core/src/nprng.rs:97:19: replace ^ with | in SeedSequence::generate_state_u32
+crates/swadesh-core/src/nprng.rs:94:41: replace % with + in SeedSequence::generate_state_u32
+crates/swadesh-core/src/nprng.rs:97:19: replace ^ with & in SeedSequence::generate_state_u32
+crates/swadesh-core/src/nprng.rs:97:24: replace >> with << in SeedSequence::generate_state_u32
+crates/swadesh-core/src/nprng.rs:105:9: replace SeedSequence::generate_state_u64 -> Vec<u64> with vec![0]
+crates/swadesh-core/src/nprng.rs:105:9: replace SeedSequence::generate_state_u64 -> Vec<u64> with vec![]
+crates/swadesh-core/src/nprng.rs:105:9: replace SeedSequence::generate_state_u64 -> Vec<u64> with vec![1]
+crates/swadesh-core/src/nprng.rs:105:43: replace * with + in SeedSequence::generate_state_u64
+crates/swadesh-core/src/nprng.rs:105:43: replace * with / in SeedSequence::generate_state_u64
+crates/swadesh-core/src/nprng.rs:107:40: replace | with & in SeedSequence::generate_state_u64
+crates/swadesh-core/src/nprng.rs:107:27: replace * with + in SeedSequence::generate_state_u64
+crates/swadesh-core/src/nprng.rs:107:27: replace * with / in SeedSequence::generate_state_u64
+crates/swadesh-core/src/nprng.rs:107:65: replace << with >> in SeedSequence::generate_state_u64
+crates/swadesh-core/src/nprng.rs:107:52: replace + with - in SeedSequence::generate_state_u64
+crates/swadesh-core/src/nprng.rs:107:52: replace + with * in SeedSequence::generate_state_u64
+crates/swadesh-core/src/nprng.rs:107:48: replace * with + in SeedSequence::generate_state_u64
+crates/swadesh-core/src/nprng.rs:107:48: replace * with / in SeedSequence::generate_state_u64
+crates/swadesh-core/src/nprng.rs:141:9: replace Pcg64::step with ()
+crates/swadesh-core/src/nprng.rs:147:9: replace Pcg64::next_u64 -> u64 with 1
+crates/swadesh-core/src/nprng.rs:149:36: replace ^ with | in Pcg64::next_u64
+crates/swadesh-core/src/nprng.rs:149:36: replace ^ with & in Pcg64::next_u64
+crates/swadesh-core/src/nprng.rs:149:21: replace >> with << in Pcg64::next_u64
+crates/swadesh-core/src/nprng.rs:150:22: replace >> with << in Pcg64::next_u64
+crates/swadesh-core/src/nprng.rs:158:9: replace Pcg64::next_u32 -> u32 with 1
+crates/swadesh-core/src/nprng.rs:164:28: replace >> with << in Pcg64::next_u32
+crates/swadesh-core/src/nprng.rs:178:5: replace lemire_u32 -> u32 with 0
+crates/swadesh-core/src/nprng.rs:178:5: replace lemire_u32 -> u32 with 1
+crates/swadesh-core/src/nprng.rs:178:20: replace + with - in lemire_u32
+crates/swadesh-core/src/nprng.rs:178:20: replace + with * in lemire_u32
+crates/swadesh-core/src/nprng.rs:179:40: replace * with + in lemire_u32
+crates/swadesh-core/src/nprng.rs:179:40: replace * with / in lemire_u32
+crates/swadesh-core/src/nprng.rs:181:13: replace < with == in lemire_u32
+crates/swadesh-core/src/nprng.rs:181:13: replace < with > in lemire_u32
+crates/swadesh-core/src/nprng.rs:182:36: replace % with / in lemire_u32
+crates/swadesh-core/src/nprng.rs:182:36: replace % with + in lemire_u32
+crates/swadesh-core/src/nprng.rs:182:29: replace - with + in lemire_u32
+crates/swadesh-core/src/nprng.rs:182:29: replace - with / in lemire_u32
+crates/swadesh-core/src/nprng.rs:183:20: replace < with == in lemire_u32
+crates/swadesh-core/src/nprng.rs:184:40: replace * with + in lemire_u32
+crates/swadesh-core/src/nprng.rs:183:20: replace < with > in lemire_u32
+crates/swadesh-core/src/nprng.rs:188:8: replace >> with << in lemire_u32
+crates/swadesh-core/src/nprng.rs:194:5: replace lemire_u64 -> u64 with 0
+crates/swadesh-core/src/nprng.rs:194:5: replace lemire_u64 -> u64 with 1
+crates/swadesh-core/src/nprng.rs:194:20: replace + with - in lemire_u64
+crates/swadesh-core/src/nprng.rs:195:41: replace * with + in lemire_u64
+crates/swadesh-core/src/nprng.rs:194:20: replace + with * in lemire_u64
+crates/swadesh-core/src/nprng.rs:195:41: replace * with / in lemire_u64
+crates/swadesh-core/src/nprng.rs:198:36: replace % with / in lemire_u64
+crates/swadesh-core/src/nprng.rs:198:29: replace - with + in lemire_u64
+crates/swadesh-core/src/nprng.rs:198:29: replace - with / in lemire_u64
+crates/swadesh-core/src/nprng.rs:199:20: replace < with == in lemire_u64
+crates/swadesh-core/src/nprng.rs:199:20: replace < with <= in lemire_u64
+crates/swadesh-core/src/nprng.rs:204:8: replace >> with << in lemire_u64
+crates/swadesh-core/src/nprng.rs:210:5: replace bounded_u64 -> u64 with 0
+crates/swadesh-core/src/nprng.rs:210:5: replace bounded_u64 -> u64 with 1
+crates/swadesh-core/src/nprng.rs:210:12: replace == with != in bounded_u64
+crates/swadesh-core/src/nprng.rs:212:19: replace <= with > in bounded_u64
+crates/swadesh-core/src/nprng.rs:213:16: replace == with != in bounded_u64
+crates/swadesh-core/src/nprng.rs:218:19: replace == with != in bounded_u64
+crates/swadesh-core/src/nprng.rs:242:9: replace Generator::integers -> Vec<i64> with vec![]
+crates/swadesh-core/src/nprng.rs:242:9: replace Generator::integers -> Vec<i64> with vec![0]
+crates/swadesh-core/src/nprng.rs:242:9: replace Generator::integers -> Vec<i64> with vec![1]
+crates/swadesh-core/src/nprng.rs:242:9: replace Generator::integers -> Vec<i64> with vec![-1]
+crates/swadesh-core/src/nprng.rs:243:25: replace - with + in Generator::integers
+crates/swadesh-core/src/nprng.rs:243:25: replace - with / in Generator::integers
+crates/swadesh-core/src/nprng.rs:260:9: replace Generator::choice -> Vec<usize> with vec![]
+crates/swadesh-core/src/nprng.rs:260:9: replace Generator::choice -> Vec<usize> with vec![0]
+crates/swadesh-core/src/nprng.rs:260:9: replace Generator::choice -> Vec<usize> with vec![1]
+crates/swadesh-core/src/nprng.rs:261:41: replace * with + in Generator::choice
+crates/swadesh-core/src/nprng.rs:261:41: replace * with / in Generator::choice
+crates/swadesh-core/src/nprng.rs:271:9: replace Generator::integers_bool -> Vec<bool> with vec![]
+crates/swadesh-core/src/nprng.rs:271:9: replace Generator::integers_bool -> Vec<bool> with vec![true]
+crates/swadesh-core/src/nprng.rs:271:9: replace Generator::integers_bool -> Vec<bool> with vec![false]
+crates/swadesh-core/src/nprng.rs:271:22: replace * with + in Generator::integers_bool
+crates/swadesh-core/src/nprng.rs:271:22: replace * with / in Generator::integers_bool
+crates/swadesh-core/src/nprng.rs:275:23: replace == with != in Generator::integers_bool
+crates/swadesh-core/src/nprng.rs:275:18: replace % with / in Generator::integers_bool
+crates/swadesh-core/src/nprng.rs:275:18: replace % with + in Generator::integers_bool
+crates/swadesh-core/src/nprng.rs:278:44: replace == with != in Generator::integers_bool
+crates/swadesh-core/src/nprng.rs:278:40: replace & with | in Generator::integers_bool
+crates/swadesh-core/src/nprng.rs:278:40: replace & with ^ in Generator::integers_bool
+crates/swadesh-core/src/nprng.rs:278:27: replace >> with << in Generator::integers_bool
+crates/swadesh-core/src/nprng.rs:278:33: replace % with / in Generator::integers_bool
+crates/swadesh-core/src/nprng.rs:295:5: replace pairwise -> T with Default::default()
+crates/swadesh-core/src/nprng.rs:296:10: replace < with == in pairwise
+crates/swadesh-core/src/nprng.rs:296:10: replace < with > in pairwise
+crates/swadesh-core/src/nprng.rs:296:10: replace < with <= in pairwise
+crates/swadesh-core/src/nprng.rs:305:29: replace - with + in pairwise
+crates/swadesh-core/src/nprng.rs:302:17: replace <= with > in pairwise
+crates/swadesh-core/src/nprng.rs:305:29: replace - with / in pairwise
+crates/swadesh-core/src/nprng.rs:305:34: replace % with / in pairwise
+crates/swadesh-core/src/nprng.rs:305:34: replace % with + in pairwise
+crates/swadesh-core/src/nprng.rs:306:17: replace < with == in pairwise
+crates/swadesh-core/src/nprng.rs:306:17: replace < with > in pairwise
+crates/swadesh-core/src/nprng.rs:306:17: replace < with <= in pairwise
+crates/swadesh-core/src/nprng.rs:308:33: replace + with - in pairwise
+crates/swadesh-core/src/nprng.rs:308:33: replace + with * in pairwise
+crates/swadesh-core/src/nprng.rs:310:15: replace += with -= in pairwise
+crates/swadesh-core/src/nprng.rs:310:15: replace += with *= in pairwise
+crates/swadesh-core/src/nprng.rs:313:17: replace < with > in pairwise
+crates/swadesh-core/src/nprng.rs:313:17: replace < with <= in pairwise
+crates/swadesh-core/src/nprng.rs:313:17: replace < with == in pairwise
+crates/swadesh-core/src/nprng.rs:315:15: replace += with -= in pairwise
+crates/swadesh-core/src/nprng.rs:319:24: replace / with * in pairwise
+crates/swadesh-core/src/nprng.rs:319:24: replace / with % in pairwise
+crates/swadesh-core/src/nprng.rs:320:12: replace -= with += in pairwise
+crates/swadesh-core/src/nprng.rs:320:12: replace -= with /= in pairwise
+crates/swadesh-core/src/nprng.rs:320:18: replace % with / in pairwise
+crates/swadesh-core/src/nprng.rs:320:18: replace % with + in pairwise
+crates/swadesh-core/src/nprng.rs:328:5: replace mean_f64 -> f64 with 1.0
+crates/swadesh-core/src/nprng.rs:328:5: replace mean_f64 -> f64 with 0.0
+crates/swadesh-core/src/nprng.rs:328:5: replace mean_f64 -> f64 with -1.0
+crates/swadesh-core/src/nprng.rs:331:18: replace / with % in mean_f64
+crates/swadesh-core/src/nprng.rs:331:18: replace / with * in mean_f64
+crates/swadesh-core/src/nprng.rs:336:5: replace pairwise_sum_f32 -> f32 with 0.0
+crates/swadesh-core/src/nprng.rs:336:5: replace pairwise_sum_f32 -> f32 with 1.0
+crates/swadesh-core/src/nprng.rs:336:5: replace pairwise_sum_f32 -> f32 with -1.0
+crates/swadesh-core/src/nprng.rs:342:5: replace sort_f64 with ()
+crates/swadesh-core/src/nprng.rs:352:5: replace pow2 -> f64 with 0.0
+crates/swadesh-core/src/nprng.rs:352:5: replace pow2 -> f64 with 1.0
+crates/swadesh-core/src/nprng.rs:352:5: replace pow2 -> f64 with -1.0
+crates/swadesh-core/src/nprng.rs:352:13: delete - in pow2
+crates/swadesh-core/src/nprng.rs:352:10: replace >= with < in pow2
+crates/swadesh-core/src/nprng.rs:353:44: replace << with >> in pow2
+crates/swadesh-core/src/nprng.rs:353:28: replace + with - in pow2
+crates/swadesh-core/src/nprng.rs:353:28: replace + with * in pow2
+crates/swadesh-core/src/nprng.rs:355:35: replace + with - in pow2
+crates/swadesh-core/src/nprng.rs:355:35: replace + with * in pow2
+crates/swadesh-core/src/nprng.rs:361:5: replace round_ratio -> f64 with 0.0
+crates/swadesh-core/src/nprng.rs:361:5: replace round_ratio -> f64 with 1.0
+crates/swadesh-core/src/nprng.rs:361:5: replace round_ratio -> f64 with -1.0
+crates/swadesh-core/src/nprng.rs:361:19: replace == with != in round_ratio
+crates/swadesh-core/src/nprng.rs:364:26: replace == with != in round_ratio
+crates/swadesh-core/src/nprng.rs:372:21: replace << with >> in round_ratio
+crates/swadesh-core/src/nprng.rs:373:22: replace / with % in round_ratio
+crates/swadesh-core/src/nprng.rs:373:22: replace / with * in round_ratio
+crates/swadesh-core/src/nprng.rs:375:38: replace - with + in round_ratio
+crates/swadesh-core/src/nprng.rs:375:38: replace - with / in round_ratio
+crates/swadesh-core/src/nprng.rs:375:34: replace - with + in round_ratio
+crates/swadesh-core/src/nprng.rs:375:34: replace - with / in round_ratio
+crates/swadesh-core/src/nprng.rs:376:40: replace - with + in round_ratio
+crates/swadesh-core/src/nprng.rs:376:40: replace - with / in round_ratio
+crates/swadesh-core/src/nprng.rs:376:46: delete - in round_ratio
+crates/swadesh-core/src/nprng.rs:377:22: replace + with * in round_ratio
+crates/swadesh-core/src/nprng.rs:377:22: replace + with - in round_ratio
+crates/swadesh-core/src/nprng.rs:378:19: replace >> with << in round_ratio
+crates/swadesh-core/src/nprng.rs:379:18: replace - with + in round_ratio
+crates/swadesh-core/src/nprng.rs:379:18: replace - with / in round_ratio
+crates/swadesh-core/src/nprng.rs:379:27: replace << with >> in round_ratio
+crates/swadesh-core/src/nprng.rs:380:31: replace << with >> in round_ratio
+crates/swadesh-core/src/nprng.rs:380:37: replace - with + in round_ratio
+crates/swadesh-core/src/nprng.rs:380:37: replace - with / in round_ratio
+crates/swadesh-core/src/nprng.rs:383:19: replace || with && in round_ratio
+crates/swadesh-core/src/nprng.rs:383:12: replace > with == in round_ratio
+crates/swadesh-core/src/nprng.rs:383:12: replace > with < in round_ratio
+crates/swadesh-core/src/nprng.rs:383:35: replace && with || in round_ratio
+crates/swadesh-core/src/nprng.rs:383:27: replace == with != in round_ratio
+crates/swadesh-core/src/nprng.rs:384:11: replace += with -= in round_ratio
+crates/swadesh-core/src/nprng.rs:384:11: replace += with *= in round_ratio
+crates/swadesh-core/src/nprng.rs:386:23: replace + with * in round_ratio
+crates/swadesh-core/src/nprng.rs:386:29: replace - with + in round_ratio
+crates/swadesh-core/src/nprng.rs:387:22: replace > with < in round_ratio
+crates/swadesh-core/src/nprng.rs:390:20: replace * with + in round_ratio
+crates/swadesh-core/src/nprng.rs:390:20: replace * with / in round_ratio
+crates/swadesh-core/src/nprng.rs:393:9: delete - in round_ratio
+crates/swadesh-core/src/nprng.rs:406:5: replace statistics_mean -> Option<f64> with None
+crates/swadesh-core/src/nprng.rs:406:5: replace statistics_mean -> Option<f64> with Some(1.0)
+crates/swadesh-core/src/nprng.rs:406:5: replace statistics_mean -> Option<f64> with Some(0.0)
+crates/swadesh-core/src/nprng.rs:406:5: replace statistics_mean -> Option<f64> with Some(-1.0)
+crates/swadesh-core/src/nprng.rs:410:26: delete ! in statistics_mean
+crates/swadesh-core/src/nprng.rs:413:25: delete ! in statistics_mean
+crates/swadesh-core/src/nprng.rs:414:41: replace + with - in statistics_mean
+crates/swadesh-core/src/nprng.rs:415:27: replace / with % in statistics_mean
+crates/swadesh-core/src/nprng.rs:414:41: replace + with * in statistics_mean
+crates/swadesh-core/src/nprng.rs:421:30: replace == with != in statistics_mean
+crates/swadesh-core/src/nprng.rs:421:24: replace >> with << in statistics_mean
+crates/swadesh-core/src/nprng.rs:422:36: replace & with | in statistics_mean
+crates/swadesh-core/src/nprng.rs:422:36: replace & with ^ in statistics_mean
+crates/swadesh-core/src/nprng.rs:422:29: replace >> with << in statistics_mean
+crates/swadesh-core/src/nprng.rs:423:25: replace & with | in statistics_mean
+crates/swadesh-core/src/nprng.rs:423:25: replace & with ^ in statistics_mean
+crates/swadesh-core/src/nprng.rs:423:41: replace - with + in statistics_mean
+crates/swadesh-core/src/nprng.rs:423:41: replace - with / in statistics_mean
+crates/swadesh-core/src/nprng.rs:424:32: replace == with != in statistics_mean
+crates/swadesh-core/src/nprng.rs:425:20: delete - in statistics_mean
+crates/swadesh-core/src/nprng.rs:427:19: replace | with & in statistics_mean
+crates/swadesh-core/src/nprng.rs:427:27: replace << with >> in statistics_mean
+crates/swadesh-core/src/nprng.rs:427:42: replace - with + in statistics_mean
+crates/swadesh-core/src/nprng.rs:427:42: replace - with / in statistics_mean
+crates/swadesh-core/src/nprng.rs:429:14: replace == with != in statistics_mean
+crates/swadesh-core/src/nprng.rs:432:36: replace << with >> in statistics_mean
+crates/swadesh-core/src/nprng.rs:432:43: replace + with - in statistics_mean
+crates/swadesh-core/src/nprng.rs:432:43: replace + with * in statistics_mean
+crates/swadesh-core/src/nprng.rs:434:17: replace -= with += in statistics_mean
+crates/swadesh-core/src/nprng.rs:434:17: replace -= with /= in statistics_mean
+crates/swadesh-core/src/nprng.rs:436:17: replace += with -= in statistics_mean
+crates/swadesh-core/src/nprng.rs:436:17: replace += with *= in statistics_mean
+crates/swadesh-core/src/nprng.rs:439:39: replace << with >> in statistics_mean
+crates/swadesh-core/src/nprng.rs:448:5: replace sum_rows_f32 -> Vec<f32> with vec![]
+crates/swadesh-core/src/nprng.rs:448:5: replace sum_rows_f32 -> Vec<f32> with vec![0.0]
+crates/swadesh-core/src/nprng.rs:448:5: replace sum_rows_f32 -> Vec<f32> with vec![1.0]
+crates/swadesh-core/src/nprng.rs:448:5: replace sum_rows_f32 -> Vec<f32> with vec![-1.0]
+crates/swadesh-core/src/nprng.rs:448:14: replace == with != in sum_rows_f32
+crates/swadesh-core/src/nprng.rs:454:26: replace * with + in sum_rows_f32
+crates/swadesh-core/src/nprng.rs:454:26: replace * with / in sum_rows_f32
+crates/swadesh-core/src/nprng.rs:454:43: replace * with + in sum_rows_f32
+crates/swadesh-core/src/nprng.rs:454:43: replace * with / in sum_rows_f32
+crates/swadesh-core/src/nprng.rs:454:38: replace + with - in sum_rows_f32
+crates/swadesh-core/src/nprng.rs:454:38: replace + with * in sum_rows_f32
+crates/swadesh-core/src/nprng.rs:456:16: replace += with -= in sum_rows_f32
+crates/swadesh-core/src/nprng.rs:456:16: replace += with *= in sum_rows_f32
+crates/swadesh-core/src/score.rs:26:23: replace match guard (m, n) >= (3, 14) with false in SumMode::for_python
+crates/swadesh-core/src/score.rs:36:5: replace neumaier_add with ()
+crates/swadesh-core/src/score.rs:26:30: replace >= with < in SumMode::for_python
+crates/swadesh-core/src/score.rs:36:18: replace + with - in neumaier_add
+crates/swadesh-core/src/score.rs:36:18: replace + with * in neumaier_add
+crates/swadesh-core/src/score.rs:37:18: replace >= with < in neumaier_add
+crates/swadesh-core/src/score.rs:38:15: replace += with -= in neumaier_add
+crates/swadesh-core/src/score.rs:38:15: replace += with *= in neumaier_add
+crates/swadesh-core/src/score.rs:38:29: replace + with - in neumaier_add
+crates/swadesh-core/src/score.rs:38:29: replace + with * in neumaier_add
+crates/swadesh-core/src/score.rs:38:24: replace - with + in neumaier_add
+crates/swadesh-core/src/score.rs:38:24: replace - with / in neumaier_add
+crates/swadesh-core/src/score.rs:40:26: replace + with - in neumaier_add
+crates/swadesh-core/src/score.rs:40:15: replace += with *= in neumaier_add
+crates/swadesh-core/src/score.rs:40:26: replace + with * in neumaier_add
+crates/swadesh-core/src/score.rs:40:21: replace - with + in neumaier_add
+crates/swadesh-core/src/score.rs:40:21: replace - with / in neumaier_add
+crates/swadesh-core/src/score.rs:40:15: replace += with -= in neumaier_add
+crates/swadesh-core/src/score.rs:73:46: replace + with - in py_sum
+crates/swadesh-core/src/score.rs:73:46: replace + with * in py_sum
+crates/swadesh-core/src/score.rs:71:45: replace += with -= in py_sum
+crates/swadesh-core/src/score.rs:71:45: replace += with *= in py_sum
+crates/swadesh-core/src/score.rs:88:13: replace != with == in py_sum
+crates/swadesh-core/src/score.rs:88:36: replace != with == in py_sum
+crates/swadesh-core/src/score.rs:89:18: replace += with -= in py_sum
+crates/swadesh-core/src/score.rs:89:18: replace += with *= in py_sum
+crates/swadesh-core/src/score.rs:97:10: replace == with != in my_log
+crates/swadesh-core/src/score.rs:98:20: delete - in my_log
+crates/swadesh-core/src/score.rs:114:9: replace Smooth::from_name -> Option<Self> with None
+crates/swadesh-core/src/score.rs:115:13: delete match arm "none" in Smooth::from_name
+crates/swadesh-core/src/score.rs:116:13: delete match arm "floor" in Smooth::from_name
+crates/swadesh-core/src/score.rs:117:13: delete match arm "add-k" in Smooth::from_name
+crates/swadesh-core/src/score.rs:118:13: delete match arm "exp" in Smooth::from_name
+crates/swadesh-core/src/score.rs:123:9: replace Smooth::default_value -> f64 with 0.0
+crates/swadesh-core/src/score.rs:152:44: replace + with - in compute_bleu
+crates/swadesh-core/src/score.rs:123:9: replace Smooth::default_value -> f64 with 1.0
+crates/swadesh-core/src/score.rs:123:9: replace Smooth::default_value -> f64 with -1.0
+crates/swadesh-core/src/score.rs:125:13: delete match arm Smooth::AddK in Smooth::default_value
+crates/swadesh-core/src/score.rs:124:13: delete match arm Smooth::Floor in Smooth::default_value
+crates/swadesh-core/src/score.rs:152:44: replace + with * in compute_bleu
+crates/swadesh-core/src/score.rs:153:39: replace + with - in compute_bleu
+crates/swadesh-core/src/score.rs:153:46: replace + with * in compute_bleu
+crates/swadesh-core/src/score.rs:153:46: replace + with - in compute_bleu
+crates/swadesh-core/src/score.rs:153:39: replace + with * in compute_bleu
+crates/swadesh-core/src/score.rs:153:50: replace * with + in compute_bleu
+crates/swadesh-core/src/score.rs:153:50: replace * with / in compute_bleu
+crates/swadesh-core/src/score.rs:155:16: replace < with == in compute_bleu
+crates/swadesh-core/src/score.rs:155:16: replace < with > in compute_bleu
+crates/swadesh-core/src/score.rs:156:25: replace > with == in compute_bleu
+crates/swadesh-core/src/score.rs:156:25: replace > with < in compute_bleu
+crates/swadesh-core/src/score.rs:156:38: replace - with + in compute_bleu
+crates/swadesh-core/src/score.rs:156:38: replace - with / in compute_bleu
+crates/swadesh-core/src/score.rs:156:48: replace / with % in compute_bleu
+crates/swadesh-core/src/score.rs:156:48: replace / with * in compute_bleu
+crates/swadesh-core/src/score.rs:159:8: delete ! in compute_bleu
+crates/swadesh-core/src/score.rs:159:35: replace != with == in compute_bleu
+crates/swadesh-core/src/score.rs:166:39: replace && with || in compute_bleu
+crates/swadesh-core/src/score.rs:166:23: replace == with != in compute_bleu
+crates/swadesh-core/src/score.rs:166:44: replace > with == in compute_bleu
+crates/swadesh-core/src/score.rs:166:44: replace > with < in compute_bleu
+crates/swadesh-core/src/score.rs:166:44: replace > with >= in compute_bleu
+crates/swadesh-core/src/score.rs:167:23: replace - with + in compute_bleu
+crates/swadesh-core/src/score.rs:167:28: replace += with *= in compute_bleu
+crates/swadesh-core/src/score.rs:167:28: replace += with -= in compute_bleu
+crates/swadesh-core/src/score.rs:167:23: replace - with / in compute_bleu
+crates/swadesh-core/src/score.rs:168:26: replace += with -= in compute_bleu
+crates/swadesh-core/src/score.rs:168:26: replace += with *= in compute_bleu
+crates/swadesh-core/src/score.rs:168:21: replace - with + in compute_bleu
+crates/swadesh-core/src/score.rs:168:21: replace - with / in compute_bleu
+crates/swadesh-core/src/score.rs:170:25: replace == with != in compute_bleu
+crates/swadesh-core/src/score.rs:170:20: replace - with + in compute_bleu
+crates/swadesh-core/src/score.rs:170:20: replace - with / in compute_bleu
+crates/swadesh-core/src/score.rs:176:27: replace == with != in compute_bleu
+crates/swadesh-core/src/score.rs:176:22: replace - with + in compute_bleu
+crates/swadesh-core/src/score.rs:176:22: replace - with / in compute_bleu
+crates/swadesh-core/src/score.rs:178:17: delete match arm Smooth::Exp in compute_bleu
+crates/swadesh-core/src/score.rs:179:35: replace *= with /= in compute_bleu
+crates/swadesh-core/src/score.rs:182:17: delete match arm Smooth::Floor in compute_bleu
+crates/swadesh-core/src/score.rs:180:34: replace - with + in compute_bleu
+crates/swadesh-core/src/score.rs:179:35: replace *= with += in compute_bleu
+crates/swadesh-core/src/score.rs:180:34: replace - with / in compute_bleu
+crates/swadesh-core/src/score.rs:180:47: replace / with % in compute_bleu
+crates/swadesh-core/src/score.rs:180:47: replace / with * in compute_bleu
+crates/swadesh-core/src/score.rs:180:64: replace * with + in compute_bleu
+crates/swadesh-core/src/score.rs:180:74: replace - with + in compute_bleu
+crates/swadesh-core/src/score.rs:180:64: replace * with / in compute_bleu
+crates/swadesh-core/src/score.rs:180:74: replace - with / in compute_bleu
+crates/swadesh-core/src/score.rs:183:34: replace - with + in compute_bleu
+crates/swadesh-core/src/score.rs:183:34: replace - with / in compute_bleu
+crates/swadesh-core/src/score.rs:183:52: replace / with % in compute_bleu
+crates/swadesh-core/src/score.rs:183:47: replace * with + in compute_bleu
+crates/swadesh-core/src/score.rs:183:52: replace / with * in compute_bleu
+crates/swadesh-core/src/score.rs:183:62: replace - with / in compute_bleu
+crates/swadesh-core/src/score.rs:183:62: replace - with + in compute_bleu
+crates/swadesh-core/src/score.rs:183:47: replace * with / in compute_bleu
+crates/swadesh-core/src/score.rs:188:26: replace - with + in compute_bleu
+crates/swadesh-core/src/score.rs:188:26: replace - with / in compute_bleu
+crates/swadesh-core/src/score.rs:188:56: replace / with % in compute_bleu
+crates/swadesh-core/src/score.rs:188:56: replace / with * in compute_bleu
+crates/swadesh-core/src/score.rs:188:39: replace * with + in compute_bleu
+crates/swadesh-core/src/score.rs:188:39: replace * with / in compute_bleu
+crates/swadesh-core/src/score.rs:188:51: replace - with + in compute_bleu
+crates/swadesh-core/src/score.rs:188:51: replace - with / in compute_bleu
+crates/swadesh-core/src/score.rs:188:66: replace - with + in compute_bleu
+crates/swadesh-core/src/score.rs:188:66: replace - with / in compute_bleu
+crates/swadesh-core/src/score.rs:195:30: replace / with % in compute_bleu
+crates/swadesh-core/src/score.rs:197:28: replace * with + in compute_bleu
+crates/swadesh-core/src/score.rs:195:30: replace / with * in compute_bleu
+crates/swadesh-core/src/score.rs:197:28: replace * with / in compute_bleu
+crates/swadesh-core/src/score.rs:202:5: replace chrf_f_score -> f64 with 0.0
+crates/swadesh-core/src/score.rs:202:5: replace chrf_f_score -> f64 with 1.0
+crates/swadesh-core/src/score.rs:202:5: replace chrf_f_score -> f64 with -1.0
+crates/swadesh-core/src/score.rs:205:24: replace * with / in chrf_f_score
+crates/swadesh-core/src/score.rs:208:29: replace * with + in chrf_f_score
+crates/swadesh-core/src/score.rs:205:24: replace * with + in chrf_f_score
+crates/swadesh-core/src/score.rs:208:29: replace * with / in chrf_f_score
+crates/swadesh-core/src/score.rs:209:33: replace + with - in chrf_f_score
+crates/swadesh-core/src/score.rs:209:29: replace * with + in chrf_f_score
+crates/swadesh-core/src/score.rs:209:29: replace * with / in chrf_f_score
+crates/swadesh-core/src/score.rs:209:33: replace + with * in chrf_f_score
+crates/swadesh-core/src/score.rs:210:35: replace + with - in chrf_f_score
+crates/swadesh-core/src/score.rs:210:35: replace + with * in chrf_f_score
+crates/swadesh-core/src/score.rs:210:31: replace * with + in chrf_f_score
+crates/swadesh-core/src/score.rs:210:31: replace * with / in chrf_f_score
+crates/swadesh-core/src/score.rs:211:29: replace > with == in chrf_f_score
+crates/swadesh-core/src/score.rs:211:29: replace > with < in chrf_f_score
+crates/swadesh-core/src/score.rs:211:29: replace > with >= in chrf_f_score
+crates/swadesh-core/src/score.rs:211:43: replace / with % in chrf_f_score
+crates/swadesh-core/src/score.rs:211:43: replace / with * in chrf_f_score
+crates/swadesh-core/src/score.rs:212:28: replace > with == in chrf_f_score
+crates/swadesh-core/src/score.rs:212:42: replace / with % in chrf_f_score
+crates/swadesh-core/src/score.rs:212:28: replace > with < in chrf_f_score
+crates/swadesh-core/src/score.rs:213:35: replace + with - in chrf_f_score
+crates/swadesh-core/src/score.rs:213:35: replace + with * in chrf_f_score
+crates/swadesh-core/src/score.rs:212:42: replace / with * in chrf_f_score
+crates/swadesh-core/src/score.rs:213:28: replace * with + in chrf_f_score
+crates/swadesh-core/src/score.rs:214:15: replace += with -= in chrf_f_score
+crates/swadesh-core/src/score.rs:213:28: replace * with / in chrf_f_score
+crates/swadesh-core/src/score.rs:214:15: replace += with *= in chrf_f_score
+crates/swadesh-core/src/score.rs:214:27: replace > with == in chrf_f_score
+crates/swadesh-core/src/score.rs:214:27: replace > with < in chrf_f_score
+crates/swadesh-core/src/score.rs:214:27: replace > with >= in chrf_f_score
+crates/swadesh-core/src/score.rs:214:63: replace / with % in chrf_f_score
+crates/swadesh-core/src/score.rs:214:63: replace / with * in chrf_f_score
+crates/swadesh-core/src/score.rs:214:57: replace * with / in chrf_f_score
+crates/swadesh-core/src/score.rs:214:57: replace * with + in chrf_f_score
+crates/swadesh-core/src/score.rs:214:50: replace * with + in chrf_f_score
+crates/swadesh-core/src/score.rs:214:50: replace * with / in chrf_f_score
+crates/swadesh-core/src/score.rs:214:40: replace + with * in chrf_f_score
+crates/swadesh-core/src/score.rs:214:40: replace + with - in chrf_f_score
+crates/swadesh-core/src/score.rs:215:22: replace && with || in chrf_f_score
+crates/swadesh-core/src/score.rs:215:18: replace > with == in chrf_f_score
+crates/swadesh-core/src/score.rs:215:18: replace > with < in chrf_f_score
+crates/swadesh-core/src/score.rs:215:18: replace > with >= in chrf_f_score
+crates/swadesh-core/src/score.rs:215:31: replace > with == in chrf_f_score
+crates/swadesh-core/src/score.rs:215:31: replace > with < in chrf_f_score
+crates/swadesh-core/src/score.rs:216:22: replace += with -= in chrf_f_score
+crates/swadesh-core/src/score.rs:216:22: replace += with *= in chrf_f_score
+crates/swadesh-core/src/score.rs:217:21: replace += with *= in chrf_f_score
+crates/swadesh-core/src/score.rs:217:21: replace += with -= in chrf_f_score
+crates/swadesh-core/src/score.rs:218:29: replace += with -= in chrf_f_score
+crates/swadesh-core/src/score.rs:218:29: replace += with *= in chrf_f_score
+crates/swadesh-core/src/score.rs:222:30: replace / with % in chrf_f_score
+crates/swadesh-core/src/score.rs:222:30: replace / with * in chrf_f_score
+crates/swadesh-core/src/score.rs:224:24: replace == with != in chrf_f_score
+crates/swadesh-core/src/score.rs:222:22: replace * with / in chrf_f_score
+crates/swadesh-core/src/score.rs:222:22: replace * with + in chrf_f_score
+crates/swadesh-core/src/score.rs:228:18: replace /= with %= in chrf_f_score
+crates/swadesh-core/src/score.rs:229:17: replace /= with %= in chrf_f_score
+crates/swadesh-core/src/score.rs:228:18: replace /= with *= in chrf_f_score
+crates/swadesh-core/src/score.rs:231:27: replace != with == in chrf_f_score
+crates/swadesh-core/src/score.rs:229:17: replace /= with *= in chrf_f_score
+crates/swadesh-core/src/score.rs:231:17: replace + with - in chrf_f_score
+crates/swadesh-core/src/score.rs:232:47: replace * with + in chrf_f_score
+crates/swadesh-core/src/score.rs:232:36: replace * with + in chrf_f_score
+crates/swadesh-core/src/score.rs:232:47: replace * with / in chrf_f_score
+crates/swadesh-core/src/score.rs:232:36: replace * with / in chrf_f_score
+crates/swadesh-core/src/score.rs:232:26: replace + with - in chrf_f_score
+crates/swadesh-core/src/score.rs:232:26: replace + with * in chrf_f_score
+crates/swadesh-core/src/score.rs:233:34: replace + with - in chrf_f_score
+crates/swadesh-core/src/score.rs:233:11: replace /= with %= in chrf_f_score
+crates/swadesh-core/src/score.rs:233:34: replace + with * in chrf_f_score
+crates/swadesh-core/src/score.rs:233:11: replace /= with *= in chrf_f_score
+crates/swadesh-core/src/score.rs:233:22: replace * with / in chrf_f_score
+crates/swadesh-core/src/score.rs:234:15: replace * with + in chrf_f_score
+crates/swadesh-core/src/score.rs:233:22: replace * with + in chrf_f_score
+crates/swadesh-core/src/score.rs:234:15: replace * with / in chrf_f_score
+crates/swadesh-core/src/score.rs:253:5: replace compute_bleu_np2_f32 -> f64 with 0.0
+crates/swadesh-core/src/score.rs:253:5: replace compute_bleu_np2_f32 -> f64 with 1.0
+crates/swadesh-core/src/score.rs:253:5: replace compute_bleu_np2_f32 -> f64 with -1.0
+crates/swadesh-core/src/score.rs:256:44: replace + with - in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:256:44: replace + with * in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:257:39: replace + with - in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:257:39: replace + with * in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:257:46: replace + with - in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:257:46: replace + with * in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:257:50: replace * with + in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:257:50: replace * with / in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:259:16: replace < with == in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:259:16: replace < with > in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:260:25: replace > with == in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:260:25: replace > with < in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:260:38: replace - with + in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:260:38: replace - with / in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:260:48: replace / with % in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:260:48: replace / with * in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:262:8: delete ! in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:262:35: replace != with == in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:271:39: replace && with || in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:271:23: replace == with != in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:259:16: replace < with <= in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:271:44: replace > with == in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:271:44: replace > with < in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:271:44: replace > with >= in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:272:28: replace += with -= in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:272:28: replace += with *= in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:272:23: replace - with + in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:272:23: replace - with / in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:273:26: replace += with -= in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:273:26: replace += with *= in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:273:21: replace - with + in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:273:21: replace - with / in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:275:25: replace == with != in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:275:20: replace - with + in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:275:20: replace - with / in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:281:22: replace - with + in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:281:27: replace == with != in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:281:22: replace - with / in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:283:17: delete match arm Smooth::Exp in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:288:17: delete match arm Smooth::Floor in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:284:35: replace *= with += in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:284:35: replace *= with /= in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:285:56: replace * with + in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:285:56: replace * with / in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:285:66: replace - with / in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:285:66: replace - with + in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:286:34: replace - with + in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:286:34: replace - with / in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:286:51: replace / with % in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:286:51: replace / with * in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:289:38: replace * with + in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:289:38: replace * with / in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:290:34: replace - with / in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:290:34: replace - with + in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:290:46: replace / with % in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:290:46: replace / with * in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:290:56: replace - with + in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:290:56: replace - with / in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:295:26: replace - with + in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:295:62: replace / with % in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:295:26: replace - with / in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:295:62: replace / with * in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:295:44: replace * with + in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:295:44: replace * with / in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:295:56: replace - with + in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:295:56: replace - with / in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:295:72: replace - with + in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:295:72: replace - with / in compute_bleu_np2_f32
+crates/swadesh-core/src/stats.rs:26:9: replace Interner<'a>::id -> u32 with 0
+crates/swadesh-core/src/stats.rs:26:9: replace Interner<'a>::id -> u32 with 1
+crates/swadesh-core/src/score.rs:302:30: replace / with % in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:302:30: replace / with * in compute_bleu_np2_f32
+crates/swadesh-core/src/score.rs:304:8: replace * with + in compute_bleu_np2_f32
+crates/swadesh-core/src/stats.rs:41:5: replace closest_ref_len -> i64 with 0
+crates/swadesh-core/src/stats.rs:41:5: replace closest_ref_len -> i64 with 1
+crates/swadesh-core/src/stats.rs:41:5: replace closest_ref_len -> i64 with -1
+crates/swadesh-core/src/stats.rs:41:48: delete - in closest_ref_len
+crates/swadesh-core/src/stats.rs:43:29: replace - with + in closest_ref_len
+crates/swadesh-core/src/score.rs:304:8: replace * with / in compute_bleu_np2_f32
+crates/swadesh-core/src/stats.rs:43:29: replace - with / in closest_ref_len
+crates/swadesh-core/src/stats.rs:44:31: replace || with && in closest_ref_len
+crates/swadesh-core/src/stats.rs:44:25: replace == with != in closest_ref_len
+crates/swadesh-core/src/stats.rs:44:28: delete - in closest_ref_len
+crates/swadesh-core/src/stats.rs:44:39: replace < with == in closest_ref_len
+crates/swadesh-core/src/stats.rs:44:39: replace < with > in closest_ref_len
+crates/swadesh-core/src/stats.rs:44:39: replace < with <= in closest_ref_len
+crates/swadesh-core/src/stats.rs:47:40: replace && with || in closest_ref_len
+crates/swadesh-core/src/stats.rs:47:24: replace == with != in closest_ref_len
+crates/swadesh-core/src/stats.rs:47:45: replace < with > in closest_ref_len
+crates/swadesh-core/src/stats.rs:47:45: replace < with == in closest_ref_len
+crates/swadesh-core/src/stats.rs:57:5: replace bleu_segment with ()
+crates/swadesh-core/src/stats.rs:62:32: replace < with == in bleu_segment
+crates/swadesh-core/src/score.rs:301:37: replace / with % in compute_bleu_np2_f32
+crates/swadesh-core/src/stats.rs:62:32: replace < with > in bleu_segment
+crates/swadesh-core/src/stats.rs:62:45: replace + with - in bleu_segment
+crates/swadesh-core/src/stats.rs:62:45: replace + with * in bleu_segment
+crates/swadesh-core/src/stats.rs:67:78: replace + with - in bleu_segment
+crates/swadesh-core/src/stats.rs:67:78: replace + with * in bleu_segment
+crates/swadesh-core/src/stats.rs:69:48: replace + with - in bleu_segment
+crates/swadesh-core/src/stats.rs:69:48: replace + with * in bleu_segment
+crates/swadesh-core/src/stats.rs:85:22: replace + with - in bleu_segment
+crates/swadesh-core/src/stats.rs:85:26: replace * with + in bleu_segment
+crates/swadesh-core/src/stats.rs:85:22: replace + with * in bleu_segment
+crates/swadesh-core/src/stats.rs:85:26: replace * with / in bleu_segment
+crates/swadesh-core/src/stats.rs:87:40: replace + with - in bleu_segment
+crates/swadesh-core/src/stats.rs:87:40: replace + with * in bleu_segment
+crates/swadesh-core/src/stats.rs:88:31: replace - with + in bleu_segment
+crates/swadesh-core/src/stats.rs:88:27: replace + with - in bleu_segment
+crates/swadesh-core/src/stats.rs:88:31: replace - with / in bleu_segment
+crates/swadesh-core/src/stats.rs:88:27: replace + with * in bleu_segment
+crates/swadesh-core/src/stats.rs:88:19: replace + with - in bleu_segment
+crates/swadesh-core/src/stats.rs:88:19: replace + with * in bleu_segment
+crates/swadesh-core/src/stats.rs:89:22: replace == with != in bleu_segment
+crates/swadesh-core/src/stats.rs:94:34: replace == with != in bleu_segment
+crates/swadesh-core/src/stats.rs:119:23: replace - with + in bleu_segment
+crates/swadesh-core/src/stats.rs:119:23: replace - with / in bleu_segment
+crates/swadesh-core/src/stats.rs:119:19: replace + with - in bleu_segment
+crates/swadesh-core/src/stats.rs:119:19: replace + with * in bleu_segment
+crates/swadesh-core/src/stats.rs:139:5: replace is_chrf_punct -> bool with true
+crates/swadesh-core/src/stats.rs:139:5: replace is_chrf_punct -> bool with false
+crates/swadesh-core/src/stats.rs:139:18: replace && with || in is_chrf_punct
+crates/swadesh-core/src/stats.rs:144:5: replace remove_punctuation -> Vec<&str> with vec![]
+crates/swadesh-core/src/stats.rs:144:5: replace remove_punctuation -> Vec<&str> with vec![""]
+crates/swadesh-core/src/stats.rs:144:5: replace remove_punctuation -> Vec<&str> with vec!["xyzzy"]
+crates/swadesh-core/src/stats.rs:153:35: replace - with + in remove_punctuation
+crates/swadesh-core/src/stats.rs:154:33: replace - with + in remove_punctuation
+crates/swadesh-core/src/stats.rs:166:5: replace chars_of with ()
+crates/swadesh-core/src/stats.rs:154:33: replace - with / in remove_punctuation
+crates/swadesh-core/src/stats.rs:170:42: delete ! in chars_of
+crates/swadesh-core/src/stats.rs:177:5: replace order_stats with ()
+crates/swadesh-core/src/stats.rs:177:30: replace + with - in order_stats
+crates/swadesh-core/src/stats.rs:178:28: replace + with - in order_stats
+crates/swadesh-core/src/stats.rs:177:30: replace + with * in order_stats
+crates/swadesh-core/src/stats.rs:178:28: replace + with * in order_stats
+crates/swadesh-core/src/stats.rs:179:24: replace == with != in order_stats
+crates/swadesh-core/src/stats.rs:179:40: replace == with != in order_stats
+crates/swadesh-core/src/stats.rs:190:25: replace > with == in order_stats
+crates/swadesh-core/src/stats.rs:190:25: replace > with < in order_stats
+crates/swadesh-core/src/stats.rs:190:25: replace > with >= in order_stats
+crates/swadesh-core/src/stats.rs:198:5: replace chrf_segment with ()
+crates/swadesh-core/src/stats.rs:201:36: replace + with - in chrf_segment
+crates/swadesh-core/src/stats.rs:201:36: replace + with * in chrf_segment
+crates/swadesh-core/src/stats.rs:207:70: replace > with == in chrf_segment
+crates/swadesh-core/src/stats.rs:207:70: replace > with < in chrf_segment
+crates/swadesh-core/src/stats.rs:218:26: delete - in chrf_segment
+crates/swadesh-core/src/stats.rs:231:18: replace > with < in chrf_segment
+crates/swadesh-core/src/stats.rs:231:18: replace > with == in chrf_segment
+crates/swadesh-core/src/stats.rs:231:18: replace > with >= in chrf_segment
+crates/swadesh-core/src/table.rs:40:9: replace CountTable::resize with ()
+crates/swadesh-core/src/table.rs:43:25: replace - with + in CountTable::resize
+crates/swadesh-core/src/table.rs:43:25: replace - with / in CountTable::resize
+crates/swadesh-core/src/table.rs:50:9: replace CountTable::reset with ()
+crates/swadesh-core/src/table.rs:65:9: replace CountTable::find -> usize with 0
+crates/swadesh-core/src/table.rs:65:9: replace CountTable::find -> usize with 1
+crates/swadesh-core/src/table.rs:65:31: replace >> with << in CountTable::find
+crates/swadesh-core/src/table.rs:68:43: replace == with != in CountTable::find
+crates/swadesh-core/src/table.rs:71:25: replace & with | in CountTable::find
+crates/swadesh-core/src/table.rs:77:9: replace CountTable::add with ()
+crates/swadesh-core/src/table.rs:80:18: replace != with == in CountTable::add
+crates/swadesh-core/src/table.rs:83:21: replace += with -= in CountTable::add
+crates/swadesh-core/src/table.rs:83:21: replace += with *= in CountTable::add
+crates/swadesh-core/src/table.rs:89:9: replace CountTable::get -> u32 with 0
+crates/swadesh-core/src/table.rs:89:9: replace CountTable::get -> u32 with 1
+crates/swadesh-core/src/table.rs:91:18: replace == with != in CountTable::get
+crates/swadesh-core/src/table.rs:101:9: replace CountTable::set_max with ()
+crates/swadesh-core/src/table.rs:104:18: replace != with == in CountTable::set_max
+crates/swadesh-core/src/table.rs:106:21: replace > with < in CountTable::set_max
+crates/swadesh-core/src/table.rs:106:21: replace > with == in CountTable::set_max
+crates/swadesh-core/src/table.rs:114:9: replace CountTable::take -> bool with true
+crates/swadesh-core/src/table.rs:114:9: replace CountTable::take -> bool with false
+crates/swadesh-core/src/table.rs:116:30: replace && with || in CountTable::take
+crates/swadesh-core/src/table.rs:116:18: replace == with != in CountTable::take
+crates/swadesh-core/src/table.rs:116:41: replace > with < in CountTable::take
+crates/swadesh-core/src/table.rs:116:41: replace > with == in CountTable::take
+crates/swadesh-core/src/table.rs:116:41: replace > with >= in CountTable::take
+crates/swadesh-core/src/table.rs:117:21: replace -= with += in CountTable::take
+crates/swadesh-core/src/table.rs:117:21: replace -= with /= in CountTable::take
+crates/swadesh-core/src/table.rs:129:5: replace packed_windows -> impl Iterator<Item = u128>+'_ with ::std::iter::empty()
+crates/swadesh-core/src/table.rs:129:5: replace packed_windows -> impl Iterator<Item = u128>+'_ with ::std::iter::once(0)
+crates/swadesh-core/src/table.rs:129:5: replace packed_windows -> impl Iterator<Item = u128>+'_ with ::std::iter::once(1)
+crates/swadesh-core/src/table.rs:129:26: replace * with + in packed_windows
+crates/swadesh-core/src/table.rs:129:26: replace * with / in packed_windows
+crates/swadesh-core/src/table.rs:130:31: replace >= with < in packed_windows
+crates/swadesh-core/src/table.rs:130:76: replace - with / in packed_windows
+crates/swadesh-core/src/table.rs:130:76: replace - with + in packed_windows
+crates/swadesh-core/src/table.rs:130:66: replace << with >> in packed_windows
+crates/swadesh-core/src/table.rs:133:39: replace & with | in packed_windows
+crates/swadesh-core/src/table.rs:133:26: replace | with & in packed_windows
+crates/swadesh-core/src/table.rs:133:39: replace & with ^ in packed_windows
+crates/swadesh-core/src/table.rs:133:17: replace << with >> in packed_windows
+crates/swadesh-core/src/table.rs:134:18: replace >= with < in packed_windows
+crates/swadesh-core/src/table.rs:134:14: replace + with - in packed_windows
+crates/swadesh-core/src/table.rs:134:14: replace + with * in packed_windows
+crates/swadesh-core/src/table.rs:144:5: replace fits -> bool with true
+crates/swadesh-core/src/table.rs:144:21: replace <= with > in fits
+crates/swadesh-core/src/table.rs:144:14: replace * with + in fits
+crates/swadesh-core/src/table.rs:144:14: replace * with / in fits
+crates/swadesh-core/src/ter.rs:87:5: replace is_13a_class -> bool with true
+crates/swadesh-core/src/ter.rs:87:5: replace is_13a_class -> bool with false
+crates/swadesh-core/src/ter.rs:93:5: replace is_period_or_comma -> bool with true
+crates/swadesh-core/src/ter.rs:93:5: replace is_period_or_comma -> bool with false
+crates/swadesh-core/src/ter.rs:80:5: replace in_ranges -> bool with true
+crates/swadesh-core/src/ter.rs:93:14: replace || with && in is_period_or_comma
+crates/swadesh-core/src/ter.rs:93:19: replace == with != in is_period_or_comma
+crates/swadesh-core/src/ter.rs:93:7: replace == with != in is_period_or_comma
+crates/swadesh-core/src/ter.rs:80:5: replace in_ranges -> bool with false
+crates/swadesh-core/src/ter.rs:98:5: replace sub_wrap with ()
+crates/swadesh-core/src/ter.rs:118:5: replace sub_pair with ()
+crates/swadesh-core/src/ter.rs:81:41: replace && with || in in_ranges
+crates/swadesh-core/src/ter.rs:121:13: replace < with == in sub_pair
+crates/swadesh-core/src/ter.rs:121:13: replace < with > in sub_pair
+crates/swadesh-core/src/ter.rs:121:13: replace < with <= in sub_pair
+crates/swadesh-core/src/ter.rs:122:22: replace && with || in sub_pair
+crates/swadesh-core/src/ter.rs:122:18: replace < with == in sub_pair
+crates/swadesh-core/src/ter.rs:122:18: replace < with <= in sub_pair
+crates/swadesh-core/src/ter.rs:122:18: replace < with > in sub_pair
+crates/swadesh-core/src/ter.rs:81:35: replace <= with > in in_ranges
+crates/swadesh-core/src/ter.rs:122:14: replace + with - in sub_pair
+crates/swadesh-core/src/ter.rs:122:14: replace + with * in sub_pair
+crates/swadesh-core/src/ter.rs:122:45: replace + with * in sub_pair
+crates/swadesh-core/src/ter.rs:122:45: replace + with - in sub_pair
+crates/swadesh-core/src/ter.rs:123:36: replace + with * in sub_pair
+crates/swadesh-core/src/ter.rs:123:36: replace + with - in sub_pair
+crates/swadesh-core/src/ter.rs:124:15: replace += with *= in sub_pair
+crates/swadesh-core/src/ter.rs:127:15: replace += with -= in sub_pair
+crates/swadesh-core/src/ter.rs:143:5: replace normalize_general_and_western -> String with String::new()
+crates/swadesh-core/src/ter.rs:143:5: replace normalize_general_and_western -> String with "xyzzy".into()
+crates/swadesh-core/src/ter.rs:124:15: replace += with -= in sub_pair
+crates/swadesh-core/src/ter.rs:81:47: replace <= with > in in_ranges
+crates/swadesh-core/src/ter.rs:170:36: replace && with || in normalize_general_and_western
+crates/swadesh-core/src/ter.rs:170:16: delete ! in normalize_general_and_western
+crates/swadesh-core/src/ter.rs:184:38: replace && with || in normalize_general_and_western
+crates/swadesh-core/src/ter.rs:127:15: replace += with *= in sub_pair
+crates/swadesh-core/src/ter.rs:184:41: delete ! in normalize_general_and_western
+crates/swadesh-core/src/ter.rs:198:35: replace && with || in normalize_general_and_western
+crates/swadesh-core/src/ter.rs:198:40: replace == with != in normalize_general_and_western
+crates/swadesh-core/src/ter.rs:134:5: replace delete_class with ()
+crates/swadesh-core/src/ter.rs:135:50: delete ! in delete_class
+crates/swadesh-core/src/ter.rs:242:5: replace wrap_whole_string_in -> String with String::new()
+crates/swadesh-core/src/ter.rs:242:5: replace wrap_whole_string_in -> String with "xyzzy".into()
+crates/swadesh-core/src/ter.rs:275:5: replace remove_punct -> String with String::new()
+crates/swadesh-core/src/ter.rs:275:5: replace remove_punct -> String with "xyzzy".into()
+crates/swadesh-core/src/ter.rs:275:29: delete ! in remove_punct
+crates/swadesh-core/src/ter.rs:292:5: replace tercom_tokenize with ()
+crates/swadesh-core/src/ter.rs:345:5: replace row_at -> &'a[Cell] with Vec::leak(Vec::new())
+crates/swadesh-core/src/ter.rs:345:10: replace == with != in row_at
+crates/swadesh-core/src/ter.rs:347:17: replace <= with > in row_at
+crates/swadesh-core/src/ter.rs:251:5: replace normalize_asian -> String with String::new()
+crates/swadesh-core/src/ter.rs:348:23: replace - with + in row_at
+crates/swadesh-core/src/ter.rs:348:23: replace - with / in row_at
+crates/swadesh-core/src/ter.rs:350:26: replace - with + in row_at
+crates/swadesh-core/src/ter.rs:350:26: replace - with / in row_at
+crates/swadesh-core/src/ter.rs:350:18: replace - with / in row_at
+crates/swadesh-core/src/ter.rs:371:9: replace BeamEdit::eval -> (i64, Vec<u8>) with (0, vec![])
+crates/swadesh-core/src/ter.rs:371:9: replace BeamEdit::eval -> (i64, Vec<u8>) with (0, vec![0])
+crates/swadesh-core/src/ter.rs:371:9: replace BeamEdit::eval -> (i64, Vec<u8>) with (0, vec![1])
+crates/swadesh-core/src/ter.rs:371:9: replace BeamEdit::eval -> (i64, Vec<u8>) with (1, vec![])
+crates/swadesh-core/src/ter.rs:371:9: replace BeamEdit::eval -> (i64, Vec<u8>) with (1, vec![0])
+crates/swadesh-core/src/ter.rs:371:9: replace BeamEdit::eval -> (i64, Vec<u8>) with (1, vec![1])
+crates/swadesh-core/src/ter.rs:371:9: replace BeamEdit::eval -> (i64, Vec<u8>) with (-1, vec![])
+crates/swadesh-core/src/ter.rs:371:9: replace BeamEdit::eval -> (i64, Vec<u8>) with (-1, vec![0])
+crates/swadesh-core/src/ter.rs:371:9: replace BeamEdit::eval -> (i64, Vec<u8>) with (-1, vec![1])
+crates/swadesh-core/src/ter.rs:251:5: replace normalize_asian -> String with "xyzzy".into()
+crates/swadesh-core/src/ter.rs:280:5: replace remove_asian_punct -> String with "xyzzy".into()
+crates/swadesh-core/src/ter.rs:280:5: replace remove_asian_punct -> String with String::new()
+crates/swadesh-core/src/ter.rs:350:18: replace - with + in row_at
+crates/swadesh-core/src/ter.rs:389:50: replace / with % in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:389:50: replace / with * in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:397:24: replace + with - in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:397:24: replace + with * in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:399:38: replace - with + in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:400:42: replace + with - in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:400:69: replace + with - in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:402:34: replace + with - in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:402:34: replace + with * in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:407:87: replace - with + in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:407:87: replace - with / in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:410:26: replace == with != in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:411:60: replace + with - in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:413:68: replace == with != in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:413:63: replace - with + in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:413:63: replace - with / in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:413:89: replace - with + in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:413:89: replace - with / in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:421:48: replace + with - in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:421:48: replace + with * in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:398:41: replace * with / in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:421:38: replace - with + in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:421:38: replace - with / in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:422:44: replace + with - in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:423:47: replace + with - in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:423:37: replace - with + in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:400:42: replace + with * in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:426:45: replace > with == in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:426:45: replace > with < in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:400:69: replace + with * in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:442:25: replace || with && in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:442:21: replace > with == in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:442:21: replace > with >= in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:442:30: replace > with == in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:442:30: replace > with < in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:442:30: replace > with >= in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:446:21: delete match arm OP_SUB | OP_NOP in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:450:21: delete match arm OP_INS in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:451:21: delete match arm OP_DEL in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:447:27: replace -= with += in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:448:27: replace -= with += in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:411:60: replace + with * in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:450:33: replace -= with += in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:422:44: replace + with * in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:451:33: replace -= with += in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:423:47: replace + with * in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:423:37: replace - with / in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:442:21: replace > with < in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:426:45: replace > with >= in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:460:37: replace > with == in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:447:27: replace -= with /= in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:460:37: replace > with >= in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:460:54: replace - with + in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:460:54: replace - with / in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:467:52: replace - with + in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:467:52: replace - with / in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:450:33: replace -= with /= in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:486:5: replace py_slice -> &[u32] with Vec::leak(Vec::new())
+crates/swadesh-core/src/ter.rs:486:5: replace py_slice -> &[u32] with Vec::leak(vec![0])
+crates/swadesh-core/src/ter.rs:486:5: replace py_slice -> &[u32] with Vec::leak(vec![1])
+crates/swadesh-core/src/ter.rs:489:10: replace > with == in py_slice
+crates/swadesh-core/src/ter.rs:489:10: replace > with < in py_slice
+crates/swadesh-core/src/ter.rs:498:5: replace perform_shift -> Vec<u32> with vec![]
+crates/swadesh-core/src/ter.rs:498:5: replace perform_shift -> Vec<u32> with vec![0]
+crates/swadesh-core/src/ter.rs:498:5: replace perform_shift -> Vec<u32> with vec![1]
+crates/swadesh-core/src/ter.rs:499:15: replace < with == in perform_shift
+crates/swadesh-core/src/ter.rs:499:15: replace < with > in perform_shift
+crates/swadesh-core/src/ter.rs:502:60: replace + with - in perform_shift
+crates/swadesh-core/src/ter.rs:502:60: replace + with * in perform_shift
+crates/swadesh-core/src/ter.rs:504:53: replace + with - in perform_shift
+crates/swadesh-core/src/ter.rs:504:53: replace + with * in perform_shift
+crates/swadesh-core/src/ter.rs:451:33: replace -= with /= in BeamEdit::eval
+crates/swadesh-core/src/ter.rs:508:53: replace + with - in perform_shift
+crates/swadesh-core/src/ter.rs:509:60: replace + with * in perform_shift
+crates/swadesh-core/src/ter.rs:523:5: replace find_shifted_pairs -> Vec<(usize, usize, usize)> with vec![]
+crates/swadesh-core/src/ter.rs:523:5: replace find_shifted_pairs -> Vec<(usize, usize, usize)> with vec![(0, 0, 0)]
+crates/swadesh-core/src/ter.rs:523:5: replace find_shifted_pairs -> Vec<(usize, usize, usize)> with vec![(0, 0, 1)]
+crates/swadesh-core/src/ter.rs:523:5: replace find_shifted_pairs -> Vec<(usize, usize, usize)> with vec![(0, 1, 0)]
+crates/swadesh-core/src/ter.rs:523:5: replace find_shifted_pairs -> Vec<(usize, usize, usize)> with vec![(0, 1, 1)]
+crates/swadesh-core/src/ter.rs:523:5: replace find_shifted_pairs -> Vec<(usize, usize, usize)> with vec![(1, 0, 0)]
+crates/swadesh-core/src/ter.rs:523:5: replace find_shifted_pairs -> Vec<(usize, usize, usize)> with vec![(1, 0, 1)]
+crates/swadesh-core/src/ter.rs:523:5: replace find_shifted_pairs -> Vec<(usize, usize, usize)> with vec![(1, 1, 0)]
+crates/swadesh-core/src/ter.rs:523:5: replace find_shifted_pairs -> Vec<(usize, usize, usize)> with vec![(1, 1, 1)]
+crates/swadesh-core/src/ter.rs:528:56: replace > with < in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:528:32: replace - with / in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:532:45: replace == with != in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:532:35: replace + with - in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:532:35: replace + with * in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:532:64: replace + with - in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:516:54: replace + with - in perform_shift
+crates/swadesh-core/src/ter.rs:532:84: replace < with == in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:532:84: replace < with > in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:533:24: replace += with -= in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:536:44: replace || with && in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:536:24: replace == with != in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:536:35: replace + with - in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:536:35: replace + with * in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:536:51: replace == with != in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:536:62: replace + with - in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:536:62: replace + with * in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:547:5: replace flip_trace -> Vec<u8> with vec![]
+crates/swadesh-core/src/ter.rs:547:5: replace flip_trace -> Vec<u8> with vec![0]
+crates/swadesh-core/src/ter.rs:547:5: replace flip_trace -> Vec<u8> with vec![1]
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![], vec![], vec![])
+crates/swadesh-core/src/ter.rs:533:24: replace += with *= in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![], vec![], vec![0])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![], vec![], vec![1])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![], vec![0], vec![])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![], vec![0], vec![0])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![], vec![0], vec![1])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![], vec![1], vec![])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![], vec![1], vec![0])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![], vec![1], vec![1])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![0], vec![], vec![])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![0], vec![], vec![0])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![0], vec![], vec![1])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![0], vec![0], vec![])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![0], vec![0], vec![0])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![0], vec![0], vec![1])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![0], vec![1], vec![])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![0], vec![1], vec![0])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![0], vec![1], vec![1])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![1], vec![], vec![])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![1], vec![], vec![0])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![1], vec![], vec![1])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![1], vec![0], vec![])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![1], vec![0], vec![0])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![1], vec![0], vec![1])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![1], vec![1], vec![0])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![1], vec![1], vec![])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![-1], vec![], vec![])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![1], vec![1], vec![1])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![-1], vec![], vec![0])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![-1], vec![], vec![1])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![-1], vec![0], vec![])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![-1], vec![0], vec![1])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![-1], vec![0], vec![0])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![-1], vec![1], vec![])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![-1], vec![1], vec![0])
+crates/swadesh-core/src/ter.rs:560:5: replace trace_to_alignment -> (Vec<i64>, Vec<u32>, Vec<u32>) with (vec![-1], vec![1], vec![1])
+crates/swadesh-core/src/ter.rs:532:74: replace && with || in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:532:64: replace + with * in find_shifted_pairs
+crates/swadesh-core/src/ter.rs:598:5: replace shift -> (i64, Vec<u32>) with (0, vec![])
+crates/swadesh-core/src/ter.rs:598:5: replace shift -> (i64, Vec<u32>) with (0, vec![0])
+crates/swadesh-core/src/ter.rs:598:5: replace shift -> (i64, Vec<u32>) with (0, vec![1])
+crates/swadesh-core/src/ter.rs:567:25: replace += with *= in trace_to_alignment
+crates/swadesh-core/src/ter.rs:574:25: replace += with *= in trace_to_alignment
+crates/swadesh-core/src/ter.rs:560:28: delete - in trace_to_alignment
+crates/swadesh-core/src/ter.rs:569:38: replace == with != in trace_to_alignment
+crates/swadesh-core/src/ter.rs:598:5: replace shift -> (i64, Vec<u32>) with (-1, vec![])
+crates/swadesh-core/src/ter.rs:598:5: replace shift -> (i64, Vec<u32>) with (-1, vec![0])
+crates/swadesh-core/src/ter.rs:598:5: replace shift -> (i64, Vec<u32>) with (-1, vec![1])
+crates/swadesh-core/src/ter.rs:609:67: replace == with != in shift
+crates/swadesh-core/src/ter.rs:574:25: replace += with -= in trace_to_alignment
+crates/swadesh-core/src/ter.rs:609:37: replace + with - in shift
+crates/swadesh-core/src/ter.rs:609:37: replace + with * in shift
+crates/swadesh-core/src/ter.rs:612:67: replace == with != in shift
+crates/swadesh-core/src/ter.rs:612:37: replace + with - in shift
+crates/swadesh-core/src/ter.rs:612:37: replace + with * in shift
+crates/swadesh-core/src/ter.rs:617:34: replace && with || in shift
+crates/swadesh-core/src/ter.rs:617:29: replace <= with > in shift
+crates/swadesh-core/src/ter.rs:617:39: replace < with > in shift
+crates/swadesh-core/src/ter.rs:622:23: delete - in shift
+crates/swadesh-core/src/ter.rs:624:35: replace == with != in shift
+crates/swadesh-core/src/ter.rs:624:38: delete - in shift
+crates/swadesh-core/src/ter.rs:623:38: replace + with * in shift
+crates/swadesh-core/src/ter.rs:626:27: replace >= with < in shift
+crates/swadesh-core/src/ter.rs:623:38: replace + with - in shift
+crates/swadesh-core/src/ter.rs:626:50: replace < with > in shift
+crates/swadesh-core/src/ter.rs:633:20: replace == with != in shift
+crates/swadesh-core/src/ter.rs:626:50: replace < with == in shift
+crates/swadesh-core/src/ter.rs:640:35: replace - with / in shift
+crates/swadesh-core/src/ter.rs:628:37: replace + with - in shift
+crates/swadesh-core/src/ter.rs:641:22: replace += with -= in shift
+crates/swadesh-core/src/ter.rs:628:37: replace + with * in shift
+crates/swadesh-core/src/ter.rs:640:35: replace - with + in shift
+crates/swadesh-core/src/ter.rs:649:33: replace > with == in shift
+crates/swadesh-core/src/ter.rs:649:33: replace > with < in shift
+crates/swadesh-core/src/ter.rs:675:5: replace translation_edit_rate -> (i64, usize) with (0, 0)
+crates/swadesh-core/src/ter.rs:675:5: replace translation_edit_rate -> (i64, usize) with (0, 1)
+crates/swadesh-core/src/ter.rs:675:5: replace translation_edit_rate -> (i64, usize) with (1, 0)
+crates/swadesh-core/src/ter.rs:675:5: replace translation_edit_rate -> (i64, usize) with (1, 1)
+crates/swadesh-core/src/ter.rs:675:5: replace translation_edit_rate -> (i64, usize) with (-1, 0)
+crates/swadesh-core/src/ter.rs:675:5: replace translation_edit_rate -> (i64, usize) with (-1, 1)
+crates/swadesh-core/src/ter.rs:677:12: replace == with != in translation_edit_rate
+crates/swadesh-core/src/ter.rs:689:31: replace >= with < in translation_edit_rate
+crates/swadesh-core/src/ter.rs:695:16: replace += with -= in translation_edit_rate
+crates/swadesh-core/src/ter.rs:695:16: replace += with *= in translation_edit_rate
+crates/swadesh-core/src/ter.rs:700:13: replace + with - in translation_edit_rate
+crates/swadesh-core/src/ter.rs:700:13: replace + with * in translation_edit_rate
+crates/swadesh-core/src/ter.rs:711:5: replace ter_segment -> Result<[f64; 2], TerError> with Ok([0.0; 2])
+crates/swadesh-core/src/ter.rs:662:21: replace >= with < in shift
+crates/swadesh-core/src/ter.rs:711:5: replace ter_segment -> Result<[f64; 2], TerError> with Ok([1.0; 2])
+crates/swadesh-core/src/ter.rs:711:5: replace ter_segment -> Result<[f64; 2], TerError> with Ok([-1.0; 2])
+crates/swadesh-core/src/ter.rs:741:21: replace += with -= in ter_segment
+crates/swadesh-core/src/ter.rs:741:21: replace += with *= in ter_segment
+crates/swadesh-core/src/ter.rs:742:22: replace < with > in ter_segment
+crates/swadesh-core/src/ter.rs:742:22: replace < with == in ter_segment
+crates/swadesh-core/src/ter.rs:746:42: replace / with % in ter_segment
+crates/swadesh-core/src/tokenize.rs:24:9: replace Tokenizer::from_name -> Option<Self> with None
+crates/swadesh-core/src/ter.rs:746:42: replace / with * in ter_segment
+crates/swadesh-core/src/ter.rs:742:22: replace < with <= in ter_segment
+crates/swadesh-core/src/tokenize.rs:25:13: delete match arm "none" in Tokenizer::from_name
+crates/swadesh-core/src/tokenize.rs:26:13: delete match arm "13a" in Tokenizer::from_name
+crates/swadesh-core/src/tokenize.rs:28:13: delete match arm "zh" in Tokenizer::from_name

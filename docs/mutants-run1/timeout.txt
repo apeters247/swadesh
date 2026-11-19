@@ -1,0 +1,19 @@
+crates/swadesh-core/src/ngram.rs:73:33: replace += with *= in clipped_matches_t
+crates/swadesh-core/src/ngram.rs:74:36: replace += with *= in clipped_matches_t
+crates/swadesh-core/src/nprng.rs:147:9: replace Pcg64::next_u64 -> u64 with 0
+crates/swadesh-core/src/nprng.rs:158:9: replace Pcg64::next_u32 -> u32 with 0
+crates/swadesh-core/src/nprng.rs:184:40: replace * with / in lemire_u32
+crates/swadesh-core/src/nprng.rs:315:15: replace += with *= in pairwise
+crates/swadesh-core/src/table.rs:42:25: replace - with + in CountTable::resize
+crates/swadesh-core/src/table.rs:42:25: replace - with / in CountTable::resize
+crates/swadesh-core/src/table.rs:50:18: replace > with == in CountTable::reset
+crates/swadesh-core/src/table.rs:50:18: replace > with < in CountTable::reset
+crates/swadesh-core/src/table.rs:50:14: replace * with / in CountTable::reset
+crates/swadesh-core/src/table.rs:51:27: replace * with / in CountTable::reset
+crates/swadesh-core/src/table.rs:68:34: replace || with && in CountTable::find
+crates/swadesh-core/src/table.rs:68:22: replace != with == in CountTable::find
+crates/swadesh-core/src/table.rs:71:25: replace & with ^ in CountTable::find
+crates/swadesh-core/src/table.rs:71:20: replace + with * in CountTable::find
+crates/swadesh-core/src/ter.rs:598:5: replace shift -> (i64, Vec<u32>) with (1, vec![])
+crates/swadesh-core/src/ter.rs:598:5: replace shift -> (i64, Vec<u32>) with (1, vec![0])
+crates/swadesh-core/src/ter.rs:598:5: replace shift -> (i64, Vec<u32>) with (1, vec![1])

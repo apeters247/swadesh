@@ -390,3 +390,115 @@ pub fn chrf_f_score_np2_f32(stats: &[f32], order: usize, beta: i64, eps_smoothin
         Py(0.0)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn hex_f64(s: &str) -> f64 {
+        f64::from_bits(u64::from_str_radix(s, 16).unwrap())
+    }
+
+    fn item(s: &str) -> PyNum {
+        match s.as_bytes()[0] {
+            b'i' => PyNum::Int(s[1..].parse().unwrap()),
+            _ => PyNum::Float(hex_f64(&s[1..])),
+        }
+    }
+
+    fn same(a: PyNum, b: PyNum) -> bool {
+        match (a, b) {
+            (PyNum::Int(x), PyNum::Int(y)) => x == y,
+            (PyNum::Float(x), PyNum::Float(y)) => x.to_bits() == y.to_bits(),
+            _ => false,
+        }
+    }
+
+    #[test]
+    fn sum_mode_follows_cpython_version() {
+        assert_eq!(SumMode::for_python(2, 7), SumMode::Naive);
+        assert_eq!(SumMode::for_python(3, 10), SumMode::Naive);
+        assert_eq!(SumMode::for_python(3, 11), SumMode::Naive);
+        assert_eq!(SumMode::for_python(3, 12), SumMode::Neumaier);
+        assert_eq!(SumMode::for_python(3, 13), SumMode::Neumaier);
+        assert_eq!(SumMode::for_python(3, 14), SumMode::NeumaierInts);
+        assert_eq!(SumMode::for_python(3, 15), SumMode::NeumaierInts);
+        assert_eq!(SumMode::for_python(4, 0), SumMode::NeumaierInts);
+    }
+
+    #[test]
+    fn as_f64_converts_both_variants() {
+        assert_eq!(PyNum::Int(-3).as_f64(), -3.0);
+        assert_eq!(PyNum::Int(7).as_f64(), 7.0);
+        assert_eq!(PyNum::Float(2.5).as_f64(), 2.5);
+        assert_eq!(PyNum::Float(-0.25).as_f64(), -0.25);
+    }
+
+    /// Builtin `sum()` on CPython 3.12 (Neumaier), 3.14 (NeumaierInts) and a plain left-to-right
+    /// reduction for the Naive mode (CPython <= 3.11). Fixtures come from the interpreters.
+    #[test]
+    fn py_sum_matches_cpython_builtin_sum() {
+        for line in include_str!("../tests/fixtures/mut_py_sum.txt").lines() {
+            let c: Vec<&str> = line.split('\t').collect();
+            let items: Vec<PyNum> = c[3].split_whitespace().map(item).collect();
+            for (mode, want) in [(SumMode::Naive, c[0]), (SumMode::Neumaier, c[1]), (SumMode::NeumaierInts, c[2])] {
+                let got = py_sum(&items, mode);
+                assert!(same(got, item(want)), "mode {mode:?} items {items:?}: got {got:?} want {want}");
+            }
+        }
+    }
+
+    #[test]
+    fn bleu_scores_match_sacrebleu_grid() {
+        for line in include_str!("../tests/fixtures/mut_bleu_score.txt").lines() {
+            let t: Vec<&str> = line.split_whitespace().collect();
+            let smooth = Smooth::from_name(t[0]).unwrap();
+            let smooth_value = if t[1] == "none" { smooth.default_value() } else { t[1].parse().unwrap() };
+            let n: usize = t[3].parse().unwrap();
+            let stats: Vec<f64> = t[4..4 + 2 + 2 * n].iter().map(|s| s.parse::<i64>().unwrap() as f64).collect();
+            let want = hex_f64(t[4 + 2 + 2 * n]);
+            let cfg = BleuScoreConfig {
+                smooth,
+                smooth_value,
+                effective_order: t[2] == "1",
+                max_order: n,
+                sum_mode: SumMode::NeumaierInts,
+            };
+            let got = compute_bleu(&stats, &cfg).score;
+            assert_eq!(got.to_bits(), want.to_bits(), "{line}");
+        }
+    }
+
+    #[test]
+    fn chrf_scores_match_sacrebleu_grid() {
+        for line in include_str!("../tests/fixtures/mut_chrf_score.txt").lines() {
+            let t: Vec<&str> = line.split_whitespace().collect();
+            let order = t[0].parse::<usize>().unwrap() + t[1].parse::<usize>().unwrap();
+            let beta: i64 = t[2].parse().unwrap();
+            let eps = t[3] == "1";
+            let stats: Vec<i64> = t[4..4 + 3 * order].iter().map(|s| s.parse().unwrap()).collect();
+            let want = hex_f64(t[4 + 3 * order]);
+            let got = chrf_f_score(&stats, order, beta, eps);
+            assert_eq!(got.to_bits(), want.to_bits(), "{line}");
+        }
+    }
+
+    #[test]
+    fn bleu_zero_hypothesis_and_reference_has_bp_one() {
+        // sys == ref == 0: sacreBLEU's `if sys_len < ref_len` is false, so BP stays 1.
+        let cfg = BleuScoreConfig {
+            smooth: Smooth::None,
+            smooth_value: 0.0,
+            effective_order: false,
+            max_order: 2,
+            sum_mode: SumMode::NeumaierInts,
+        };
+        let r = compute_bleu(&[0.0, 0.0, 0.0, 0.0, 0.0, 0.0], &cfg);
+        assert_eq!(r.bp, 1.0);
+        assert_eq!(r.score, 0.0);
+        // Perfect precisions at equal length: BP is 1 and the score is 100.
+        let r = compute_bleu(&[4.0, 4.0, 4.0, 3.0, 4.0, 3.0], &cfg);
+        assert_eq!(r.bp, 1.0);
+        assert!((r.score - 100.0).abs() < 1e-9, "perfect precisions give 100, got {}", r.score);
+    }
+}

@@ -458,3 +458,87 @@ pub fn sum_rows_f32(mat: &[f32], width: usize, idx: &[usize]) -> Vec<f32> {
     }
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn hex64(s: &str) -> u64 {
+        u64::from_str_radix(s, 16).unwrap()
+    }
+
+    /// Lemire 64-bit rejection: `integers(-2**62, 2**62 + 1)` has rng = 2**63 (threshold near 2**63),
+    /// so about half of the first draws are rejected. Expected values from numpy 2.x.
+    #[test]
+    fn lemire_u64_rejection_matches_numpy() {
+        for line in include_str!("../tests/fixtures/mut_int_edge.txt").lines() {
+            let t: Vec<&str> = line.split_whitespace().collect();
+            if t[0] != "int64" {
+                continue;
+            }
+            let seed: u128 = t[1].parse().unwrap();
+            let got = default_rng(seed).integers(-(1i64 << 62), (1i64 << 62) + 1, t.len() - 2);
+            for (i, tok) in t[2..].iter().enumerate() {
+                assert_eq!(got[i], tok.parse::<i64>().unwrap(), "seed {seed} draw {i}");
+            }
+        }
+    }
+
+    /// 32-bit Lemire with crafted PCG64 states: the first draw has `left == threshold` (accepted)
+    /// or `left < threshold` (rejected). The state is chosen so the first output is known;
+    /// numpy's generator started from the same state gives the expected draws.
+    #[test]
+    fn lemire_u32_boundary_draws_match_numpy() {
+        for line in include_str!("../tests/fixtures/mut_int_edge.txt").lines() {
+            let t: Vec<&str> = line.split_whitespace().collect();
+            if t[0] != "crafted32" {
+                continue;
+            }
+            let excl: i64 = t[1].parse().unwrap();
+            let state: u128 = t[2].parse().unwrap();
+            let inc: u128 = t[3].parse().unwrap();
+            let mut g = Generator { bitgen: Pcg64 { state, inc, has_uint32: false, uinteger: 0 } };
+            let got = g.integers(0, excl, t.len() - 4);
+            for (i, tok) in t[4..].iter().enumerate() {
+                assert_eq!(got[i], tok.parse::<i64>().unwrap(), "excl {excl} draw {i}");
+            }
+        }
+    }
+
+    /// `Generator::next_below(n)` is numpy's `integers(0, n)` one draw at a time, including
+    /// n = 2**32 (rng = u32::MAX, raw 32-bit draw) and n = 2**63 + 1 (64-bit Lemire).
+    #[test]
+    fn next_below_matches_numpy_integers() {
+        for line in include_str!("../tests/fixtures/mut_next_below.txt").lines() {
+            let t: Vec<&str> = line.split_whitespace().collect();
+            let n: u64 = t[0].parse().unwrap();
+            let seed: u128 = t[1].parse().unwrap();
+            let mut g = default_rng(seed);
+            for (i, tok) in t[2..].iter().enumerate() {
+                let want: u64 = tok.parse().unwrap();
+                assert_eq!(g.next_below(n), want, "n {n} seed {seed} draw {i}");
+            }
+        }
+    }
+
+    /// CPython `statistics.mean` on values spanning the whole exponent range: exercises
+    /// results whose rounding lsb is a power of two in the subnormal range.
+    #[test]
+    fn statistics_mean_wide_exponents_matches_cpython() {
+        for line in include_str!("../tests/fixtures/mut_stat_mean.txt").lines() {
+            let mut it = line.split_whitespace().map(hex64).map(f64::from_bits);
+            let want = it.next().unwrap();
+            let data: Vec<f64> = it.collect();
+            let got = statistics_mean(&data).unwrap();
+            assert_eq!(got.to_bits(), want.to_bits(), "data {data:?}");
+        }
+    }
+
+    #[test]
+    fn statistics_mean_power_of_two_below_normal_range() {
+        let x = 2f64.powi(-1000);
+        assert_eq!(statistics_mean(&[x]), Some(x));
+        assert_eq!(statistics_mean(&[x, x * 3.0]), Some(x * 2.0));
+        assert_eq!(statistics_mean(&[]), None);
+    }
+}

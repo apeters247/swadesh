@@ -1,0 +1,860 @@
+seg	3	2	0	0	1	b. b. a dog! é		a (x) abc	10 7 2 9 6 0 8 5 0 8 4 1 7 3 0
+seg	3	3	0	0	2	b.dog!	xy  a-b  xy		x?  é	6 7 1 5 6 0 4 5 0 2 3 0 1 2 0 0 1 0
+seg	4	1	1	0	3	(x)	dog!	3 4 0 2 3 0 1 2 0 0 1 0 2 2 0
+seg	3	2	1	1	2	adog! x?	é	8 1 0 0 0 0 0 0 0 4 1 0 0 0 0
+seg	3	1	1	0	2	abab a	éxy  aé  c, é	xy  dog! é éb. x?	6 13 2 5 12 1 4 11 0 2 5 0
+seg	6	0	1	0	2	(x)	xy	3 2 1 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	5	0	0	1	2	x? cat  xy dog! a		(x)  x? cat	12 8 6 11 7 4 10 6 3 9 5 2 8 4 1
+seg	5	2	0	1	2	adog!	cat xy (x) a-b	é é (x)xy	b.  a-b c, x?  a-b xy	5 11 1 4 10 0 3 9 0 2 8 0 1 7 0 2 5 0 1 4 0
+seg	3	3	1	0	1		ab  b.catc,	0 11 0 0 10 0 0 9 0 0 3 0 0 2 0 0 1 0
+seg	1	2	0	0	1	ab c, b.  (x)(x) c,		0 0 0 0 0 0 0 0 0
+seg	3	3	1	0	2		(x) ab  a ab	xy	0 12 0 0 11 0 0 10 0 0 5 0 0 4 0 0 3 0
+seg	2	0	1	0	2	b. é	b.b.x? dog! abc	4 15 3 3 14 1
+seg	5	1	0	0	2	a-b  a  (x) c,		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	2	0	1	0	1	xya	xy  ab abc  a-bcat(x)	a	(x) dog! dog!	3 1 1 0 0 0
+seg	3	2	1	0	1	c,aa-b  ax?b.	cat ab cat a ab	a  abcx? b.	13 11 10 12 10 4 11 9 1 3 5 1 2 4 0
+seg	6	3	1	0	3	(x)	xy		dog!(x) cat x? b.	3 2 1 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 2 1 0 0 0 0 0 0 0
+seg	3	0	0	0	2	b. dog!b. abc  a	c, xy  é xy  x? (x)	a é x? ab x?	12 8 3 11 7 1 10 6 0
+seg	6	0	0	0	2	x?x?abcdog!	a-b b.	c,x? cat(x) é	11 11 5 10 10 1 9 9 0 8 8 0 7 7 0 6 6 0
+seg	4	3	1	0	3		b. a	0 4 0 0 3 0 0 2 0 0 1 0 0 3 0 0 2 0 0 1 0
+seg	5	2	0	0	3	a-b	ab xy		abc abcxy c, ab	3 4 2 2 3 0 1 2 0 0 1 0 0 0 0 1 2 0 0 1 0
+seg	2	1	1	1	3	xy	é cat abc		x? dog!	2 7 1 1 6 0 1 4 0
+seg	5	1	1	0	2	(x) (x)  x?	a-b  (x) abc a		abc  a x?  abc catx?	11 14 6 10 13 5 9 12 3 8 11 2 7 10 1 6 5 2
+seg	1	0	0	0	2	é	cat	c, ab	1 3 0
+seg	6	3	1	1	2	aba xy	b.	aa-b		6 4 3 5 3 0 4 2 0 3 1 0 0 0 0 0 0 0 2 1 0 0 0 0 0 0 0
+seg	3	2	1	0	1		a xyababca-b	0 12 0 0 11 0 0 10 0 0 2 0 0 1 0
+seg	5	1	0	0	2	aba-b  a-b(x) dog! a-b	x? catabcé dog! dog!	18 17 8 17 16 4 16 15 2 15 14 1 14 13 0 6 7 2
+seg	6	1	1	0	1	(x)ab  b.	a-b cat a-b	x?aba-b xy x?b.		9 15 7 8 14 3 7 13 0 6 12 0 5 11 0 4 10 0 4 4 1
+seg	1	0	1	0	3	a-b cat cat	xyabc abxy	b.	11 10 5
+seg	6	0	1	0	3	b.cat a-b b.  édog!	a	19 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	6	0	1	1	1	cat xyab abcabc	x? a-b b. é a-b	15 15 8 14 14 2 13 13 0 12 12 0 11 11 0 10 10 0
+seg	5	1	0	0	3	c, cat a x? dog!dog!	x?b.  (x)	16 7 2 15 6 1 14 5 0 13 4 0 12 3 0 8 4 0
+seg	4	0	1	0	1	xy (x) éb.  x?	é xy a-b  b.ab(x)		ab	14 17 12 13 16 7 12 15 2 11 14 0
+seg	3	3	1	0	1			xy éx?x?	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	6	0	1	0	3	dog!  abc	a-b x? c, abc abcx?	xy(x)	9 19 5 8 18 3 7 17 2 6 16 1 5 15 0 4 14 0
+seg	6	3	0	0	1	dog!(x) abc  cat	ab a-b cat	13 8 5 12 7 4 11 6 1 10 5 0 9 4 0 8 3 0 4 3 1 3 2 0 2 1 0
+seg	5	2	1	1	3	xy  ab  cat xy dog!		(x)abaab  a c,	19 14 8 18 13 5 17 12 3 16 11 1 15 10 0 6 5 0 5 4 0
+seg	6	3	1	0	3	b. abc  a	b.	9 2 2 8 1 1 0 0 0 0 0 0 0 0 0 0 0 0 4 2 2 3 1 1 0 0 0
+seg	3	2	0	0	2	dog!  ab é (x) dog! a	a-b(x)  dog!	15 10 9 14 9 6 13 8 5 9 4 3 8 3 2
+seg	3	0	0	1	1	a-b cat abc b. c, a		c,b. x?  abc xy	a-bé	14 11 7 13 10 4 12 9 1
+seg	4	3	1	0	2	a  (x)cat dog!	abc  xy xy  c,x?é	14 17 6 13 16 1 12 15 0 11 14 0 5 4 0 4 3 0 3 2 0
+seg	5	3	0	1	1	a-b x? abca-bxy	b.x? (x)éab  b.	(x)(x) c,  é  (x) ab	abc b.	13 12 7 12 11 2 11 10 0 10 9 0 9 8 0 4 6 1 3 5 0 2 4 0
+seg	6	2	0	0	2			x?	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	4	3	1	0	1		b.	abc ab a-b a cat é	0 2 0 0 1 0 0 0 0 0 0 0 0 2 0 0 1 0 0 0 0
+seg	3	0	0	0	1		x?ab(x) xy	(x)  b. cat cat	0 9 0 0 8 0 0 7 0
+seg	1	2	0	0	2	b.  caté	(x)a  xy abcb.dog!	(x)  a-b a-b catdog! é	6 17 5 3 7 0 2 6 0
+seg	3	2	0	0	1	a-b dog! (x) xy	abc	cat acat ab		12 3 2 11 2 0 10 1 0 6 1 0 0 0 0
+seg	1	1	0	0	2	(x) ééabc  a-b ab	(x)dog! a	13 8 4 5 3 0
+seg	2	0	1	0	3	ab (x) (x)  xy	a-b  b. (x) c,	abca	ab dog! xycat  ab ab	14 14 9 13 13 6
+seg	5	0	0	0	1	xy  (x)x?	x? c,  a  a-b  c,cat	7 13 2 6 12 1 5 11 0 4 10 0 3 9 0
+seg	5	3	1	1	2	dog!	xy	a c, xy  abc	4 2 0 3 1 0 0 0 0 0 0 0 0 0 0 2 1 0 0 0 0 0 0 0
+seg	6	3	0	0	2			0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	5	3	0	0	2	ab x?é c,		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	1	0	0	0	3	xy	a-b a-b  é é abb.	2 12 0
+seg	6	3	0	0	2	xy  b.	abxy  dog!		c,  xycat c, c,	4 8 3 3 7 1 2 6 0 1 5 0 0 4 0 0 3 0 3 3 0 2 2 0 1 1 0
+seg	6	1	0	0	2	a  dog!  cat		catc,x? x?ab abc	dog!abc ab xy	8 11 7 7 10 4 6 9 2 5 8 1 4 7 0 3 6 0 4 3 0
+seg	4	0	1	0	2		dog! c,xy dog!  é  abc	0 22 0 0 21 0 0 20 0 0 19 0
+seg	5	2	1	1	3	a-b a x? (x)	dog!b.  (x)x?		abc  ab	12 13 8 11 12 4 10 11 2 9 10 1 8 9 0 6 4 1 5 3 0
+seg	2	2	1	0	1	b. dog!	ab  ab b. aba	xy dog!	abcc, dog!  a-b dog!	7 7 5 6 6 4 4 3 2 3 2 1
+seg	1	2	1	0	3	cat	ab cat xy abc	3 13 3 1 4 1 0 3 0
+seg	3	1	1	0	2	c,	a  dog! cat cat	abc  dog! cat(x) b.	abé	2 15 1 1 14 0 0 13 0 2 5 0
+seg	4	3	0	1	2	é (x)a  x?	b. c, a é	abc (x) é dog!	7 11 5 6 10 2 5 9 1 4 8 0 5 6 1 4 5 0 3 4 0
+seg	4	2	0	1	2	x?(x) abc		ab dog!	8 6 2 7 5 1 6 4 0 5 3 0 3 3 0 2 2 0
+seg	4	0	1	0	1	a  b. abc		c,(x) dog!	9 10 2 8 9 0 7 8 0 6 7 0
+seg	2	0	1	0	1	b. a-b  catdog! cat	a (x)  x? abc	dog!	19 4 4 18 3 3
+seg	2	2	1	1	3	dog!dog!	ab	c, cat  a-b (x)	8 2 0 7 1 0 2 1 0 0 0 0
+seg	5	2	1	0	2	xy cat  xyxyb.	x? a (x) é	14 10 6 13 9 0 12 8 0 11 7 0 10 6 0 4 6 0 3 5 0
+seg	2	1	1	0	1	ab	cat  c,ab a-b	x? xyc,	2 13 2 1 12 1 1 3 0
+seg	6	0	0	1	2	catx?dog! b. a-b	abc (x) b. abc x?  ab	adog! dog!cat	14 12 8 13 11 5 12 10 3 11 9 1 10 8 0 9 7 0
+seg	3	2	1	0	1	x?abc abc (x)abc	xy  a-bx? (x)c,	16 15 10 15 14 5 14 13 2 4 5 0 3 4 0
+seg	5	3	1	0	3		x?	c, cat	0 2 0 0 1 0 0 0 0 0 0 0 0 0 0 0 2 0 0 1 0 0 0 0
+seg	4	0	0	0	1	a  cat cat (x)  a-b dog!	b.  é xydog! a-b (x)	catcat  abc  ab		17 11 9 16 10 5 15 9 4 14 8 3
+seg	4	1	0	0	2	é b. x?	(x) c, dog!	5 9 1 4 8 0 3 7 0 2 6 0 5 6 0
+seg	1	2	1	0	1	a-ba-b	b.	xy abc dog! é	c, dog! (x)  ab cat	6 2 1 1 2 0 0 1 0
+seg	6	1	0	0	3	a x? b.  a-b		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	5	2	1	0	1	a-bb. c, x? ac,	a	b.  c,  (x) xy ab	15 17 10 14 16 7 13 15 3 12 14 1 11 13 0 8 8 3 7 7 2
+seg	5	1	1	0	3	dog!	ab  abc b. é abc	4 16 0 3 15 0 2 14 0 1 13 0 0 12 0 2 6 0
+seg	2	2	0	0	3	abc,	xycat  x?  a-b ab	4 12 3 3 11 1 2 5 0 1 4 0
+seg	1	2	1	0	2	xy a-b ab		é abc  ab	9 9 6 3 3 1 2 2 0
+seg	3	2	1	0	3	xy b. ab	ab a-bcat dog!	xy	8 2 2 7 1 1 0 0 0 4 1 1 0 0 0
+seg	2	0	1	1	1	dog!  c, a-ba cat	éa	a xy  dog!	dog!  a c,	17 10 10 16 9 9
+seg	2	2	0	0	2		a-b b.x?abc  x?a-b	dog!	cat abc	0 15 0 0 14 0 0 3 0 0 2 0
+seg	2	3	0	1	1	cat abc  c, catdog!  ab	é  abc  ab	17 6 5 16 5 4 7 3 2 6 2 0 5 1 0
+seg	6	3	1	0	3	(x) x?  abxy  cat	a-b  abc  (x)	17 13 11 16 12 6 15 11 3 14 10 1 13 9 0 12 8 0 6 4 2 5 3 1 4 2 0
+seg	1	1	1	0	1	é	ab	b. ab b. a(x)	1 2 0 1 1 0
+seg	5	3	0	0	2	dog! ab cat (x)  a-b dog!	(x) b. a	c, abc c,	19 6 5 18 5 2 17 4 1 16 3 0 15 2 0 9 5 2 8 4 1 7 3 0
+seg	1	3	0	0	3	(x)	b.  aa c,	3 6 0 2 5 0 1 4 0 0 3 0
+seg	1	2	1	0	1	abc catc,	(x) cat	a-b  é  b.	9 7 4 3 3 0 2 2 0
+seg	6	1	0	0	1	abcc,  c,	xy	7 2 0 6 1 0 0 0 0 0 0 0 0 0 0 0 0 0 4 1 0
+seg	4	1	0	0	3	catab  cata dog!	c,  é c,  a	ab xya c,	13 7 4 12 6 1 11 5 0 10 4 0 4 4 0
+seg	6	3	1	0	3	aé a é a-b	abc  (x)  xy	c,	é	10 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 1 1 0 0 0 0 0 0
+seg	4	0	0	0	3	abc  c,  ax?  dog! b.	abc		14 3 3 13 2 2 12 1 1 0 0 0
+seg	5	2	0	1	2	catdog!		b.  x? cat b.	7 9 3 6 8 2 5 7 1 4 6 0 3 5 0 2 7 0 1 6 0
+seg	2	3	0	0	3	cat xy  éxy	é dog!catcat  xy	xydog! abcx?	8 13 6 7 12 4 3 3 1 2 2 0 1 1 0
+seg	2	3	0	1	3	cat a  b. dog! b. b.	a-babc dog! a-b  é	x?a-b  abc	14 14 10 13 13 4 10 5 2 9 4 1 8 3 0
+seg	6	3	0	1	1	é  abdog!  ab cat	écat  aéa	dog! abx?  (x)  a	12 12 7 11 11 5 10 10 4 9 9 3 8 8 2 7 7 1 5 7 1 4 6 0 3 5 0
+seg	2	0	1	0	2	x?	xy  c, x? a  xy	ab xy  cat b.ab	b. dog!	2 15 2 1 14 1
+seg	1	3	0	0	1		a-b abc b. xy x?	cat  (x)  dog!xy cat  dog!	c, abc a a  c,  dog!	0 12 0 0 7 0 0 6 0 0 5 0
+seg	4	1	0	0	2	a abc abc	c,dog!	é cat aa-b	7 8 5 6 7 2 5 6 0 4 5 0 3 3 0
+seg	2	1	1	0	3		(x)xy  cat b. a-b  xy	c,dog!	é c, cat  ab b.	0 21 0 0 20 0 0 7 0
+seg	1	0	1	0	3	a  a-b dog!  é		dog! dog! cat	a-bb.	14 13 7
+seg	2	2	0	1	1	édog! c, a-b  b. xy		0 0 0 0 0 0 0 0 0 0 0 0
+seg	5	3	1	1	1	cat (x)a ab	é	c, é é	dog!  cat  x?éa	11 15 7 10 14 3 9 13 2 8 12 1 7 11 0 4 4 1 3 3 0 2 2 0
+seg	4	2	1	0	3	cat  b. ac,cat		(x)  a-b xy ab  dog!  xy	xy c,b.  cat (x)  é	14 19 10 13 18 7 12 17 3 11 16 1 4 7 2 3 6 0
+seg	6	1	1	1	3	(x)a-b abc (x)dog!  x?	xy ab ab ab a-b abc	a a-bcat(x) abc	x?  ababc	22 9 9 21 8 5 20 7 2 19 6 0 18 5 0 17 4 0 7 3 2
+seg	1	2	1	0	1	cat dog! a abc dog!	a ab  b. b. x?	19 14 7 7 8 1 6 7 0
+seg	3	0	0	1	2	b.	ab abc  ab cat  (x) c,	2 15 1 1 14 0 0 13 0
+seg	5	2	0	1	1	a-b	aabc	a-b a é abc a-b	abc dog!ab abc (x)	3 11 3 2 10 2 1 9 1 0 8 0 0 7 0 1 5 1 0 4 0
+seg	3	3	0	0	2	a abc	b.	4 2 1 3 1 0 0 0 0 2 2 0 1 1 0 0 0 0
+seg	6	2	0	0	2	a xy  abc		(x) b. abc a(x)	6 12 5 5 11 2 4 10 1 3 9 0 2 8 0 1 7 0 3 7 1 2 6 0
+seg	6	1	1	1	1	aa-ba-b a-b	b.	11 2 1 10 1 0 0 0 0 0 0 0 0 0 0 0 0 0 2 2 0
+seg	5	0	1	1	1	é	cat xyab	1 8 0 0 7 0 0 6 0 0 5 0 0 4 0
+seg	1	2	0	0	2	x?(x) abc	éx? (x)cat  ab	x? é	a catcat	8 11 8 3 5 0 2 4 0
+seg	1	2	1	1	2	x? ab dog!a  a-b	dog! a	c, dog!	c,	16 6 6 5 3 0 4 2 0
+seg	6	3	1	1	3		c, a-b  abc	cat(x) (x) dog!  cat		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	2	1	0	1	2	a  cat (x)  b.	é xyxy  x? xy	(x) c,xy c, a b.	(x)	9 3 3 8 2 2 6 2 2
+seg	6	2	1	1	2	x?		ab  éx?	c,	2 7 2 1 6 1 0 5 0 0 4 0 0 3 0 0 2 0 2 3 1 1 2 0
+seg	6	0	1	0	2	abé c,	abc xy(x)abcabcab	6 17 4 5 16 1 4 15 0 3 14 0 2 13 0 1 12 0
+seg	2	1	1	0	3	xydog! cat	é c, a-b  dog! ab (x)	a-b é a-b  dog!	10 15 6 9 14 3 3 5 1
+seg	4	1	0	0	3	a dog!  b.  ab  ab x?	b.  a-b x?abc(x) dog!	13 17 12 12 16 8 11 15 4 10 14 1 9 7 4
+seg	3	2	1	0	2	c, b.a (x)dog! abc	x?a-b a-bab	18 11 6 17 10 2 16 9 0 6 2 0 5 1 0
+seg	1	3	1	1	1	cat (x)  b.	a  a-b a-b	ab	c,cat xy c,	11 11 6 5 4 0 4 3 0 3 2 0
+seg	4	1	1	1	2	catx? éé	cat  a-b	ab  xya-b	a	8 8 4 7 7 2 6 6 1 5 5 0 3 2 0
+seg	2	3	0	0	3	a a c,  xy xy	b.abcdog! abccat  ab	8 17 3 7 16 0 6 4 0 5 3 0 4 2 0
+seg	3	2	1	1	3	a-bab xy  abc  x? x?	c,c,dog! c,	a xy ab c,	cat c, ab  xyc,	20 10 9 19 9 6 18 8 4 7 5 1 6 4 0
+seg	1	0	1	1	3	a-b	x? a  ab	3 8 2
+seg	1	0	1	0	3	é abcat cat	adog! a b. cat	c,	11 14 8
+seg	5	3	1	0	1	abb. a(x)	a-b a-bcat a-b abc	x? c,  abc	a	9 1 1 0 0 0 0 0 0 0 0 0 0 0 0 4 1 0 0 0 0 0 0 0
+seg	4	3	1	1	2	x?  ab	b.	cat	6 2 1 5 1 0 0 0 0 0 0 0 3 2 0 2 1 0 0 0 0
+seg	6	2	0	0	3	a-b a-b  ab  ab a	c, a-b  c, é	é  xy	11 8 3 10 7 2 9 6 1 8 5 0 7 4 0 6 3 0 5 6 1 4 5 0
+seg	5	0	1	1	1	cat xy  abc, b.b.	a (x) a a-b ab  a-b	cat a-b c,	abc  xyx?	17 10 9 16 9 5 15 8 2 14 7 1 13 6 0
+seg	1	1	0	0	1	c,  ab a  a-b dog!	x? cat  b.	c, dog!dog!abc abb.	12 17 10 7 5 2
+seg	3	2	1	0	1	é c,xy		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	2	2	1	1	3	a  caté  b.cat	a-b  xy (x)	14 11 5 13 10 1 3 4 0 2 3 0
+seg	2	3	1	1	3			abc dog! ab	cata-b a-bx?  ab	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	5	3	1	0	1	b.	(x)	2 3 0 1 2 0 0 1 0 0 0 0 0 0 0 2 2 0 1 1 0 0 0 0
+seg	2	3	1	0	1		cat catab  (x)	a c,dog! x?	0 14 0 0 13 0 0 4 0 0 3 0 0 2 0
+seg	3	2	1	1	2	abc  dog!  dog!  xy abc  cat	c,	28 2 1 27 1 0 0 0 0 8 2 0 7 1 0
+seg	4	0	0	0	3	(x)c,		0 0 0 0 0 0 0 0 0 0 0 0
+seg	3	2	1	0	2	(x)c, é b. dog!  abc	xydog!xy a	cat	20 10 7 19 9 4 18 8 2 8 2 0 7 1 0
+seg	1	0	1	0	2		abc c,	0 6 0
+seg	6	1	1	0	3	é  dog!	ab	7 2 0 6 1 0 0 0 0 0 0 0 0 0 0 0 0 0 3 1 0
+seg	2	3	1	1	3		ab  catxy	dog! a abc  x? cat	é ab cat c,  (x)  x?	0 9 0 0 8 0 0 2 0 0 1 0 0 0 0
+seg	4	0	1	0	3	x? a(x) é (x)		0 0 0 0 0 0 0 0 0 0 0 0
+seg	1	3	1	0	3	x?(x)xy dog! (x) cat	a-b xy  a  cat		20 14 8 6 4 1 5 3 0 4 2 0
+seg	6	3	0	1	3	b.	(x)	x? cat xy xy	ab  dog!	2 6 1 1 5 0 0 4 0 0 3 0 0 2 0 0 1 0 2 3 0 1 2 0 0 1 0
+seg	4	1	1	0	3	x?	xy  x?	cat  c, a-b c,	cat dog!  c, a	2 6 2 1 5 1 0 4 0 0 3 0 2 3 2
+seg	2	3	1	0	2	xy  x?dog! x? abc  dog!	ab		23 2 2 22 1 1 8 1 0 0 0 0 0 0 0
+seg	3	0	1	0	1	a x? abc		0 0 0 0 0 0 0 0 0
+seg	5	2	1	1	1	abc xyc,	(x) ab	(x)	8 6 4 7 5 1 6 4 0 5 3 0 4 2 0 3 3 0 2 2 0
+seg	3	0	1	1	1	ab  é dog! é  abc  a		b.  ab  abc c, a x?	abc b.  ab	20 19 13 19 18 9 18 17 7
+seg	6	2	0	1	2	a-bab (x) (x) xy x?	b.	15 2 1 14 1 0 0 0 0 0 0 0 0 0 0 0 0 0 8 2 0 7 1 0
+seg	5	0	1	0	3	a-b	c, cat	3 6 1 2 5 0 1 4 0 0 3 0 0 2 0
+seg	6	1	1	0	3	a	c,  dog!  cat		1 13 1 0 12 0 0 11 0 0 10 0 0 9 0 0 8 0 1 5 0
+seg	1	0	0	1	3	c,	x?é	cat  abc a abc	2 10 1
+seg	3	0	0	0	3	é cat  a a-b b.é	dog! a ab	11 7 3 10 6 1 9 5 0
+seg	4	0	0	0	1	c, caté  é  b.	xyb.	xy  dog! b. abc	9 11 4 8 10 1 7 9 0 6 8 0
+seg	2	0	0	0	1	catdog!  ab b. é a	abc	x?	13 3 3 12 2 1
+seg	3	3	0	0	3	dog! x?a-b é  dog!	dog! b. é	b. x? ab b.	é  a cat a-bb. cat	14 7 6 13 6 3 12 5 2 6 5 3 5 4 1 4 3 0
+seg	3	3	0	1	2	a-b (x) a	dog! c, aba  (x)  ab	7 14 6 6 13 3 5 12 2 4 8 2 3 7 1 2 6 0
+seg	5	1	1	1	1	abc b.  a-b c,x?	(x)	abc	b.	16 3 3 15 2 2 14 1 1 0 0 0 0 0 0 6 1 1
+seg	6	2	1	0	2	xya édog!	a-b (x)	9 7 3 8 6 0 7 5 0 6 4 0 5 3 0 4 2 0 3 3 0 2 2 0
+seg	6	1	1	0	1		é abé  cat  c,	0 14 0 0 13 0 0 12 0 0 11 0 0 10 0 0 9 0 0 5 0
+seg	6	2	1	1	1	x? cat  a	c, (x) dog! ab cat a-b	é c,  dog!	9 22 8 8 21 5 7 20 3 6 19 2 5 18 1 4 17 0 4 9 1 3 8 0
+seg	6	3	0	1	3	a-bxy ab a a-b dog!	a-b c,  cat b. c,	15 12 5 14 11 2 13 10 1 12 9 0 11 8 0 10 7 0 6 8 1 5 7 0 4 6 0
+seg	3	0	1	0	3	é x?	b. dog!	4 7 1 3 6 0 2 5 0
+seg	2	2	0	1	3	xy (x)	a-b abc aba-b dog!		5 15 0 4 14 0 3 5 0 2 4 0
+seg	3	3	0	0	3	cat(x) (x) cat abc	b.a dog!			15 7 2 14 6 0 13 5 0 6 3 0 5 2 0 4 1 0
+seg	5	0	0	0	1			c,	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	6	1	0	0	1	éé  cat	dog!	c, é cata xy	(x)  écatcat	5 9 4 4 8 3 3 7 2 2 6 1 1 5 0 0 4 0 2 5 0
+seg	2	1	1	0	2	a dog!	(x)xy  é ab abc	6 15 2 5 14 0 3 5 0
+seg	3	1	1	1	1		a-b cat  dog! b.  x?	0 20 0 0 19 0 0 18 0 0 8 0
+seg	5	1	1	0	3	b. x?		b. ab abc c,  (x)b.		5 19 4 4 18 2 3 17 1 2 16 0 1 15 0 4 8 2
+seg	5	1	0	1	2	c, x? abc catx?	xya b. a-b	a-b dog! abc a  é	abc a-b a-b	12 9 4 11 8 3 10 7 1 9 6 0 8 5 0 7 3 1
+seg	3	3	1	0	1		abc	0 3 0 0 2 0 0 1 0 0 1 0 0 0 0 0 0 0
+seg	2	1	1	0	1	(x) x? cat cat cat	a  c,	18 5 4 17 4 1 7 3 0
+seg	4	1	0	0	1	é	b.  ab		1 4 0 0 3 0 0 2 0 0 1 0 1 3 0
+seg	1	3	0	1	1	(x)	a x? b. a  ab	3 8 1 2 7 0 1 6 0 0 5 0
+seg	5	3	0	0	1	x?		ab(x)	xy é	2 3 1 1 2 0 0 1 0 0 0 0 0 0 0 2 2 0 1 1 0 0 0 0
+seg	6	3	1	0	1	c,		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	2	3	1	1	3	cat b. dog!  ab  a-b	(x)  a-bdog!		b. x? (x) a-b	20 13 8 19 12 5 7 7 3 6 6 1 5 5 0
+seg	5	0	0	0	2	c,  b.	a (x)  a-b  a-b	4 10 1 3 9 0 2 8 0 1 7 0 0 6 0
+seg	3	1	1	0	2	(x) cat x?	xy  dog! a-babc  b.	10 19 5 9 18 0 8 17 0 5 6 0
+seg	1	1	1	0	1	a-b x?	é  abc	6 6 3 3 2 0
+seg	2	3	1	0	1	a	x?  cat caté xy x?	dog!(x)  dog!  x?b.	x? xy  a	1 8 1 0 7 0 1 4 1 0 3 0 0 2 0
+seg	4	3	0	0	1	axy  xy		x? (x) (x)	5 8 2 4 7 0 3 6 0 2 5 0 2 6 0 1 5 0 0 4 0
+seg	6	0	0	0	2	b.	dog! xy a abc ab	abcc, écatx?	catab  b.  (x) abc b.	2 15 2 1 14 1 0 13 0 0 12 0 0 11 0 0 10 0
+seg	1	0	0	1	2	ab c,xy	xy  a-b ab  cat	(x)  (x) é	6 10 5
+seg	6	1	1	0	3	xy(x)é  cat	a-b  b.ab	ab  (x) c,abcab	11 15 7 10 14 5 9 13 1 8 12 0 7 11 0 6 10 0 2 4 0
+seg	4	0	0	0	2		b. x?catxy	0 9 0 0 8 0 0 7 0 0 6 0
+seg	1	0	0	0	3		catx?	0 5 0
+seg	1	0	1	0	2	ab	c,	2 2 0
+seg	2	0	0	0	2	c,	abcc,ab		2 7 2 1 6 1
+seg	3	0	0	0	3	abcc,	c, (x) xyc, é	5 10 3 4 9 1 3 8 0
+seg	4	2	0	0	3	(x) a-b cat é abc  a	(x)	cat  (x)	éa-b dog! c, dog! a	14 3 3 13 2 2 12 1 1 0 0 0 7 2 2 6 1 1
+seg	5	0	0	0	3	abca	ab  cat xy b. c,  dog!	x?a-b ab catxy	4 12 4 3 11 3 2 10 2 1 9 1 0 8 0
+seg	1	0	1	0	3	dog! ac, dog! c,x?	a-bc,  abc	ab	abc abc ab cat  b.	18 10 6
+seg	2	2	0	0	2	dog! b.	dog! é b.  (x) a	6 11 6 5 10 4 4 8 4 3 7 2
+seg	6	1	1	1	1	x?  xy	(x)xy	6 5 3 5 4 1 4 3 0 3 2 0 2 1 0 0 0 0 3 2 0
+seg	5	0	1	1	3		abc (x) c,c, a-ba	0 17 0 0 16 0 0 15 0 0 14 0 0 13 0
+seg	3	0	0	1	2	c,  catb. cat	cat  c, a-b  c,	(x) x?  é		10 10 8 9 9 3 8 8 1
+seg	3	2	1	0	2		cat  x? x?é	0 11 0 0 10 0 0 9 0 0 4 0 0 3 0
+seg	5	0	1	1	2	x?	b. catabc	2 9 0 1 8 0 0 7 0 0 6 0 0 5 0
+seg	2	2	1	1	3	dog! ab aa-b	xy é	12 4 1 11 3 0 4 2 0 3 1 0
+seg	6	0	0	0	1	(x) x?  ab  xyx?cat		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	4	0	1	0	2		dog!  a ab c,	0 13 0 0 12 0 0 11 0 0 10 0
+seg	2	3	0	0	2	a  x? (x) abc  c,	a  cat  ababc	11 9 5 10 8 2 8 3 1 7 2 0 6 1 0
+seg	2	1	0	1	2	é		a  (x)b. x?	0 0 0 0 0 0 0 0 0
+seg	6	3	1	1	2	cat abc  cat dog!  (x)	abcxy	22 5 4 21 4 2 20 3 1 19 2 0 18 1 0 0 0 0 7 1 0 0 0 0 0 0 0
+seg	1	2	0	0	2	dog!	b. a-b	4 5 0 2 3 0 1 2 0
+seg	4	2	1	1	2	b. a x?  cat é c,		a  a b.abc	17 10 8 16 9 4 15 8 1 14 7 0 9 3 1 8 2 0
+seg	2	2	1	0	2		ax?  dog!	a-b  abc  é	ab	0 9 0 0 8 0 0 4 0 0 3 0
+seg	2	1	0	0	3	é	a-b x?ab  é		1 8 1 0 7 0 1 3 1
+seg	3	2	0	1	2	abc  cat  cat c, c, c,	cat (x)	15 6 3 14 5 2 13 4 1 9 3 1 8 2 0
+seg	1	3	1	0	2	x?  dog!		dog! xya-b  é		8 13 7 4 4 2 3 3 1 2 2 0
+seg	3	3	1	1	2	ab b.	x?a-b catb.	a b. cat  b. dog! c,	5 11 5 4 10 2 3 9 0 3 3 1 2 2 0 1 1 0
+seg	5	0	1	0	2	ab(x)	c,  ab  xy	é	dog!  abc a-b dog!é b.	5 10 3 4 9 1 3 8 0 2 7 0 1 6 0
+seg	4	1	0	0	2	c,  x? x?a	a-b	7 3 1 6 2 0 5 1 0 0 0 0 5 1 0
+seg	6	2	0	0	1			b. b. b.  (x)a-b	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	2	1	0	1	2	dog!  a xy xy dog! c,	aé	x?  ab	cat  x?  é  b. dog!  a-b	15 15 7 14 14 4 9 9 2
+seg	5	1	0	1	1	(x) xyaba-b  c,	b.cat	dog! ab  c,catb.a-b		12 16 7 11 15 5 10 14 2 9 13 0 8 12 0 5 4 0
+seg	1	2	0	0	1	abc	ab  b.a abc dog!	dog! cat x? x? c,	xy cat x?a	3 12 3 1 5 1 0 4 0
+seg	2	2	0	0	3	abb.  b.  é (x)  x?	xy  dog!a-b  ab  (x) é	xyabc	12 15 8 11 14 3 9 6 3 8 5 1
+seg	4	0	1	0	2		b. a  a a-b dog!	abc  x? a-b		0 16 0 0 15 0 0 14 0 0 13 0
+seg	4	3	0	0	1	(x)a ab ab	édog!	cat  b. abcabc abc  (x)	é ab  a-b	8 6 4 7 5 2 6 4 1 5 3 0 4 3 1 3 2 0 2 1 0
+seg	4	2	1	0	1		a-b a	0 5 0 0 4 0 0 3 0 0 2 0 0 2 0 0 1 0
+seg	1	2	1	0	1	a-b	xy a-b	3 6 3 1 2 1 0 1 0
+seg	2	3	0	0	1	x?  cat	abx? é  abc (x) dog!	5 15 4 4 14 1 3 8 1 2 7 0 1 6 0
+seg	2	0	1	0	2	(x)  xy c, cat	xy	14 2 2 13 1 1
+seg	6	0	0	0	3	ab abc  x? x? xy cat	abé	14 3 2 13 2 1 12 1 0 0 0 0 0 0 0 0 0 0
+seg	6	0	0	1	3	abc a-b	x?  (x)	cat	é é a-b  adog!  é	6 3 2 5 2 1 4 1 0 0 0 0 0 0 0 0 0 0
+seg	2	1	1	0	3	a-b é abc  catxy  xy		0 0 0 0 0 0 0 0 0
+seg	4	1	1	0	2		dog!  dog! abc ab(x)a-b	a-b  dog! xy é c, dog!		0 23 0 0 22 0 0 21 0 0 20 0 0 6 0
+seg	1	1	0	0	1		cat  xya a-b c,		(x)	0 11 0 0 5 0
+seg	6	2	1	0	1		x? é abc a  (x)		0 15 0 0 14 0 0 13 0 0 12 0 0 11 0 0 10 0 0 7 0 0 6 0
+seg	4	3	1	0	2			0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	5	2	1	0	2	ab dog!	dog!b.cat b.	a abc b.	ab	7 2 2 6 1 1 0 0 0 0 0 0 0 0 0 3 1 1 0 0 0
+seg	6	1	1	0	1	(x)  cat dog!cat a  xy	x? b. dog! a-b  a-b	é ab dog!  ab é a-b	22 19 13 21 18 6 20 17 3 19 16 2 18 15 1 17 14 0 6 7 0
+seg	4	0	0	0	2	b. xy dog! a b.	a  abca abc  (x)  b.	a-b  c, é	11 13 5 10 12 2 9 11 0 8 10 0
+seg	4	2	0	1	3	x? (x) abc b.a	b. xy  abcx?	11 9 8 10 8 4 9 7 1 8 6 0 6 5 1 5 4 0
+seg	6	3	0	0	1	abcxyxydog!  (x)			0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	3	1	1	0	2	ab (x)	xy	6 2 1 5 1 0 0 0 0 3 1 0
+seg	5	0	1	0	2	x?  b.	b. c,	xy x?	6 5 3 5 4 1 4 3 0 3 2 0 2 1 0
+seg	5	3	1	1	3	cat b.	é  dog! b. b.	éabc  cat  a-b dog! a	6 13 3 5 12 2 4 11 1 3 10 0 2 9 0 3 7 2 2 6 1 1 5 0
+seg	4	0	1	0	2	b.abc b.  a	abxydog! cat  ab	11 16 8 10 15 3 9 14 1 8 13 0
+seg	3	3	0	1	3		dog! ax? cat	0 10 0 0 9 0 0 8 0 0 5 0 0 4 0 0 3 0
+seg	1	3	1	0	3	xy é c, é	x?b. (x) a-b aa-b	b. cat a	9 8 3 5 4 0 4 3 0 3 2 0
+seg	3	0	1	0	3	abc	dog!  abab	a  dog!(x) (x) é	3 10 2 2 9 1 1 8 0
+seg	2	0	0	0	1	x? a-b  c,	catb.  ab b.	7 9 3 6 8 0
+seg	1	2	1	1	2	abc é (x)  x?xyc,	é	17 1 1 6 1 1 0 0 0
+seg	2	1	1	0	2		(x) abc  dog! b. c, c,	é(x)a a-b	ab ab (x)xy (x) b.	0 22 0 0 21 0 0 11 0
+seg	1	1	1	0	1	é abc(x)  é  c,dog!	abxy  a ab (x)  dog!	dog!abc x? b. xy abc	a é	19 20 14 6 7 2
+seg	6	2	0	0	3	b. xy  abc	a-b xy dog! abc	7 12 6 6 11 3 5 10 1 4 9 0 3 8 0 2 7 0 4 5 2 3 4 0
+seg	2	2	1	0	3	x? dog! a-bxy xy  c,	(x) a-b  édog! a	20 16 12 19 15 8 8 6 1 7 5 0
+seg	3	3	1	0	2	abc dog! c,  dog!  a-b	a a-b	cat  ab cat x? x? dog!	22 5 5 21 4 3 20 3 2 8 2 1 7 1 0 0 0 0
+seg	3	3	1	0	2	ab	a-bdog! (x)  a	xy xy xy cat abdog!	2 19 2 1 18 1 0 17 0 1 6 0 0 5 0 0 4 0
+seg	2	1	1	0	3	aabc xy	é	7 1 0 0 0 0 2 1 0
+seg	3	2	1	0	1	catab ab	xy  cat  dog!	8 13 4 7 12 2 6 11 1 2 4 0 1 3 0
+seg	1	2	1	0	2	b.		a ab cat  abc	2 13 1 2 4 0 1 3 0
+seg	1	0	1	0	1			cat xy é  dog!	abc (x) cat dog!  (x) a-b	0 0 0
+seg	1	3	1	1	1	a-b(x)		0 0 0 0 0 0 0 0 0 0 0 0
+seg	4	2	0	0	2	dog! xyc,  x? abc  dog!	a ab  ab a		17 6 2 16 5 1 15 4 0 14 3 0 9 4 0 8 3 0
+seg	4	2	1	0	2	c,  x?a dog!		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	3	0	1	1	2	(x)(x)a-b b.	(x) ab a-b		12 10 8 11 9 5 10 8 2
+seg	1	2	0	0	1	ab a-b dog! xy cat	xy aa-b	14 6 6 6 2 1 5 1 0
+seg	4	0	1	1	3	é a  ab x?	a-b  (x) xyx?é  (x)	abc ab(x) a-b b.	10 16 7 9 15 4 8 14 1 7 13 0
+seg	3	1	1	1	2	a-b a  cat	acat  abc é (x)	10 15 9 9 14 4 8 13 1 3 5 0
+seg	6	1	1	0	1	é  b.x? xy x? é	a-b  dog!abc  b.	a a-ba-b  é c,	xy	15 2 2 14 1 1 0 0 0 0 0 0 0 0 0 0 0 0 7 1 1
+seg	3	2	0	0	1	a  b. dog!	xy (x) cat é é	abc xy éb. é é	a é  a-b (x)dog!dog!	7 16 6 6 15 3 5 14 2 5 5 2 4 4 0
+seg	2	0	1	0	3	xyxy	b.		4 2 0 3 1 0
+seg	3	2	1	0	3	x? x? ab abc	xy c, b. abab  abc		12 18 9 11 17 6 10 16 4 6 7 1 5 6 0
+seg	5	3	1	0	3	c, (x) (x) c,  c,	abc  xy cat cat  dog!	17 21 9 16 20 3 15 19 0 14 18 0 13 17 0 10 6 0 9 5 0 8 4 0
+seg	2	3	0	0	3	x?abcc,		(x)a-b  (x) (x)  é	7 13 3 6 12 0 2 7 0 1 6 0 0 5 0
+seg	1	0	0	0	2	(x)abdog!cat b.ab	(x)  a-b cat		16 9 8
+seg	4	2	0	1	3	x?	b. abc b. a ab	é dog!  x?	dog! cat	2 7 2 1 6 1 0 5 0 0 4 0 2 5 2 1 4 1
+seg	5	2	0	0	1	dog!	(x)	dog! (x) abc é  abccat	ababc	4 17 4 3 16 3 2 15 2 1 14 1 0 13 0 2 7 2 1 6 1
+seg	3	3	1	0	3	a  dog! (x) éabc	dog! xy a-ba-b	x?  b.xy	c,  a-b  xy	16 14 10 15 13 4 14 12 3 6 4 2 5 3 1 4 2 0
+seg	5	1	1	0	2	xy c,ab a	ab	(x)  cat abc	9 2 2 8 1 1 0 0 0 0 0 0 0 0 0 3 1 0
+seg	4	1	1	0	3	abc abc	c,	7 2 1 6 1 0 0 0 0 0 0 0 2 2 0
+seg	4	0	0	0	1	(x)  ab	cat  b. abc(x)  catb.	5 16 5 4 15 3 3 14 1 2 13 0
+seg	6	2	1	0	3	x?a-b c,  x?	x?	abc  c, xy		12 2 2 11 1 1 0 0 0 0 0 0 0 0 0 0 0 0 5 2 2 4 1 1
+seg	5	3	0	0	1	x?abcab x?	ab a-b  é xy	aabc	9 4 4 8 3 2 7 2 1 6 1 0 0 0 0 3 1 0 0 0 0 0 0 0
+seg	3	3	1	0	1	a  dog!  x?b.		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	5	1	0	1	1	é  cat abab	c,a	c, dog! catxy	8 11 3 7 10 2 6 9 1 5 8 0 4 7 0 3 5 0
+seg	1	3	1	0	1	c, c,  x?	b.	b.  dog! (x)	a-b  c,	9 7 4 6 3 2 5 2 1 4 1 0
+seg	6	3	1	0	1	a dog!abcaa	a-b a-b  cat xy cat	é	11 19 7 10 18 1 9 17 0 8 16 0 7 15 0 6 14 0 2 5 0 1 4 0 0 3 0
+seg	6	0	1	1	3		x?  a  xyabc	0 12 0 0 11 0 0 10 0 0 9 0 0 8 0 0 7 0
+seg	4	1	0	0	1			é b.xy	ab	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	5	3	0	1	2		a-bxyx?  ab cat	0 12 0 0 11 0 0 10 0 0 9 0 0 8 0 0 4 0 0 3 0 0 2 0
+seg	4	1	0	0	2	a	ab  é  dog! a-bx?	1 12 1 0 11 0 0 10 0 0 9 0 1 6 0
+seg	5	0	1	1	1	x? cat	xy  c,	6 6 3 5 5 1 4 4 0 3 3 0 2 2 0
+seg	4	0	0	0	3	x? ab	x? abc	ab	4 2 2 3 1 1 0 0 0 0 0 0
+seg	6	1	0	1	2	é a  dog! cat  c,		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	5	2	0	1	2	dog!  b.	dog!	abc  éabc (x)	6 4 4 5 3 3 4 2 2 3 1 1 0 0 0 4 2 2 3 1 1
+seg	1	1	0	0	1	a		0 0 0 0 0 0
+seg	6	0	0	0	1		cat abdog!x? xy	ab abc  é  x? (x)a-b	0 13 0 0 12 0 0 11 0 0 10 0 0 9 0 0 8 0
+seg	5	0	1	1	2	dog!  é xya-b ab x?	x?  x?	dog!	19 4 4 18 3 3 17 2 2 16 1 1 0 0 0
+seg	2	1	1	0	3	b. c,  a-b abc	xy(x)xy  dog! b. é	cat dog!xyx?  a  a-b	14 20 9 13 19 5 6 5 1
+seg	2	3	0	1	3	c, cat dog!	abc a-b  dog!		9 10 6 8 9 4 5 4 2 4 3 1 3 2 0
+seg	6	0	1	0	1	c, abc	écat xyxy x?	6 12 3 5 11 0 4 10 0 3 9 0 2 8 0 1 7 0
+seg	1	0	0	1	1	xy	x?  (x)	abc  é a a-b	a-b  xy  (x) x?  xy	2 5 1
+seg	5	1	0	0	3		(x)	0 3 0 0 2 0 0 1 0 0 0 0 0 0 0 0 2 0
+seg	1	0	1	0	2	dog!  xya-b	(x) a-b  b.	abcdog! a-b a	11 13 9
+seg	4	2	0	0	3			0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	4	0	0	0	3	cat		0 0 0 0 0 0 0 0 0 0 0 0
+seg	1	2	1	0	2	x? a-b ab  (x) (x)	b.dog!b. b.	18 11 3 8 4 0 7 3 0
+seg	4	3	1	1	2	(x) b.  abc x? a	(x)a-ba ababc	a-bé	16 13 9 15 12 5 14 11 3 13 10 0 8 3 0 7 2 0 6 1 0
+seg	6	1	1	0	3	x?c,c,	x? éx? cat  b.	6 14 3 5 13 1 4 12 0 3 11 0 2 10 0 1 9 0 2 7 0
+seg	1	2	0	0	2	a-b	a-b éb.  dog! c,	a-b (x) dog! cat	a  c,  dog! éc,abc	3 13 3 1 6 1 0 5 0
+seg	4	2	0	0	2	cat  xy	é		(x)c,abc x?	5 10 3 4 9 0 3 8 0 2 7 0 2 4 0 1 3 0
+seg	2	0	0	0	2	cata-b x?	b.a cat a-b  (x)	b. dog! a-b dog!	a-b (x) éabc	8 12 7 7 11 5
+seg	5	3	0	0	3	x? cat c,	xydog!	7 6 1 6 5 0 5 4 0 4 3 0 3 2 0 5 2 0 4 1 0 0 0 0
+seg	5	0	1	0	1	dog!  b.  a-bb.		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	3	0	0	0	1	a-b xyxy c,  ab		x?  a	11 3 2 10 2 0 9 1 0
+seg	4	2	1	1	2	x? xy	dog! b.xy abc	(x) adog! a-bx?abc	xyb.	5 4 2 4 3 1 3 2 0 2 1 0 3 2 0 2 1 0
+seg	6	3	1	0	1	(x)	cat cat x?  xy  c, x?	a xy xy  ab(x) dog!	3 19 3 2 18 2 1 17 1 0 16 0 0 15 0 0 14 0 2 7 1 1 6 0 0 5 0
+seg	3	0	0	0	2	ab (x)  ab		(x) éab catc,abc	c, abc  xy  cat (x)	7 14 7 6 13 4 5 12 1
+seg	5	0	1	0	3	c,	ab  cat dog!	(x) dog!(x)xy	a	2 12 1 1 11 0 0 10 0 0 9 0 0 8 0
+seg	3	1	1	0	3		(x) x?	(x)  é é xy	0 6 0 0 5 0 0 4 0 0 4 0
+seg	3	2	1	1	3	b.  c, a a a-b é	a-b	16 3 3 15 2 2 14 1 1 8 1 1 0 0 0
+seg	3	2	1	0	3	x?	ab		(x)	2 3 1 1 2 0 0 1 0 2 2 0 1 1 0
+seg	4	1	0	1	1	c,  x? xy cat abc	xy  ab c, x? (x)	abc  dog!	12 11 8 11 10 6 10 9 3 9 8 1 7 8 5
+seg	3	0	0	1	3	b.  a a-b cata-b c,		0 0 0 0 0 0 0 0 0
+seg	3	0	0	0	3	b. c, abc a  xycat	a-b x?c,	dog!  abc a-b	13 10 5 12 9 3 11 8 2
+seg	3	2	1	0	3	(x)ababc cata-b	abc b. b.	ab b. abc xy	(x)	15 3 3 14 2 2 13 1 1 3 2 0 2 1 0
+seg	2	0	1	1	3			0 0 0 0 0 0
+seg	3	2	1	0	3	dog!aa-b é a-b	b.	dog!	14 4 4 13 3 3 12 2 2 3 2 0 2 1 0
+seg	2	2	0	0	1	dog!  x?	é	6 1 0 0 0 0 4 1 0 0 0 0
+seg	2	3	0	1	2	é	abc  x?  c,  b. c, (x)	c,a	1 3 0 0 2 0 1 1 0 0 0 0 0 0 0
+seg	3	2	1	0	3	ab  a-b  xy a-b	é b.	15 4 2 14 3 0 13 2 0 4 3 0 3 2 0
+seg	6	0	0	0	1	c, é	a	3 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	6	1	0	0	2	x? xyab	a-b		xyx? x? dog! ab  é	6 13 6 5 12 4 4 11 1 3 10 0 2 9 0 1 8 0 3 8 2
+seg	1	1	1	0	1		a x? dog! c, c,	c,dog! abc	dog!  abc	0 15 0 0 9 0
+seg	5	2	0	0	2	édog!  a-b  abcc,	x?	xya-b abc	dog!	13 4 4 12 3 3 11 2 2 10 1 1 0 0 0 5 2 1 4 1 0
+seg	1	3	1	0	1	a-bc,  cat  b.		0 0 0 0 0 0 0 0 0 0 0 0
+seg	5	1	1	0	2		x?  abxyb. a	0 12 0 0 11 0 0 10 0 0 9 0 0 8 0 0 5 0
+seg	4	0	0	0	2	ab  c,  (x)  é ab	ab	(x) ab abc	10 8 8 9 7 5 8 6 2 7 5 0
+seg	2	1	1	0	2	b.	b.  b. aé	2 9 2 1 8 1 2 5 2
+seg	1	3	0	0	1		xy a-b (x)	é  dog! c,xy	0 8 0 0 4 0 0 3 0 0 2 0
+seg	5	3	0	0	3	a  é dog!	b. (x) dog! (x)	6 12 4 5 11 3 4 10 2 3 9 1 2 8 0 4 8 2 3 7 1 2 6 0
+seg	4	0	1	0	2	xy é	ab abc	4 6 1 3 5 0 2 4 0 1 3 0
+seg	6	3	0	1	3	abccat	caté  (x)  dog!  xy	xy  xy	abc(x)dog!	6 10 3 5 9 2 4 8 1 3 7 0 2 6 0 1 5 0 1 2 0 0 1 0 0 0 0
+seg	5	0	1	0	1	c, dog!  cat  é		cat ab a-b	aabc  c,  cat  (x)	15 18 10 14 17 8 13 16 6 12 15 4 11 14 3
+seg	6	3	1	0	3	abc (x) c,	ab	x?  a-b  a-b dog!	a-b  é a (x)	10 2 2 9 1 1 0 0 0 0 0 0 0 0 0 0 0 0 5 1 0 0 0 0 0 0 0
+seg	2	1	0	0	3	é abcdog!	ab	é cat ab cat a-b  ab	8 2 2 7 1 1 3 1 0
+seg	5	2	1	0	3	é dog!xy x?  é  abc	c, c, é b. x? ab	19 16 11 18 15 7 17 14 4 16 13 1 15 12 0 6 10 3 5 9 1
+seg	3	3	0	1	3			a	abc dog! b. b. b.	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	1	1	1	0	3	abc  dog!  a		a-b a-b  xy	ab cat ab é	12 11 7 4 4 0
+seg	1	3	1	0	3	cat (x)a  dog! é  abc	catcat  aab	x?	c,  é	21 11 9 7 2 0 6 1 0 0 0 0
+seg	6	3	1	1	2	b. dog!  c, a ab	cat  cat xy xy b.  a-b	c,	16 2 2 15 1 1 0 0 0 0 0 0 0 0 0 0 0 0 8 2 2 7 1 1 0 0 0
+seg	2	3	1	0	2	ababc  a-bab a-b	abc  é c,cat abcdog!		16 20 9 15 19 6 3 5 0 2 4 0 1 3 0
+seg	1	2	0	0	1	b.  a-b	ab axy a ab é	5 9 3 3 5 0 2 4 0
+seg	6	3	1	1	1	abccat  b.	abccat a x?	x? cat c,  (x)	10 11 8 9 10 6 8 9 5 7 8 4 6 7 3 5 6 2 3 4 1 2 3 0 1 2 0
+seg	1	3	0	0	3	é éc,  b. abc	b.  abdog! ab	c, b. dog!  dog!	(x) x? ab b.xy	9 12 4 6 8 3 5 7 2 4 6 1
+seg	2	2	1	0	3	b. é a-b a-b	cat abc  ab c,	12 14 7 11 13 3 5 5 0 4 4 0
+seg	2	1	0	0	3	(x)c, cat  (x) xy  ab	b. a-ba-b  x?ab	x? ab xyaba-b  a-b	a(x) x? a	15 7 6 14 6 3 7 5 1
+seg	4	0	0	0	3				0 0 0 0 0 0 0 0 0 0 0 0
+seg	4	3	0	0	1	(x) cat  cat	abc c,  cat (x)	(x) cat dog!dog!	9 14 6 8 13 5 7 12 4 6 11 3 4 5 3 3 4 2 2 3 1
+seg	2	3	0	1	1	dog! (x)	abc ac,ab (x)	dog! a-b  aé abc	a b. dog!	7 7 4 6 6 3 4 5 2 3 4 1 2 3 0
+seg	1	2	1	0	1	ab c,  cat xy	b.é	xy	x?abc  c,ab (x)	13 2 2 5 1 1 0 0 0
+seg	5	0	1	0	2		abc b.dog!	cat  cat a-b  x?(x) x?	x? dog! abdog! x?(x)	0 10 0 0 9 0 0 8 0 0 7 0 0 6 0
+seg	5	2	1	0	1	dog!	cat	cat  dog! (x)b.	4 15 4 3 14 3 2 13 2 1 12 1 0 11 0 2 5 2 1 4 1
+seg	5	3	0	1	1		dog! c,  cat	(x)  x?	0 9 0 0 8 0 0 7 0 0 6 0 0 5 0 0 5 0 0 4 0 0 3 0
+seg	4	1	1	1	1	b. x? abcx?  dog!  xy	cata-b abc	ab a  catc, cat	21 10 5 20 9 3 19 8 2 18 7 1 9 2 0
+seg	2	0	1	0	3	c, cat  ab ab b.	b.	16 2 2 15 1 1
+seg	3	1	0	0	2	b.	b.cat a xyab dog!	(x) abc	2 14 2 1 13 1 0 12 0 2 5 0
+seg	2	0	0	1	2		(x)  cat xy (x) c,		0 0 0 0 0 0
+seg	3	1	0	0	2	dog!c,	ab  abc x?b.  xy dog!	6 15 5 5 14 3 4 13 2 2 7 0
+seg	3	0	0	0	2	dog! c,ab		0 0 0 0 0 0 0 0 0
+seg	5	2	1	1	2		abc  ab abc  xy é	0 17 0 0 16 0 0 15 0 0 14 0 0 13 0 0 5 0 0 4 0
+seg	6	3	0	0	1	ab (x)  ab c,	é	xy cat  dog! xy  aabc	9 15 5 8 14 2 7 13 1 6 12 0 5 11 0 4 10 0 6 6 0 5 5 0 4 4 0
+seg	6	3	0	0	3	é  a (x)b. xy	ab.  a-bc,  a-b	cat (x) é c, (x) é	9 13 6 8 12 2 7 11 1 6 10 0 5 9 0 4 8 0 5 9 1 4 8 0 3 7 0
+seg	3	1	1	1	2		ab  (x)  b.	0 11 0 0 10 0 0 9 0 0 5 0
+seg	4	2	1	1	3	abc  abc é c,	ab ab  dog!	dog!  é é	13 9 4 12 8 3 11 7 1 10 6 0 5 4 1 4 3 0
+seg	5	2	1	1	2	aabc  abc c,	abc  abc	12 8 8 11 7 7 10 6 6 9 5 5 8 4 4 4 2 1 3 1 0
+seg	3	3	1	0	2		b. dog!dog!	x? abc  catxy  xy		0 11 0 0 10 0 0 9 0 0 4 0 0 3 0 0 2 0
+seg	6	2	0	0	1	é	abc ab  c, é		abccat	1 8 1 0 7 0 0 6 0 0 5 0 0 4 0 0 3 0 1 5 1 0 4 0
+seg	2	1	0	0	1		cat dog!dog!	c, x? b.	xyé(x)	0 11 0 0 10 0 0 3 0
+seg	5	1	1	0	2		ab  xy	(x)(x) (x)  abcé	0 6 0 0 5 0 0 4 0 0 3 0 0 2 0 0 2 0
+seg	5	1	0	0	2	(x) dog!  x? dog! c,	cat é	a-b b.catb.é ab	(x) é  c, é x?é	15 10 7 14 9 4 13 8 1 12 7 0 11 6 0 10 7 4
+seg	1	1	0	0	1	b. x?  c, abc	axy b.é (x)		é  adog!	9 9 4 7 4 0
+seg	1	0	0	0	2	(x)  a-b  x? x?abc é	x? ab	é  x?  é c,	14 4 4
+seg	1	3	0	1	3	a-b  (x)  abc,  (x)	c,	dog! dog! (x)		13 2 2 7 2 1 6 1 0 0 0 0
+seg	2	1	0	0	2	b.abcb. a  a-b (x)	dog! a dog! xy	dog! é x?	14 11 2 13 10 0 6 6 1
+seg	1	2	1	0	3	c,cat	xy x? abcb.	abc écat(x)a-b  a-b	5 19 4 1 3 0 0 2 0
+seg	3	1	1	1	3	dog! abcé  xy	(x) x? cat  cat x? x?		x?  b. cat	13 10 7 12 9 1 11 8 0 4 5 0
+seg	1	2	1	0	2	abc ab  é  a a a	ab b. a xy	abc (x) catxy	16 10 7 6 5 2 5 4 0
+seg	1	1	0	0	2	dog!	ab ab éxy	cat  cat	xy	4 7 0 2 3 0
+seg	2	2	1	0	3	(x)x? cat	catcat a-b	c,é c, é c,		9 10 4 8 9 2 3 2 0 2 1 0
+seg	4	3	1	1	3	x?  a-b	é xy	a-b xy	7 6 5 6 5 2 5 4 1 4 3 0 3 2 1 2 1 0 0 0 0
+seg	4	1	0	1	3	xyx? b.  a	x? abab	b.  ab.	7 5 3 6 4 2 5 3 1 4 2 0 5 4 2
+seg	3	1	1	0	1	a-b x?	(x)	6 3 1 5 2 0 4 1 0 3 2 0
+seg	2	0	1	1	1	aba cat  x?a-b	abc  b.	b. ababc  a dog!ab	14 18 10 13 17 4
+seg	5	1	1	0	1	c, dog!	b.  ab  dog!é a a-b	7 19 5 6 18 4 5 17 3 4 16 2 3 15 1 4 6 0
+seg	1	3	0	0	3	dog!  (x)	x? ab xy	éa (x)	c,a-b	7 5 3 4 3 2 3 2 1 2 1 0
+seg	1	2	0	1	3	ab	x? a-b c,  abc, cat	2 14 2 1 8 0 0 7 0
+seg	2	1	1	0	3	x?	é		ab xy	2 5 1 1 4 0 2 2 0
+seg	1	0	1	0	2	c, a-b  b.a	dog!	(x) xy	11 6 1
+seg	2	0	1	0	2	xyaxy cat a	dog!cat  a-b	x?	11 12 6 10 11 4
+seg	1	1	0	0	1	ab abc é a	cat	c,x?a-b  b.a	7 10 5 4 2 0
+seg	2	1	0	0	1	abc  cat  dog! abc	é  abcxy é	abc  abc	c, dog!	13 6 6 12 5 5 5 2 2
+seg	1	1	1	0	2	c, cat  a-baba-b	é xy (x) a ab	16 13 6 4 6 0
+seg	3	3	1	1	2	abc x?	é é  c, dog! xy	6 15 3 5 14 1 4 13 0 3 7 0 2 6 0 1 5 0
+seg	4	1	0	0	3	c, dog! x?		abcxy a  a-b	b.	8 9 2 7 8 0 6 7 0 5 6 0 6 3 0
+seg	3	3	1	0	1	abc é xy (x)ab.	dog!catab	15 9 4 14 8 1 13 7 0 5 1 0 0 0 0 0 0 0
+seg	2	0	1	0	3	é b.  b.		b.	abb. b.dog!	8 2 2 7 1 1
+seg	5	0	0	0	1	x?	c, a	(x) x? (x)(x) x?	2 13 2 1 12 1 0 11 0 0 10 0 0 9 0
+seg	6	1	1	0	1	a-b b.ab cat	ab  a-b  abc a-bc, a	x?	12 20 10 11 19 5 10 18 3 9 17 1 8 16 0 7 15 0 3 6 1
+seg	5	1	1	0	2	x? a	éabc cat abc		é  dog! cat dog! ab	4 12 2 3 11 1 2 10 0 1 9 0 0 8 0 3 3 0
+seg	2	2	0	0	2	a a-b	a-b(x) xy	4 8 3 3 7 2 2 3 0 1 2 0
+seg	3	3	0	1	3	b.  a	x?  (x)	3 5 0 2 4 0 1 3 0 3 4 0 2 3 0 1 2 0
+seg	6	0	1	1	2	x? x?	éa-b  (x)	5 9 2 4 8 0 3 7 0 2 6 0 1 5 0 0 4 0
+seg	1	2	1	0	3	ab a		xy écatc,	4 9 2 2 3 0 1 2 0
+seg	2	0	1	0	1		ab ab ab	é a-b  x?a-b	c,  (x)	0 8 0 0 7 0
+seg	2	1	1	0	2	b.		(x) xy a c, cat	0 0 0 0 0 0 0 0 0
+seg	6	3	1	0	2	é b. cata-bé	dog!a-b cataa-bb.		12 17 9 11 16 7 10 15 4 9 14 2 8 13 1 7 12 0 4 3 1 3 2 0 2 1 0
+seg	1	1	0	1	2			(x)  cat (x)	0 0 0 0 0 0
+seg	1	1	0	0	1	b. x?	c, éc,x? cat c,	xycat	4 12 2 4 7 1
+seg	4	1	1	1	2	abccat é		b.  a-b xy	x?	8 10 3 7 9 0 6 8 0 5 7 0 2 4 0
+seg	1	1	1	0	3	xy  c,dog! cat  abcab	catcat	cat  ab(x)	21 10 8 5 3 1
+seg	5	2	1	1	1	a-b  b. (x) b.	abc a	a-b a-b  abc é  abc	(x)	14 3 3 13 2 2 12 1 1 0 0 0 0 0 0 7 2 2 6 1 1
+seg	1	3	1	0	3		xy x? dog!	x?  cat  ab  c,  a-b	0 10 0 0 5 0 0 4 0 0 3 0
+seg	3	2	1	0	3	abc cat b.	cat c, xy	dog!	abc	10 3 3 9 2 2 8 1 1 4 1 1 0 0 0
+seg	4	3	0	1	1	b.  xyx? xy x?x?		abcabxy ab é	12 10 3 11 9 1 10 8 0 9 7 0 7 3 0 6 2 0 5 1 0
+seg	3	0	1	0	1	x? édog! (x)  ab (x)	ab ab ab	x? cat dog! c,  b.  abc	20 23 13 19 22 9 18 21 6
+seg	1	1	0	0	2	(x) x? dog! (x) c, abc		0 0 0 0 0 0
+seg	6	1	1	0	3	abc c, a-b (x) abccat	ab (x)dog!  dog! éxy	ab b. a-ba		21 10 9 20 9 5 19 8 2 18 7 1 17 6 0 16 5 0 7 4 0
+seg	2	0	1	1	1	a-b  (x)  dog!  c,a	a-b  cat é dog! cat	axy ab	dog! dog!	19 19 14 18 18 10
+seg	1	0	0	0	2		x?  dog!abc  a	0 10 0
+seg	5	0	0	0	1		b. dog!	0 6 0 0 5 0 0 4 0 0 3 0 0 2 0
+seg	4	1	0	0	1	dog!	cat  ab	4 5 0 3 4 0 2 3 0 1 2 0 2 2 0
+seg	1	2	1	0	1	c,	(x) catx?	a abc  a-b  a-babc		2 9 1 2 4 0 1 3 0
+seg	3	2	1	0	2	abc (x)			0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	6	1	1	0	2	b.  ab	b. éc, abc cat  xy		dog! xy	6 18 6 5 17 5 4 16 2 3 15 0 2 14 0 1 13 0 3 7 2
+seg	5	1	1	0	1	dog!b.	abc  abc cat	é a  a  a-b abc	dog!a-bc, (x)	6 13 5 5 12 3 4 11 2 3 10 1 2 9 0 2 4 0
+seg	1	0	0	0	2	cat dog! c,		b.	dog! a-bcat	9 10 7
+seg	3	1	1	0	2	b. dog!b.dog!b.	a	aa-b(x)  dog!	15 13 6 14 12 4 13 11 3 4 4 0
+seg	5	0	1	1	2	ab	cata-b  é a-b	dog!é	abc, a-bab	2 10 2 1 9 1 0 8 0 0 7 0 0 6 0
+seg	4	0	1	0	1		écat	0 4 0 0 3 0 0 2 0 0 1 0
+seg	6	3	1	1	3	b.xy xy a-b	abc c,  x?xy	x?é b.  éb.dog!	c, abc c, ab a-b a-b	11 20 6 10 19 3 9 18 2 8 17 1 7 16 0 6 15 0 3 8 1 2 7 0 1 6 0
+seg	4	1	1	1	1	x?écat(x)  dog!	a  (x)  c,a-b é	a	15 15 8 14 14 4 13 13 3 12 12 2 4 5 1
+seg	6	2	1	0	1	dog! a c,	b. éa(x)	abc  a	9 6 4 8 5 1 7 4 0 6 3 0 5 2 0 4 1 0 5 2 1 4 1 0
+seg	1	1	1	0	3	cat	(x)	3 3 0 1 2 0
+seg	1	2	1	0	2	a	xy (x)	a-b  ab aba-b	1 13 1 1 3 0 0 2 0
+seg	4	3	0	1	1	é x? (x)  xy	a-b (x)a-b	8 9 3 7 8 2 6 7 1 5 6 0 6 3 0 5 2 0 4 1 0
+seg	5	3	1	1	2	a éa-b é	abc  c, abc  c,	a xy abc ab x?	é	8 1 1 0 0 0 0 0 0 0 0 0 0 0 0 3 1 1 0 0 0 0 0 0
+seg	2	2	0	0	2	cat (x)dog!catdog!	cat  abc	17 6 5 16 5 2 3 2 1 2 1 0
+seg	3	1	1	1	2	cat ac,c,		é abca  a-b	(x) cat cat abc  a-bx?	9 22 7 8 21 4 7 20 3 3 7 1
+seg	6	1	1	0	2	ab	x?a		c,	2 3 1 1 2 0 0 1 0 0 0 0 0 0 0 0 0 0 1 1 0
+seg	2	0	0	0	1	c,  ab  c,a	ab dog!		7 6 2 6 5 1
+seg	6	2	1	1	3	xy  dog! (x)ab dog!ab	a-b		catx? a-b  a-b	21 14 8 20 13 2 19 12 0 18 11 0 17 10 0 16 9 0 6 4 0 5 3 0
+seg	2	3	0	0	3	abc abc  b. ab  b. é	ééx? a-ba-b	dog!  a	b.	13 2 2 12 1 1 8 2 2 7 1 1 0 0 0
+seg	1	3	0	1	1	dog!c,  adog! é (x)	xy  a  xyc, é(x)	xy cat	(x) b.	15 5 3 7 4 2 6 3 1 5 2 0
+seg	5	0	1	0	2	é dog! b.	abc abc		dog! abcé  xy	9 13 8 8 12 5 7 11 3 6 10 2 5 9 1
+seg	5	1	1	0	1	a-b xyé	abcabc	édog! xy  (x) a-b  dog!	7 23 7 6 22 5 5 21 3 4 20 1 3 19 0 2 8 1
+seg	1	1	0	1	1	b.  a	dog!	3 4 0 3 2 0
+seg	5	3	0	0	2		c, abc é dog! abcb.	a xyb. xy	0 15 0 0 14 0 0 13 0 0 12 0 0 11 0 0 8 0 0 7 0 0 6 0
+seg	2	0	0	0	3	a-b	a-b	xy  abcdog!b. ac,	x?  c,(x)  abc	3 3 3 2 2 2
+seg	1	0	1	1	1	x?		dog! cat (x) (x) xy	2 19 1
+seg	5	2	0	1	1	é b. a x?	dog!catx?c,	xy a	6 3 2 5 2 0 4 1 0 0 0 0 0 0 0 6 2 1 5 1 0
+seg	2	2	1	0	1	dog!	adog!	a-b xycat b. c,	(x) dog!	4 8 4 3 7 3 2 4 2 1 3 1
+seg	2	1	1	0	3	c,	cat c,	2 6 2 1 5 1 2 3 2
+seg	6	3	0	1	1	x?  a-b	c, dog!	a-babc b. c,  a-b	abdog!	5 13 3 4 12 2 3 11 1 2 10 0 1 9 0 0 8 0 3 6 1 2 5 0 1 4 0
+seg	4	3	0	1	1		dog!  (x)	é  cat  ab  xy c, c,	é  é cat  x? xy	0 7 0 0 6 0 0 5 0 0 4 0 0 4 0 0 3 0 0 2 0
+seg	3	3	1	1	3	xy x?é xy  (x)	aa  (x)	é abc		14 7 5 13 6 4 12 5 3 5 3 2 4 2 1 3 1 0
+seg	1	3	0	0	1	b.  cat	a éb. éx?c,	5 9 4 3 5 1 2 4 0 1 3 0
+seg	3	1	1	0	1	a cat  xy cat x?	abc	16 3 2 15 2 0 14 1 0 6 1 0
+seg	2	0	1	0	2	a-b	abc abc a-b xy	x?abc  x? (x)c,	3 14 3 2 13 2
+seg	2	3	1	0	3	abc  ab cat  é  é		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	6	2	1	1	1		(x)	a  a-b  a-b dog!	(x)x?	0 3 0 0 2 0 0 1 0 0 0 0 0 0 0 0 0 0 0 2 0 0 1 0
+seg	5	2	0	1	1		x?  ac,	cat xy x?	0 5 0 0 4 0 0 3 0 0 2 0 0 1 0 0 4 0 0 3 0
+seg	1	2	1	1	2	abc a  b.	(x)ab	9 5 2 4 2 0 3 1 0
+seg	2	3	1	0	3	b. b.  dog!a-b (x)	b. b. é c, xy	x?abc	dog! x? a-b cat	18 13 9 17 12 5 7 8 4 6 7 3 5 6 2
+seg	3	0	1	0	3	dog!	ab  xycat	4 9 0 3 8 0 2 7 0
+seg	2	3	0	0	1	a-b (x) (x)	x? é x? x?	a-b x?  abcé x?	b.b. b.  a  dog!	9 11 5 8 10 2 5 6 1 4 5 0 3 4 0
+seg	5	0	1	0	2	x? dog!	xy cat abc	cat éb.  ab  c,	é a-b xy	7 8 2 6 7 0 5 6 0 4 5 0 3 4 0
+seg	2	0	1	0	3	é catc,  xy	catc, a-bx?	(x)  b. c,  cat é a	11 11 7 10 10 5
+seg	5	3	1	1	3	a ab	a-b	éc,  a abc	cat(x)cat a é	4 10 4 3 9 3 2 8 2 1 7 1 0 6 0 2 4 1 1 3 0 0 2 0
+seg	6	1	0	0	2	xy a-b  a cat	dog!a catxy abc	9 13 8 8 12 5 7 11 3 6 10 1 5 9 0 4 8 0 4 3 0
+seg	6	3	0	0	2	xy	b. (x)b. ab	abc a-ba-babc x?ab	édog!ab  é	2 9 1 1 8 0 0 7 0 0 6 0 0 5 0 0 4 0 1 5 0 0 4 0 0 3 0
+seg	5	0	0	0	3	b. é é	xy  b.abc dog!x?	4 13 2 3 12 1 2 11 0 1 10 0 0 9 0
+seg	5	0	0	0	2	(x) b.a x? dog!	c, a x?		12 5 3 11 4 2 10 3 1 9 2 0 8 1 0
+seg	6	0	1	1	3			0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	1	1	0	0	2	dog!dog!abcé	cat	xy  dog! cat	12 9 6 1 4 0
+seg	6	3	0	0	1	ab  b. a	c,xy xy c, cat (x)	5 14 1 4 13 0 3 12 0 2 11 0 1 10 0 0 9 0 4 7 0 3 6 0 2 5 0
+seg	4	0	0	0	2	c, é (x)	(x) x?  b. (x) abc	b.		6 13 4 5 12 2 4 11 1 3 10 0
+seg	6	1	1	0	2	é  é  abxy	dog!cat cat	x? abc x? cat	10 13 6 9 12 2 8 11 1 7 10 0 6 9 0 5 8 0 3 6 0
+seg	6	0	0	0	3	b.abc  abc  éa-b		x?catcatb.  xy	12 12 6 11 11 2 10 10 0 9 9 0 8 8 0 7 7 0
+seg	4	3	0	0	1	dog!	b.cata xy a-b a-b	dog!	4 4 4 3 3 3 2 2 2 1 1 1 2 2 2 1 1 1 0 0 0
+seg	5	2	1	0	1	(x) xy xyé (x) a	cat a (x)dog!ab	ab abc ab cat abc	(x) c,c, c,a	16 12 6 15 11 3 14 10 2 13 9 1 12 8 0 7 5 2 6 4 1
+seg	1	3	1	0	1	a dog! cat abc	dog! b. x? é  dog! ab	14 21 9 5 10 2 4 9 1 3 8 0
+seg	1	1	1	0	1	c,  é x? c,x?abc	abc b.	16 6 4 6 3 0
+seg	3	2	0	1	2	c,	abc	é	2 3 1 1 2 0 0 1 0 2 1 0 0 0 0
+seg	6	0	1	1	3	cat catdog! a	é  é abc, ab	13 12 5 12 11 1 11 10 0 10 9 0 9 8 0 8 7 0
+seg	2	2	0	0	1	cat	xy x?	(x)c,  a-babb.	3 12 2 2 11 0 1 4 0 0 3 0
+seg	4	0	0	0	2	a-b ab a-b x?		dog! é  é  x? c, cat	10 13 3 9 12 1 8 11 0 7 10 0
+seg	1	3	1	0	3	x?  é	é abc  x?xy dog!	5 16 5 3 5 1 2 4 0 1 3 0
+seg	4	3	0	0	2	b. écat c,  é b.		ab b. abc dog!	11 11 5 10 10 1 9 9 0 8 8 0 8 6 2 7 5 1 6 4 0
+seg	4	2	1	0	1	b.  ab xya		b.  (x) xycat	10 13 8 9 12 5 8 11 3 7 10 1 4 5 2 3 4 1
+seg	5	1	1	0	3	catx?abc	b.xy	8 4 2 7 3 0 6 2 0 5 1 0 0 0 0 1 1 0
+seg	4	1	1	0	2	cat abc	a-b(x)  (x) a-b	é é	7 15 4 6 14 1 5 13 0 4 12 0 2 5 0
+seg	6	3	0	0	2	(x) (x) xy	dog! ab cat abc	abc é	c,xya abc b.	8 10 2 7 9 1 6 8 0 5 7 0 4 6 0 3 5 0 5 4 0 4 3 0 3 2 0
+seg	4	0	0	1	3	(x)b.  b.	c,  b.  abc a  ab	c,	dog!  abxy  é	7 10 3 6 9 1 5 8 0 4 7 0
+seg	1	1	0	1	1	catxy		0 0 0 0 0 0
+seg	5	1	0	1	3	ab.cat aba-b	é  éb.  a-b b.	b.b.abc		11 9 6 10 8 3 9 7 1 8 6 0 7 5 0 2 6 0
+seg	3	2	0	0	2	catabc a-b x?	b. abc b.	x?		11 2 2 10 1 1 0 0 0 4 2 2 3 1 1
+seg	4	3	1	0	2	xy aa-b  é  (x)	a cat	c,	15 5 3 14 4 0 13 3 0 12 2 0 5 2 0 4 1 0 0 0 0
+seg	6	1	1	0	3	b. xyéabc cat	catc, (x) xy  ab  ab	13 20 11 12 19 5 11 18 2 10 17 0 9 16 0 8 15 0 4 7 0
+seg	1	0	1	0	2	axy é xy	abcabc abc a	8 12 3
+seg	6	3	1	0	3	abcab a	dog! b.	(x)  x?	7 7 2 6 6 0 5 5 0 4 4 0 3 3 0 2 2 0 2 4 0 1 3 0 0 2 0
+seg	2	2	0	0	2	b.  é x? x? c,xy	aé dog! x?	11 8 3 10 7 1 8 5 2 7 4 1
+seg	1	1	0	0	3	cat		dog!	xydog!	0 0 0 0 0 0
+seg	1	0	1	0	2	cat xy	b.x? (x)  ab	6 12 3
+seg	3	1	1	0	1	cat	c,x?  x?	c,x?  (x) x?	c,  cat	3 7 3 2 6 2 1 5 1 1 3 1
+seg	1	3	0	0	2	a  xyxy	dog! éb. abb.	é c,	5 11 1 2 6 0 1 5 0 0 4 0
+seg	3	0	0	0	2	cat c, a-b	c,	caté a (x) b.	é ab	8 2 2 7 1 1 0 0 0
+seg	1	3	0	0	3	a  abc	dog!	abcaxy		4 6 4 2 1 0 0 0 0 0 0 0
+seg	3	2	1	1	3	abc  xy a dog!	abc dog! a-b c, c,	xy  abc  é b.	14 13 9 13 12 7 12 11 4 5 5 2 4 4 0
+seg	1	3	1	0	1	ab		é é	cat  ab é	2 9 2 1 3 1 0 2 0 0 1 0
+seg	3	3	0	0	2	b. a-b	b.	5 2 2 4 1 1 0 0 0 3 2 2 2 1 1 0 0 0
+seg	2	2	1	0	2	é é	xy a-b a-b  ab	3 14 1 2 13 0 2 4 0 1 3 0
+seg	3	3	0	0	2	xyx? (x)	xy  abc dog! aba-b cat	7 17 2 6 16 1 5 15 0 4 6 0 3 5 0 2 4 0
+seg	1	3	1	0	2	b.  xyabc, cat x?	x?  dog!	abdog!dog! ab	17 8 4 7 4 2 6 3 1 5 2 0
+seg	1	3	0	0	3	abcx? abc  a-b	c, x?  b.		ab c,	11 6 4 4 6 1 3 5 0 2 4 0
+seg	1	2	1	1	2	ab		a-b b.x?	a x?dog! x?  x?  (x)	2 8 2 1 3 0 0 2 0
+seg	1	0	1	1	2	dog! ab aa	abc (x) x? abc	10 14 5
+seg	5	1	1	1	1	a dog!	é x?  ab	x?b.	6 8 2 5 7 0 4 6 0 3 5 0 2 4 0 3 4 0
+seg	3	3	0	0	3	xyab  é  dog! xy (x)	é	a-b	cat	14 1 1 0 0 0 0 0 0 7 1 1 0 0 0 0 0 0
+seg	5	0	0	0	3	a  a x?  é  (x)  c,	aécat	10 5 4 9 4 0 8 3 0 7 2 0 6 1 0
+seg	4	0	0	0	3	abc ac,	abc é ab aab abc	xy c,c, c, dog! a	6 12 5 5 11 2 4 10 1 3 9 0
+seg	5	3	0	0	1		cat dog!é é	c,é (x)  (x)	0 9 0 0 8 0 0 7 0 0 6 0 0 5 0 0 3 0 0 2 0 0 1 0
+seg	3	2	0	0	3			xy (x)(x)é	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	3	3	1	1	2	a  é c,		ab c, x?	cat xy ab x? é	7 8 5 6 7 2 5 6 1 4 5 2 3 4 1 2 3 0
+seg	6	1	1	1	3	xy (x) b.a-b (x) a-b	(x)	20 3 3 19 2 2 18 1 1 0 0 0 0 0 0 0 0 0 7 2 2
+seg	2	2	0	0	2	a  xyb. a c, cat	x?	a é  abc	11 5 4 10 4 0 7 3 1 6 2 0
+seg	3	0	1	0	3	dog! c,	a  c,aba-b cat	abc ab  b.		7 14 3 6 13 2 5 12 1
+seg	6	0	0	0	3	x? x?	b.  é  ab	é  a-b dog! a-b x?	b.  a-ba  b. x?	4 10 2 3 9 1 2 8 0 1 7 0 0 6 0 0 5 0
+seg	3	0	1	1	2	aé dog!	(x)ab dog!	a b.c, a-b	7 10 6 6 9 4 5 8 3
+seg	1	0	0	0	2	a-b  c, c, c,		(x)(x)x?	0 0 0
+seg	6	3	1	1	3		x? abc	(x) ab é ab x?  a-b	aa-b  b.  ab dog! c,	0 6 0 0 5 0 0 4 0 0 3 0 0 2 0 0 1 0 0 3 0 0 2 0 0 1 0
+seg	6	3	0	0	1	dog!dog! b. a-bc,	x? x? dog!	ab  a		15 8 4 14 7 3 13 6 2 12 5 1 11 4 0 10 3 0 6 6 1 5 5 0 4 4 0
+seg	2	3	1	1	3	catcat ab  c, ab (x)	abcb.cat a-b	a	20 12 9 19 11 5 7 2 0 6 1 0 0 0 0
+seg	1	1	0	0	1	(x)abc b.		(x) b. ab b.	cat  a-b a-b  b. a-b	8 9 7 4 7 2
+seg	6	2	1	0	3	a  a-b xy	a-bdog! é é	9 11 5 8 10 2 7 9 1 6 8 0 5 7 0 4 6 0 3 4 0 2 3 0
+seg	3	2	1	1	1	a-b (x) ab éabc c,	b.	c, dog!  xy  cat  abc x?	(x)c,a x?  dog!	18 24 11 17 23 6 16 22 3 7 9 2 6 8 1
+seg	4	0	0	1	1	a  é x?		(x)é cat(x)  a-b	4 13 3 3 12 0 2 11 0 1 10 0
+seg	6	0	1	0	3	(x)  a-bdog!  (x)  a-b  abc	ab cat  abc	aab (x)  c,	x?  xy a  cat xy xy	27 11 10 26 10 7 25 9 4 24 8 3 23 7 2 22 6 1
+seg	4	0	1	0	1	abc	c, (x) b. (x)  c,	x?  a x?b.  ab	(x) x? xy cat	3 14 2 2 13 1 1 12 0 0 11 0
+seg	2	1	0	0	1	b. b.  ab		x?  (x)  x?		0 0 0 0 0 0 0 0 0
+seg	3	2	0	0	2	x? cat  c,	aabc	7 4 2 6 3 0 5 2 0 5 1 0 0 0 0
+seg	3	1	0	0	1	a-b dog! a xyc,		0 0 0 0 0 0 0 0 0 0 0 0
+seg	6	2	1	0	1	b.b. é abc cat x?	a x?a  x?é c,	ab cat b.	a-b abc	17 9 9 16 8 6 15 7 3 14 6 2 13 5 1 12 4 0 7 4 2 6 3 0
+seg	3	3	1	1	2		é  abc  a  dog! (x) c,	0 22 0 0 21 0 0 20 0 0 9 0 0 8 0 0 7 0
+seg	4	0	0	1	3		a a-b	0 4 0 0 3 0 0 2 0 0 1 0
+seg	2	0	1	1	1	c,  abc cat c,  dog!		0 0 0 0 0 0
+seg	3	3	0	0	2	b.b.  xycat	abc (x) a  xy c,c,	9 13 5 8 12 2 7 11 1 3 7 0 2 6 0 1 5 0
+seg	2	3	0	0	1	aabc	(x)  a-b dog!	é  x?  ab  abxy  abc	4 12 4 3 11 2 1 6 0 0 5 0 0 4 0
+seg	6	1	1	0	3	c, xy xy catabc	dog! a dog!	15 11 3 14 10 0 13 9 0 12 8 0 11 7 0 10 6 0 5 5 0
+seg	6	1	1	0	2	a  x?c,  ab a-b abc	b.x?dog! ab a-b	a  é cat a x?  a	19 15 10 18 14 7 17 13 5 16 12 4 15 11 3 14 10 2 6 4 2
+seg	1	0	0	0	2	x?cat  a  b.  abc	(x)	b.	11 2 2
+seg	4	0	1	0	3	xyb. c, é a	aba-ba-b a  (x)	x? x?  a	11 8 5 10 7 1 9 6 0 8 5 0
+seg	5	3	1	1	1	é	a-b ab (x)éabc  ab	1 18 1 0 17 0 0 16 0 0 15 0 0 14 0 1 5 0 0 4 0 0 3 0
+seg	5	2	1	1	2	c,	xy  b.  dog! é  a-ba-b		xy  b.	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	6	2	0	0	2	(x)  ab cat abca-b ab	abcabc	16 6 6 15 5 5 14 4 3 13 3 1 12 2 0 11 1 0 6 1 0 0 0 0
+seg	5	0	0	0	3		xyab.  b.	0 7 0 0 6 0 0 5 0 0 4 0 0 3 0
+seg	1	3	1	0	3	ab	x? b.  xy c,	aa-b  cat x? cat a-b	2 20 2 1 6 0 0 5 0 0 4 0
+seg	6	3	0	0	1	ab.  c, abc  ac,	a-b cat abc	é	11 9 7 10 8 3 9 7 2 8 6 0 7 5 0 6 4 0 7 3 1 6 2 0 5 1 0
+seg	1	0	1	0	2	ab  a-b b.  x?  a-b c,	dog!  b.aba	(x)		22 11 7
+seg	6	2	0	0	1		é xyc, ab  c,  a-b	dog!xyacat  é  é	dog!a x?	0 12 0 0 11 0 0 10 0 0 9 0 0 8 0 0 7 0 0 7 0 0 6 0
+seg	1	1	1	0	2	dog! abc abc,a	cata a-b  b.  ab dog!	14 21 12 4 7 2
+seg	5	0	0	0	1	b. é b.  a-b	(x)a é cat  cat	cat dog!	x?  cat	8 11 2 7 10 0 6 9 0 5 8 0 4 7 0
+seg	2	3	1	0	1	(x) cat	é dog! ab	7 9 2 6 8 0 3 4 0 2 3 0 1 2 0
+seg	2	2	1	0	1	x?  (x) ab ab b.	x?dog! xy xyc,(x)	ab c, ab  b.		16 12 10 15 11 8 8 6 4 7 5 2
+seg	2	0	1	1	3	ab	b.  éa ab  cat  cat	abc b. é  b. xy	2 15 2 1 14 1
+seg	5	1	0	0	1		c, abcat  ab (x)b.	0 14 0 0 13 0 0 12 0 0 11 0 0 10 0 0 6 0
+seg	1	2	0	0	3	catc,	xy(x)a-b  é x?  a	abc	x?cat	5 3 2 2 1 0 0 0 0
+seg	4	2	1	0	3	abc x? a x?	b.	dog! ab catxy  ab	11 17 8 10 16 2 9 15 0 8 14 0 6 5 0 5 4 0
+seg	3	0	1	0	1	x?  a-b  é	xy  b.xy a-bé	cat  x?  ab  c, a	10 17 8 9 16 6 8 15 4
+seg	5	3	0	1	3	x? abcc, b.  c,  xy	abx?a-babab a-b	cat  caté	abca  b. c, é	13 9 7 12 8 5 11 7 3 10 6 1 9 5 0 9 6 4 8 5 3 7 4 2
+seg	3	2	0	1	3	a cat x? b.ab	xya-b	cat  x? c, xy é	dog!	10 10 5 9 9 4 8 8 3 5 7 3 4 6 2
+seg	1	2	1	0	1	ab(x)		0 0 0 0 0 0 0 0 0
+seg	6	0	1	0	3	é	xy  b. aa-b abc  a	abé	x? (x)  ab a  xy	1 3 1 0 2 0 0 1 0 0 0 0 0 0 0 0 0 0
+seg	5	3	1	0	2	a  éa-b é a	x? (x)  c, (x) (x) cat	b.  dog! dog! dog!é	11 19 6 10 18 1 9 17 0 8 16 0 7 15 0 4 7 0 3 6 0 2 5 0
+seg	5	3	0	0	3	b.  abcx?abc xy a-b	x? a c,  xy  c,  ab	15 11 9 14 10 4 13 9 1 12 8 0 11 7 0 5 9 1 4 8 0 3 7 0
+seg	5	3	0	0	3		é	dog! x?(x)abc	0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0
+seg	4	3	0	0	3		x? b.	0 4 0 0 3 0 0 2 0 0 1 0 0 4 0 0 3 0 0 2 0
+seg	2	2	0	1	3	(x) x?abc  c,  abc	a-b a-bdog! a	cat a-b  (x) a-b xyb.	a-bxy abc  ab éa	13 16 9 12 15 2 6 7 2 5 6 1
+seg	3	0	1	0	2	é dog!x? dog!dog!  b.	dog!  catab dog! dog! b.	c,  ab  é	21 24 18 20 23 15 19 22 11
+seg	4	0	1	0	2		xy  dog!x?b.	0 12 0 0 11 0 0 10 0 0 9 0
+seg	2	1	0	0	3	é	a ab (x)ab xy	ab cat  a c,	1 10 0 0 9 0 1 5 0
+seg	4	0	1	0	3	abc dog! é  cat	(x) (x)xy			15 9 1 14 8 0 13 7 0 12 6 0
+seg	5	0	1	0	3	xy (x)	a  dog!  x?	(x)catc,		6 8 3 5 7 2 4 6 1 3 5 0 2 4 0
+seg	1	0	1	0	2	c, a-bxy a-babc b.	(x)  cat (x)  abc	18 17 9
+seg	1	3	1	0	3		x? x? cat (x) éabc	b. é	ax? a é  a-b	0 18 0 0 8 0 0 7 0 0 6 0
+seg	5	2	1	0	3	a  catcat a-b	x?a-b  b.  ab  b. a-b	a	ab c, a-ba-b  x?	13 1 1 0 0 0 0 0 0 0 0 0 0 0 0 3 1 1 0 0 0
+seg	6	3	0	0	2	ab dog! a-b a-b(x)	dog!  cata  a	15 9 7 14 8 3 13 7 2 12 6 1 11 5 0 10 4 0 6 4 2 5 3 1 4 2 0
+seg	4	3	0	0	3		b.  ab  ab abcat	0 11 0 0 10 0 0 9 0 0 8 0 0 5 0 0 4 0 0 3 0
+seg	3	3	0	1	2	(x)(x)ab abé	b.cat  é	11 6 3 10 5 0 9 4 0 3 2 0 2 1 0 0 0 0
+seg	1	2	1	0	1	dog! b. a	a  a	9 4 3 5 2 1 4 1 0
+seg	6	3	0	0	1			cat a  a-b  xy  xy	abc b. é	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	1	1	0	1	3	é		b.x? éb.  a	1 8 1 1 5 0
+seg	1	3	1	0	2	xy	(x) ab abc	é a-b (x) a-b c, xy	2 19 2 1 8 1 0 7 0 0 6 0
+seg	3	1	0	1	1			a  x?	a	0 0 0 0 0 0 0 0 0 0 0 0
+seg	6	0	0	1	2	catxy cat	x?	8 2 1 7 1 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	2	2	0	0	1	ab			0 0 0 0 0 0 0 0 0 0 0 0
+seg	5	1	1	1	2		abdog!  é abc	abc cat  (x)	0 13 0 0 12 0 0 11 0 0 10 0 0 9 0 0 4 0
+seg	2	0	1	1	1	a-b  dog! a-b x? cat	cat xy	20 6 5 19 5 3
+seg	2	1	0	0	2	dog!	dog! a abcxy (x)	xyabc cat xy	4 13 4 3 12 3 2 6 2
+seg	2	1	0	1	2		dog! c,a  a-b  (x) abc	abcb. éé  dog!  é	0 16 0 0 15 0 0 7 0
+seg	1	2	0	1	3	xy	ab cat(x)xyabc	abcc, dog! dog!		2 13 2 1 2 0 0 1 0
+seg	2	2	1	0	1	abc c, abab.xy	é  (x)	14 6 3 13 5 0 4 3 0 3 2 0
+seg	5	0	0	0	1	xy  x?é	ab ab cat acat	5 11 0 4 10 0 3 9 0 2 8 0 1 7 0
+seg	6	3	0	0	2	xy  cat  b. abc	xyabc ab	x?cat  a-b x? catdog!	a-b abc a-ba	10 7 7 9 6 4 8 5 1 7 4 0 6 3 0 5 2 0 5 2 0 4 1 0 0 0 0
+seg	3	0	1	0	2	x? c, abc  a-ba xy	a-b	18 3 3 17 2 2 16 1 1
+seg	1	3	1	1	1		xyxy	0 4 0 0 1 0 0 0 0 0 0 0
+seg	4	2	0	0	2	(x)éx?			0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	6	2	0	1	2	x?xy a-b (x)  dog! xy	x? xy	x?x? xy	16 4 4 15 3 3 14 2 2 13 1 1 0 0 0 0 0 0 7 3 1 6 2 0
+seg	1	2	0	1	1	catx? dog!	dog!  b.		xy(x) a-b	9 6 4 4 4 2 3 3 1
+seg	2	1	0	0	1	ab  (x)c, cat	c,	xy dog! dog!c,  (x) abc	10 18 8 9 17 4 4 8 1
+seg	3	0	0	1	2	b.	dog! édog! é b.	cat (x) dog!  (x)	2 12 2 1 11 1 0 10 0
+seg	4	3	0	1	1		x?	abc  c, catb. (x)  x?	0 2 0 0 1 0 0 0 0 0 0 0 0 2 0 0 1 0 0 0 0
+seg	4	2	0	0	2	écat  cat  a-b abcc,	a-b  c, c,dog!	cat cat	15 6 6 14 5 5 13 4 4 12 3 3 5 2 1 4 1 0
+seg	6	2	1	0	1	x? (x) b. abc	a x?xyxy  c,é	13 13 8 12 12 1 11 11 0 10 10 0 9 9 0 8 8 0 7 3 0 6 2 0
+seg	4	0	1	0	1	x?	é  c,  b. abx?  xy	ab x?	éa-b  a a-b	2 5 2 1 4 1 0 3 0 0 2 0
+seg	3	0	1	0	1	cat x? abc  a	a-b  c,	xy  xydog!  dog!	abc catab	13 9 8 12 8 5 11 7 3
+seg	3	1	1	1	2	abc x?xy abc x?dog!	xy			19 2 2 18 1 1 0 0 0 5 1 0
+seg	1	1	0	0	1	dog! xy  a-bxy (x)ab	abc x?  (x)a-b abc cat	(x)  xy c,cat  éabc	c, c,	16 14 8 6 5 1
+seg	5	2	0	0	2	c,xy catabc ab  dog!	é  a a-bcat	16 8 6 15 7 3 14 6 2 13 5 0 12 4 0 5 3 0 4 2 0
+seg	4	3	1	0	3	a-b x?catécat é		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	1	0	0	1	2	a-b é c, ab (x)c,	catdog!	13 7 2
+seg	5	2	1	0	2	c,aa	a-b x? abab	aé  é  é xy	4 11 2 3 10 0 2 9 0 1 8 0 0 7 0 1 4 0 0 3 0
+seg	1	2	0	1	1		ab  a-bxy  cat	0 10 0 0 3 0 0 2 0
+seg	4	3	0	0	1	(x)	xy ab xy  c, xy	x? é cata	3 7 1 2 6 0 1 5 0 0 4 0 2 4 0 1 3 0 0 2 0
+seg	3	1	0	0	2	b.a-b dog!	cat	9 3 1 8 2 0 7 1 0 3 1 0
+seg	2	1	0	0	3	cat	c,é cat  c, (x)  x?	a aa-b xy	c,xy xy b. dog! (x)	3 13 3 2 12 2 1 8 1
+seg	1	0	0	0	1	xyb. cat	é	abc  dog!	7 7 3
+seg	5	0	0	0	3	a x? c,  dog!			é c,	9 3 2 8 2 1 7 1 0 0 0 0 0 0 0
+seg	3	0	1	0	2	(x)  ab c,  abc	a a xy(x) cata-b	catacatxy cat	xy xy	15 16 10 14 15 5 13 14 2
+seg	6	0	0	1	3	(x)  a-b	xy(x)cat abdog!  xy	6 16 5 5 15 2 4 14 1 3 13 0 2 12 0 1 11 0
+seg	2	0	0	1	3	c,x?  cat a-b c, b.		x?é  abc a-b		14 9 8 13 8 5
+seg	6	3	1	0	3	ab dog!	éab		b. b. c,	7 3 2 6 2 1 5 1 0 0 0 0 0 0 0 0 0 0 3 1 0 0 0 0 0 0 0
+seg	3	3	0	0	2	x?  b. xy x? ab  xy		c, dog! ab		12 8 2 11 7 1 10 6 0 9 5 1 8 4 0 7 3 0
+seg	5	1	0	0	3	b. c,	a-b (x)  é a-b abc	(x)	a abdog! abc  c,b.	4 14 4 3 13 2 2 12 0 1 11 0 0 10 0 4 6 1
+seg	1	0	0	0	2		a-bé x?	dog!  dog! dog!  a-b	0 6 0
+seg	2	2	0	0	1	b.	b. a-bédog!	(x) xy xy	2 10 2 1 9 1 2 4 2 1 3 1
+seg	6	0	1	0	2	c, x? dog!  abcx?	abcdog!  b.	c, dog! abc  édog!b.	17 11 9 16 10 7 15 9 5 14 8 3 13 7 2 12 6 1
+seg	2	2	0	1	1	x?é  x? ab	abc  a-b abcab abc b.		7 16 2 6 15 1 4 6 0 3 5 0
+seg	3	3	0	0	1	cat abc cat	b.		9 2 1 8 1 0 0 0 0 3 2 0 2 1 0 0 0 0
+seg	6	1	0	0	1	a-b  b.c,		é  x? dog! c,dog!	7 13 2 6 12 1 5 11 0 4 10 0 3 9 0 2 8 0 3 7 0
+seg	5	1	0	0	2	a-b xy a é a	é ab	c, cat	8 3 3 7 2 1 6 1 0 0 0 0 0 0 0 5 2 1
+seg	2	3	0	0	1	b.dog!  c,	x? b.a-béxydog!	dog! ab	8 6 5 7 5 3 4 3 1 3 2 0 2 1 0
+seg	1	1	0	1	3	b. xy	a-b cat  b.c,ab a-b	(x)  x?  b.  ab	a xy xy cat a	4 9 3 3 7 2
+seg	4	2	0	1	1	xy ab(x)  a é  cat	dog! abc x?	12 9 4 11 8 1 10 7 0 9 6 0 6 5 0 5 4 0
+seg	2	2	1	0	1	abé  dog! c, abc	b. dog! (x) (x)	a-b a xy abc  cat	16 15 8 15 14 5 6 8 2 5 7 1
+seg	1	2	0	0	1	a-bb. x?b.xy  a-b	é c, a-b c, dog!	abc b. xy xy a-b  abc	b.  a-bb.  b. (x) a-b	14 15 11 4 9 3 3 8 1
+seg	5	1	0	0	2			0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	3	1	1	0	1	a-b xy x? cat abc		0 0 0 0 0 0 0 0 0 0 0 0
+seg	3	2	1	1	3		a-b éxy xyé	ab adog!	a-b  dog! cat	0 11 0 0 10 0 0 9 0 0 3 0 0 2 0
+seg	4	0	0	0	3	b. (x)	édog!b.  ab cat	5 12 2 4 11 1 3 10 0 2 9 0
+seg	1	2	1	0	2	c,	aba	2 3 0 2 1 0 0 0 0
+seg	5	0	1	0	2	a		(x) c,	b. c, dog!a-b  ab	1 17 1 0 16 0 0 15 0 0 14 0 0 13 0
+seg	2	3	0	0	3		xydog!b.x?c,	éxy ab  abc  (x)ab	0 12 0 0 11 0 0 2 0 0 1 0 0 0 0
+seg	5	2	1	1	3			0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	6	0	0	0	2		abcé a abc	0 8 0 0 7 0 0 6 0 0 5 0 0 4 0 0 3 0
+seg	6	0	0	1	2	éc, é cat		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	2	0	0	1	3	ab  xy  (x)	abccat b.  é é  abc	xya ab x?  x? ab		7 11 5 6 10 3
+seg	5	1	1	0	3		b. abc c, a-b  abc	0 18 0 0 17 0 0 16 0 0 15 0 0 14 0 0 7 0
+seg	3	0	0	1	3	abc b.  x?  c,			a-b	9 3 2 8 2 0 7 1 0
+seg	1	0	1	0	2	dog!  (x)		0 0 0
+seg	4	0	0	1	2	xyaa  b. b.	cat	xy	ab	8 2 2 7 1 1 0 0 0 0 0 0
+seg	2	0	0	1	2	(x)	(x)	abc	c,c, dog! c,	3 3 3 2 2 2
+seg	5	1	0	1	1	a-b éabc xy  a-b		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	3	1	1	1	3	ab cat abc (x)b.é		cat	17 3 3 16 2 2 15 1 1 5 1 1
+seg	5	1	1	0	1	b.		b.  a-b a-b abc a-bcat	abc (x)	2 22 2 1 21 1 0 20 0 0 19 0 0 18 0 2 6 2
+seg	3	0	1	0	2	(x)b. dog! c,a-b a-b		0 0 0 0 0 0 0 0 0
+seg	6	3	1	1	1	a-b abc c,	dog!  ab  a-b dog! c,  a	a c,  a abc cat  a-b	10 20 10 9 19 8 8 18 6 7 17 3 6 16 2 5 15 1 4 7 4 3 6 1 2 5 0
+seg	3	3	0	0	2	dog! (x) catx?  é	x? abc  aba-b	13 10 4 12 9 2 11 8 0 7 4 1 6 3 0 5 2 0
+seg	1	2	0	0	3	a cat a-ba a	abc	9 3 3 4 1 0 0 0 0
+seg	4	1	1	1	1	xy c,		x? a-babca a	x?  abcc,  xy cat  c,	5 21 5 4 20 4 3 19 3 2 18 1 3 8 3
+seg	4	2	0	0	3	abc  a b.  écat		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	4	1	1	1	1	dog!  abc  b.	abcabc	13 6 4 12 5 2 11 4 1 10 3 0 5 1 0
+seg	4	1	1	0	3	cat		b.abc (x)abc	3 12 2 2 11 0 1 10 0 0 9 0 1 3 0
+seg	2	0	1	1	1	b.abc	(x)  dog! édog!		5 15 0 4 14 0
+seg	4	1	0	1	2	cat  x?	dog! a dog! b.	5 11 1 4 10 0 3 9 0 2 8 0 3 7 0
+seg	5	2	0	0	1	é dog!  (x)abc  b.c,	x?	15 2 1 14 1 0 0 0 0 0 0 0 0 0 0 7 2 0 6 1 0
+seg	3	2	0	0	3	a-b  (x)xy  a a-b abc	(x) dog! (x) ab abc x?		dog! b.	15 17 9 14 16 5 13 15 3 6 10 1 5 9 0
+seg	3	1	1	1	3	cat  c,  cat(x)	b. dog! cat  b. b.	b. a a b.		15 18 7 14 17 5 13 16 4 5 9 1
+seg	6	2	0	0	2	abcab xy x?	dog!  ab dog!abcc,  c,	é  b.  é		9 17 5 8 16 3 7 15 1 6 14 0 5 13 0 4 12 0 4 7 0 3 6 0
+seg	1	1	1	1	3	cat		0 0 0 0 0 0
+seg	5	2	1	1	1	xy abc	(x)  éab  b. ax?	a a a-b	6 7 3 5 6 1 4 5 0 3 4 0 2 3 0 2 3 0 1 2 0
+seg	5	2	0	0	3	a-bx?b.	ab  xy a-b  c, x?	7 11 6 6 10 4 5 9 1 4 8 0 3 7 0 2 7 0 1 6 0
+seg	3	0	1	1	2	(x) xy	catc,	abc ab  a-b  a-b	6 16 1 5 15 0 4 14 0
+seg	5	2	1	1	2	abc cat cat  (x)  a  cat	xy c, x?(x)a-b	catc, a-bc,catb.	cat(x)	24 6 6 23 5 4 22 4 2 21 3 0 20 2 0 7 2 1 6 1 0
+seg	4	1	1	1	3	b.  c, a-babcabcc,	dog! ab dog!		18 12 4 17 11 2 16 10 0 15 9 0 6 5 0
+seg	2	3	0	0	1	c, a-ba c,	cat  dog!c, ab	abc é	8 11 6 7 10 2 5 4 1 4 3 0 3 2 0
+seg	2	3	1	0	1	b. dog! é x?	ab b. ab c,	x? a-b a-b ab b.	12 16 7 11 15 2 7 7 4 6 6 2 5 5 0
+seg	2	1	0	0	2		(x)(x) a-babc éabc	0 16 0 0 15 0 0 4 0
+seg	6	0	0	0	3	dog!c,	a-b c,b.x? (x)	a-b(x)	cat ab é b.  ab (x)	6 12 2 5 11 1 4 10 0 3 9 0 2 8 0 1 7 0
+seg	3	2	1	1	2		é  a  dog!  c,	x?  b. x?ab x?  b.	xy  é a abc c,	0 14 0 0 13 0 0 12 0 0 6 0 0 5 0
+seg	4	0	1	0	3	ab	c, c, abc dog!	2 14 2 1 13 1 0 12 0 0 11 0
+seg	2	2	0	0	2	é	b.	cat abx? ab xy	abc	1 2 0 0 1 0 1 2 0 0 1 0
+seg	4	1	0	0	3	cat aa	a-b abc  abc  x?(x)	5 14 4 4 13 1 3 12 0 2 11 0 2 5 0
+seg	1	0	0	0	2	abc  abc  a-bcat	dog! a-b  dog! cat b. xy	x?  xydog!	b. dog!	12 18 7
+seg	2	1	0	0	3		abc  x? abab abc	0 12 0 0 11 0 0 5 0
+seg	4	3	0	0	2		(x) é	0 4 0 0 3 0 0 2 0 0 1 0 0 3 0 0 2 0 0 1 0
+seg	4	3	1	0	3	a abc  é dog!	b.		dog!abcé	13 8 8 12 7 5 11 6 3 10 5 1 5 1 0 0 0 0 0 0 0
+seg	1	2	0	0	2	c, é é  a-b	b.		7 2 1 5 2 0 4 1 0
+seg	3	0	0	0	2	(x)xydog! ab		é b.catb.  x?  c,	11 12 3 10 11 0 9 10 0
+seg	3	0	1	1	1	catb.b.a a é	b. a-bé x?		12 10 7 11 9 2 10 8 0
+seg	2	2	1	0	2	dog! abc  x? cat xy	é b.  é	19 7 4 18 6 1 7 4 0 6 3 0
+seg	1	2	1	0	3				(x)  (x)  x? dog! ab	0 0 0 0 0 0 0 0 0
+seg	5	0	1	0	3	dog!cat		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	1	3	1	1	3	é	(x)		0 0 0 0 0 0 0 0 0 0 0 0
+seg	4	2	1	1	2		catxy	0 5 0 0 4 0 0 3 0 0 2 0 0 1 0 0 0 0
+seg	2	1	1	0	3		é ab xyab	0 9 0 0 8 0 0 3 0
+seg	3	1	1	0	3	a  a-b dog! x? (x) xy	c,	ab dog!xyxy	21 11 10 20 10 6 19 9 4 9 2 0
+seg	2	3	0	1	1	éé  a-b  cat	a-b b. xy cat cat  (x)	xy aba  b. dog! c,	8 16 6 7 15 4 3 8 2 2 7 0 1 6 0
+seg	2	3	1	1	2	dog!é x?  c, abc	b. dog!  b.cat a  (x)	xy	16 21 12 15 20 5 6 8 0 5 7 0 4 6 0
+seg	2	3	0	1	1	xy cat a-b abc  x? xy	c,x?  abc  abcé	a-b (x) xy  xy xy	15 12 8 14 11 4 7 6 3 6 5 0 5 4 0
+seg	5	0	1	1	1	b.  abc ab c,	aabccata-b é	abc  ab	cat	13 7 7 12 6 6 11 5 4 10 4 2 9 3 0
+seg	5	0	0	0	2	a é b.é a-b  xy		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	2	1	1	0	3	cat  a(x) (x)	xy b.	13 5 2 12 4 0 5 3 0
+seg	3	2	0	0	1	é	dog! ab  c, x?	ab é  a  a cat c,	1 10 1 0 9 0 0 8 0 1 7 1 0 6 0
+seg	5	0	0	1	1	a-b	a caté abc	3 8 2 2 7 0 1 6 0 0 5 0 0 4 0
+seg	4	2	1	1	2	x?  a (x)	a-b	9 3 1 8 2 0 7 1 0 0 0 0 5 1 0 0 0 0
+seg	6	0	0	0	3	cat	b.	ab b.  é cat	3 8 3 2 7 2 1 6 1 0 5 0 0 4 0 0 3 0
+seg	2	3	0	0	3		abc	dog!x?	0 3 0 0 2 0 0 1 0 0 0 0 0 0 0
+seg	6	1	0	0	3	cat  a-b  dog!a-b a	é		14 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 1 0
+seg	6	2	1	0	1	a-bdog! abca	a-b a-bb.	c,  b.	12 9 6 11 8 3 10 7 1 9 6 0 8 5 0 7 4 0 3 3 0 2 2 0
+seg	2	1	0	0	3	abc c, a-b  x? x? (x)	é abc  c,xy a a	15 10 7 14 9 4 10 5 1
+seg	2	0	1	0	1	xya-b adog!  é cat	xy  dog!  ab	é xy	(x)(x)  a x?	18 12 12 17 11 7
+seg	4	1	0	0	1	abc xy xy (x)	a cat xyx? abc  a-b	10 14 6 9 13 4 8 12 2 7 11 0 5 6 1
+seg	3	0	0	0	2	éabc a-b	cat cat xy x?	ab x?  (x)	7 7 2 6 6 1 5 5 0
+seg	4	2	1	0	2	a dog!(x)	a		b.  x? a-b  dog!abc c,	9 1 1 0 0 0 0 0 0 0 0 0 3 1 1 0 0 0
+seg	2	2	0	0	3		c,cat b. dog!	xy  a cat b. x? (x)	x?	0 11 0 0 10 0 0 5 0 0 4 0
+seg	6	0	0	0	3	b. aba-b c, a	cat	abc	c, c,xy dog!  cat c,	10 3 3 9 2 2 8 1 0 0 0 0 0 0 0 0 0 0
+seg	1	3	0	0	2	ab  abc  cat	a-b  a	cat	(x)	8 3 3 3 1 1 0 0 0 0 0 0
+seg	6	0	1	0	2	é (x)	c,adog!	5 7 0 4 6 0 3 5 0 2 4 0 1 3 0 0 2 0
+seg	4	0	1	1	2	a  abc c,	aab	éa-b a		9 3 3 8 2 1 7 1 0 0 0 0
+seg	1	0	1	1	3	b.	c,	b. dog!  cat ab	2 15 2
+seg	2	2	0	1	3	a-b ab x? a é	(x)  c, catabc  abc  é	xyabc  x?	9 7 4 8 6 2 6 3 2 5 2 1
+seg	2	3	0	1	2	c,b. (x) cat a-b cat		(x)	16 3 3 15 2 2 7 2 2 6 1 1 0 0 0
+seg	4	2	0	1	2		x?ab  abc	0 7 0 0 6 0 0 5 0 0 4 0 0 2 0 0 1 0
+seg	2	1	0	0	2	a xy		0 0 0 0 0 0 0 0 0
+seg	5	1	0	0	1	abc	xy	xyab  b. abxy	3 10 2 2 9 1 1 8 0 0 7 0 0 6 0 1 4 0
+seg	2	0	1	0	2	(x) éxy x?		a-b é	10 5 2 9 4 1
+seg	2	3	1	1	2	abc	a-b x? a	xy  é  ab. ab x?	3 8 2 2 7 0 1 4 0 0 3 0 0 2 0
+seg	4	1	0	1	1	abc (x)  aba-b	a-b  c, a-b dog! c, cat	11 17 7 10 16 3 9 15 1 8 14 0 4 9 0
+seg	3	3	0	1	1	c,  a-b(x)  a ab	x?  a-b cat	b.	11 8 6 10 7 2 9 6 1 6 4 0 5 3 0 4 2 0
+seg	4	2	0	0	3	c, x? xy  é a-b	xy  x? a-b a-b xy	cat abcé ab		10 12 7 9 11 4 8 10 1 7 9 0 7 6 4 6 5 1
+seg	5	0	0	0	2	ab(x)		cat  a-b é dog!	catxy xy (x)	5 10 4 4 9 2 3 8 1 2 7 0 1 6 0
+seg	5	3	1	0	2	(x) dog!xy b. abc	abcab dog!  xy  é	(x) abc x? c, dog!	17 18 14 16 17 10 15 16 7 14 15 4 13 14 1 6 9 3 5 8 1 4 7 0
+seg	5	3	1	0	1		abc é  a ab	0 11 0 0 10 0 0 9 0 0 8 0 0 7 0 0 4 0 0 3 0 0 2 0
+seg	5	2	1	1	3	x?(x)  xy cat		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	3	1	1	0	3	x?	a xy	dog!dog!		2 4 1 1 3 0 0 2 0 2 2 0
+seg	2	1	0	1	3		abxy	c, a-b abcx?  x?	0 4 0 0 3 0 0 1 0
+seg	1	1	1	1	1	a xy		0 0 0 0 0 0
+seg	6	1	0	0	2	a-b  c,	x? a-babé  a-b	b.  axy	catc,b. é  c,  c,	5 11 3 4 10 2 3 9 1 2 8 0 1 7 0 0 6 0 3 4 1
+seg	2	0	1	0	2			xy	0 0 0 0 0 0
+seg	2	1	1	0	2	a-b a-bb. xy abc	c, (x)cat	abc x? cat c,  ab x?	cat  cat a-b  abcat	16 19 10 15 18 7 5 4 1
+seg	1	0	1	0	2	cat dog!dog!	dog!  acatc, c,dog!		12 19 12
+seg	2	2	0	0	2	a	c, c, a	é  ab dog! x?	c, é(x)xy  catc,	1 5 1 0 4 0 1 5 1 0 4 0
+seg	1	2	1	0	1		xy x? abc,		0 10 0 0 5 0 0 4 0
+seg	3	0	0	0	1	ab cat cat	b. é abc a-b  abé	dog!cat xyab	8 12 5 7 11 3 6 10 2
+seg	4	1	1	1	3	xy dog! abc  a  b.		a-bc, ab abc(x)	18 15 8 17 14 4 16 13 2 15 12 1 7 5 0
+seg	6	2	1	0	2	xy (x)  dog! é	x?  x?  c,	14 10 6 13 9 1 12 8 0 11 7 0 10 6 0 9 5 0 6 6 0 5 5 0
+seg	1	0	0	0	1	dog! (x) a-bb.abc c,	a-babc c, a a-b	17 12 9
+seg	2	0	1	0	3	cat ab xy dog!	abc dog!  ab (x) cat	x? xy abc	c,	14 9 7 13 8 5
+seg	5	3	1	0	3	dog! aba-b abc aba-b	cat  (x)  a-babc (x)	20 20 10 19 19 7 18 18 3 17 17 1 16 16 0 5 6 0 4 5 0 3 4 0
+seg	3	0	0	0	1	xy a-b (x)cat		0 0 0 0 0 0 0 0 0
+seg	1	0	0	0	2	(x)		0 0 0
+seg	5	0	1	0	1	x?  b.éé		x? a-b  a-b c,  x?  é	8 21 6 7 20 3 6 19 2 5 18 1 4 17 0
+seg	5	1	0	1	2	(x)		abé  x? x? (x) c,	3 12 3 2 11 2 1 10 1 0 9 0 0 8 0 2 9 2
+seg	5	0	0	0	3	xy abc  (x)  dog!  dog! dog!	é	é  cat a-b abab	x? x?	20 4 2 19 3 0 18 2 0 17 1 0 0 0 0
+seg	1	3	1	1	1	cat ab	é a aé ab a	cat x?  (x)a-b  abc	(x)b.xy (x)	6 11 4 2 5 1 1 4 0 0 3 0
+seg	4	2	1	0	2	abc x?c, b.	b. x? dog!a-b a-b	(x)abc a	a	11 8 5 10 7 3 9 6 2 8 5 1 5 3 0 4 2 0
+seg	5	0	0	0	3	a  a-b  ab xydog!xy	catxy	xy		14 2 2 13 1 1 0 0 0 0 0 0 0 0 0
+seg	1	3	0	0	2		xy  x?  a-b	0 7 0 0 4 0 0 3 0 0 2 0
+seg	3	3	1	1	1		b.	cat abc	0 2 0 0 1 0 0 0 0 0 2 0 0 1 0 0 0 0
+seg	1	1	1	0	1		abc	xy xy c, c,c, é	0 3 0 0 1 0
+seg	2	3	1	1	3		x? (x) dog! ab  xy	0 18 0 0 17 0 0 8 0 0 7 0 0 6 0
+seg	3	0	1	0	1	dog!xy  b.a-b b.	abc  b.	c, (x)	x? (x)dog! ab	16 7 6 15 6 3 14 5 2
+seg	4	2	1	0	1	c, (x)	é (x)dog! abc	6 13 5 5 12 3 4 11 2 3 10 1 4 4 0 3 3 0
+seg	3	1	1	0	3	x?	c,abc	ab  a-b a  é	2 5 0 1 4 0 0 3 0 2 1 0
+seg	2	2	1	0	1	é  cat (x)	x? ab  b. é  (x) a-b	c, cat é é xy	(x)	10 3 3 9 2 2 4 2 2 3 1 1
+seg	2	2	1	1	1	c, b.  abc catb.	b.dog!abc,	16 10 6 15 9 4 7 2 1 6 1 0
+seg	2	0	1	1	1	dog! dog!	x?c, xy aabc	cat  dog! a-b	x? cat  éxy	9 13 5 8 12 5
+seg	4	2	0	0	1	a-b	c, ab a-b abc  a-b	(x) a-b	xy	3 6 3 2 5 2 1 4 1 0 3 0 1 3 1 0 2 0
+seg	2	3	1	0	3		(x)	0 3 0 0 2 0 0 2 0 0 1 0 0 0 0
+seg	5	0	0	1	1	x? cat	c, a é	abcx? éababc		5 11 4 4 10 1 3 9 0 2 8 0 1 7 0
+seg	6	1	0	0	1	c,  cat c,  (x)a  c,	b.	13 2 0 12 1 0 0 0 0 0 0 0 0 0 0 0 0 0 9 2 0
+seg	4	0	1	1	3	cat  (x) é		cat a x? b.c,	10 13 7 9 12 3 8 11 2 7 10 1
+seg	5	3	1	1	2	dog!  abc a-b x?		(x)abcé x?a-b	16 13 9 15 12 6 14 11 3 13 10 0 12 9 0 6 3 0 5 2 0 4 1 0
+seg	1	0	0	1	2	(x) é  dog! é (x)  c,	é ab (x)  abc	x? é a  cat xy(x)	ab  cat  cat  b. abc,	14 9 5
+seg	6	3	1	0	1	cat  ab dog!é c,	é  dog! caté  ab	16 16 14 15 15 11 14 14 6 13 13 3 12 12 1 11 11 0 5 5 1 4 4 0 3 3 0
+seg	2	2	1	0	1	cat b.  dog!	x? é	12 4 1 11 3 0 5 3 0 4 2 0
+seg	6	0	1	0	2	a  (x)	(x) ab  catab b.	dog!  xy  c, a-b ab	a	6 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	5	0	0	0	2	c,	a-babc	é ababc cat	2 6 1 1 5 0 0 4 0 0 3 0 0 2 0
+seg	3	1	1	0	3	x? c,b.	dog!  a	7 7 1 6 6 0 5 5 0 4 3 0
+seg	1	0	0	1	2	a-b xy é	a-b (x)  c,	xy x? é x?  (x)	6 8 4
+seg	3	3	0	1	3	x?c, x? a-b abc	dog! abdog! ab	12 12 4 11 11 1 10 10 0 6 5 0 5 4 0 4 3 0
+seg	2	0	0	0	2		b. (x)	dog!	a ab  (x)	0 5 0 0 4 0
+seg	2	1	0	0	2		a éé xy  é xy	acat  (x) xy  c,dog!	dog!x?	0 8 0 0 7 0 0 5 0
+seg	2	2	0	0	2	é		catdog! ab  cat dog!c,	(x)	0 0 0 0 0 0 0 0 0 0 0 0
+seg	2	0	0	0	2		a-bx?	a ab	catabc  abc dog! c,c,	0 5 0 0 4 0
+seg	2	0	0	0	2		cat c,	é  b.  dog!  dog! b.  c,	ab x?	0 5 0 0 4 0
+seg	2	0	0	0	2		dog!  (x)a (x)  ab	cat abc b. a-b	abc,  a-b	0 13 0 0 12 0
+seg	2	0	0	0	2		x?  ab dog! c, é c,	xydog! dog! a	c,c,  catb. x?	0 13 0 0 12 0
+seg	3	0	0	0	2			(x)  é	(x) a-b	0 0 0 0 0 0 0 0 0
+seg	2	2	0	0	2	abc ab  ab	b.  abccat	é a catab a	x? ab  (x)	7 8 5 6 7 3 3 3 0 2 2 0
+seg	3	2	0	0	2		a-b	a-b ab a  (x)	x? b. a-b x?	0 3 0 0 2 0 0 1 0 0 1 0 0 0 0
+seg	1	1	0	0	2		xy a-b  ab	é  b. é	c,  cat (x)c, dog!	0 7 0 0 3 0
+seg	3	0	0	0	2		c, xy	b. xyc,		0 4 0 0 3 0 0 2 0
+seg	3	1	0	0	2		cat xy	é c,abc (x)		0 5 0 0 4 0 0 3 0 0 2 0
+seg	1	1	0	0	2	dog!	a catb. c,x?	é x?	ab é a	4 10 0 2 5 0
+seg	1	0	0	0	2		cat a-b(x)  a-b abcc,	abc, a-b	c, (x) abc c,  cat	0 17 0
+seg	2	0	0	0	2		dog!xy x? é (x)		cat  c, é	0 12 0 0 11 0
+seg	1	1	0	0	2	é xy dog!  xy dog!	cat  abc	a-b		13 6 0 7 2 0
+seg	1	2	0	0	2		b.  x?  a c, éc,	ab ab xy	a-b xy x?	0 10 0 0 9 0 0 8 0
+seg	3	2	0	0	2		écat  x? c, b.  a	aabc(x)abc	abc a-bab abc	0 11 0 0 10 0 0 9 0 0 8 0 0 7 0
+seg	3	2	0	0	2			a-b dog!ab		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	2	1	0	0	2	a-bb.	c, x? dog! x?		é	5 10 0 4 9 0 2 8 0
+seg	3	0	0	0	2		c,	é (x) é	a-b c, a  abc dog!  x?	0 2 0 0 1 0 0 0 0
+seg	1	1	0	0	2			cat	acat  a  b.	0 0 0 0 0 0
+seg	3	1	0	0	2		é (x)a	b.dog!  c,  a	b. xya	0 5 0 0 4 0 0 3 0 0 3 0
+seg	1	2	0	0	2		c,x? c, b.	cat	(x)	0 8 0 0 6 0 0 5 0
+seg	3	0	0	0	2		a  b.a-b cat	x?	(x)  xy a	0 9 0 0 8 0 0 7 0
+seg	1	2	0	0	2		xy cat(x)xy ab  cat	b. abc		0 15 0 0 4 0 0 3 0
+seg	1	0	0	0	2	dog! (x)  c, a  a-b (x)	abc b. (x)c,	dog!	é é  (x)	16 10 7
+seg	3	0	0	0	2		ababc dog!	a  abc a  (x) a-b  ab		0 9 0 0 8 0 0 7 0
+seg	3	2	0	0	2	é xy(x) xydog! xy		a-b c,	a-b	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+seg	1	2	0	0	2	ab b.	(x) x?	é  é x?	c,  dog!	4 5 0 3 4 0 2 3 0
+seg	1	2	0	0	2		b.		cat dog!  c, a	0 2 0 0 2 0 0 1 0
+seg	3	0	0	0	2		x? c, a	c,  ab x? ab  x?	b. abc xyb. cat	0 5 0 0 4 0 0 3 0
+seg	1	1	0	0	2		ab éc,  b.	dog!	(x)	0 7 0 0 5 0
+seg	1	0	0	0	2		c,xy	c,  dog!	b.b.	0 4 0
+seg	2	1	0	0	2	é  (x)		abcabc	dog! b.	0 0 0 0 0 0 0 0 0
+seg	3	2	0	0	2	dog!  dog!	a a  a-b  x?	ab	abc	8 7 0 7 6 0 6 5 0 4 5 0 3 4 0
+seg	2	0	0	0	2		b.		x?  abc  abc (x)b.	0 2 0 0 1 0
+seg	3	0	0	0	2		ab ab		ab a-b xy  a	0 4 0 0 3 0 0 2 0
+seg	1	2	0	0	2		catc,  a-b  a  c, b.	dog! dog!	c,abc	0 13 0 0 8 0 0 7 0
+seg	3	1	0	0	2			c,(x)x? xyx? dog!	dog!écat  catdog!	0 0 0 0 0 0 0 0 0 0 0 0
+seg	2	2	0	0	2		c, xy abc	xy é		0 7 0 0 6 0 0 4 0 0 3 0
+seg	3	0	0	0	2		é  ab xyb.ab xy	abcdog! abc ab	c, a-b  ab	0 11 0 0 10 0 0 9 0
+seg	2	2	0	0	2		a  dog!  éab  c,	(x)  cat	(x) b.a-b c,	0 10 0 0 9 0 0 6 0 0 5 0
+seg	2	0	0	0	2		x? é catdog!a-b	ab  a  é  (x)	a	0 13 0 0 12 0
+seg	1	0	0	0	2		cata-b  c,dog!  x? x?	abab	é x? x? a  abc dog!	0 16 0
+seg	3	2	0	0	2		é (x) c, x?		cat  a c, xya	0 8 0 0 7 0 0 6 0 0 7 0 0 6 0
+seg	1	2	0	0	2		a-babc(x)  a-b cat  b.	x?	cata abc	0 17 0 0 6 0 0 5 0
+seg	1	2	0	0	2		ab a-ba  abc a-b x?	a-bé a xyé	abcb.abc b.(x)	0 14 0 0 6 0 0 5 0
+seg	1	1	0	0	2			ab  xy b. x?	dog! é	0 0 0 0 0 0
+seg	2	1	0	0	2		a-b (x)	x? a-b  c,		0 6 0 0 5 0 0 3 0
+seg	3	1	0	0	2			abc abcatx? c, é	cat	0 0 0 0 0 0 0 0 0 0 0 0
+seg	2	1	0	0	2			b. a a-b	a-b	0 0 0 0 0 0 0 0 0
+seg	1	0	0	0	2		cat ab	dog! abx? é	é ab	0 5 0
+seg	2	1	0	0	2		a-b cat b.		c,	0 8 0 0 7 0 0 4 0
+seg	2	2	0	0	2		xy a-b  abc ab	b. a a abc  dog!	b. b.catcat x?	0 10 0 0 9 0 0 4 0 0 3 0
+seg	3	0	0	0	2	xy xy		a ab ab  a-b	dog!	0 0 0 0 0 0 0 0 0
+seg	2	0	0	0	2		cat c, é	c, é	ab	0 6 0 0 5 0
+seg	3	0	0	0	2		dog!a b.b.		c, c, ab	0 9 0 0 8 0 0 7 0
+seg	1	0	0	0	2		a-b  é		xy abc c,	0 4 0

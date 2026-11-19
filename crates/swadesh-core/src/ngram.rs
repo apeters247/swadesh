@@ -135,3 +135,140 @@ pub fn max_merge(parts: Vec<AnyRuns>) -> AnyRuns {
         AnyRuns::Packed(max_merge_t(packed))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeMap;
+
+    fn packed(r: &AnyRuns) -> Vec<(u128, u32)> {
+        match r {
+            AnyRuns::Packed(v) => v.clone(),
+            AnyRuns::Wide(_) => panic!("expected packed keys"),
+        }
+    }
+
+    fn naive_packed(seq: &[u32], n: usize, bits: u32) -> BTreeMap<u128, u32> {
+        let mut m = BTreeMap::new();
+        if seq.len() >= n {
+            for w in seq.windows(n) {
+                let k = w.iter().fold(0u128, |k, &x| (k << bits) | x as u128);
+                *m.entry(k).or_insert(0) += 1;
+            }
+        }
+        m
+    }
+
+    #[test]
+    fn count_merges_repeated_ngrams() {
+        assert_eq!(packed(&count(&[1, 1, 1], 1, 32)), vec![(1, 3)]);
+        let seq = [3u32, 1, 2, 1, 2, 1, 3, 3];
+        for n in 1..=4 {
+            let got: BTreeMap<u128, u32> = packed(&count(&seq, n, 32)).into_iter().collect();
+            assert_eq!(got, naive_packed(&seq, n, 32), "n {n}");
+        }
+        assert!(count(&[1, 2], 3, 32).is_empty());
+        assert!(count(&[1, 2], 0, 32).is_empty());
+    }
+
+    #[test]
+    fn count_wide_keys_for_long_orders() {
+        let seq: Vec<u32> = (0..12).map(|i| (i % 3) as u32).collect();
+        match count(&seq, 5, 32) {
+            AnyRuns::Wide(r) => {
+                assert_eq!(r.iter().map(|x| x.1 as usize).sum::<usize>(), seq.len() - 4);
+                for w in r.windows(2) {
+                    assert!(w[0].0 < w[1].0, "keys must be sorted and unique");
+                }
+                for (k, c) in &r {
+                    let want = seq.windows(5).filter(|w| *w == k.as_slice()).count() as u32;
+                    assert_eq!(*c, want);
+                }
+            }
+            AnyRuns::Packed(_) => panic!("5 x 32 bits must use wide keys"),
+        }
+    }
+
+    #[test]
+    fn clipped_matches_sums_min_counts() {
+        let h = [1u32, 2, 1, 2, 1, 3, 2, 2];
+        let r = [1u32, 2, 2, 2, 4];
+        for n in 1..=3 {
+            let hc = naive_packed(&h, n, 32);
+            let rc = naive_packed(&r, n, 32);
+            let want: u64 = hc
+                .iter()
+                .map(|(k, c)| (*c).min(*rc.get(k).unwrap_or(&0)) as u64)
+                .sum();
+            assert_eq!(clipped_matches(&count(&h, n, 32), &count(&r, n, 32)), want, "n {n}");
+        }
+        // Wide keys, and mixed representations (an empty side is always 0).
+        let hw: Vec<u32> = (0..30).map(|i| (i * i % 4) as u32).collect();
+        let rw: Vec<u32> = (0..30).map(|i| (i % 3) as u32).collect();
+        let (a, b) = (count(&hw, 6, 32), count(&rw, 6, 32));
+        let mut distinct: Vec<&[u32]> = hw.windows(6).collect();
+        distinct.sort();
+        distinct.dedup();
+        let want: u64 = distinct
+            .iter()
+            .map(|k| {
+                let hit = hw.windows(6).filter(|w| w == k).count() as u64;
+                let rhit = rw.windows(6).filter(|w| w == k).count() as u64;
+                hit.min(rhit)
+            })
+            .sum();
+        assert_eq!(clipped_matches(&a, &b), want);
+        assert_eq!(clipped_matches(&count(&[9], 1, 32), &count(&r, 1, 32)), 0);
+    }
+
+    #[test]
+    fn max_merge_takes_per_key_maximum() {
+        let a = count(&[1, 1, 2], 1, 32);
+        let b = count(&[1, 3, 3, 3], 1, 32);
+        let c = count(&[], 1, 32);
+        assert_eq!(packed(&max_merge(vec![a, b, c])), vec![(1, 2), (2, 1), (3, 3)]);
+        assert_eq!(packed(&max_merge(vec![count(&[5, 5], 1, 32)])), vec![(5, 2)]);
+        assert!(max_merge(vec![count(&[], 1, 32), count(&[1], 2, 32)]).is_empty());
+    }
+
+    #[test]
+    fn max_merge_wide_parts_take_per_key_maximum() {
+        let parts = [
+            vec![1u32, 2, 3, 4, 5, 6],
+            vec![1u32, 2, 3, 4, 5, 9, 1, 2, 3, 4, 5],
+            vec![1u32, 2, 3],
+        ];
+        let runs: Vec<AnyRuns> = parts.iter().map(|p| count(p, 5, 32)).collect();
+        let mut want: BTreeMap<Vec<u32>, u32> = BTreeMap::new();
+        for p in &parts {
+            let mut here: BTreeMap<Vec<u32>, u32> = BTreeMap::new();
+            if p.len() >= 5 {
+                for w in p.windows(5) {
+                    *here.entry(w.to_vec()).or_insert(0) += 1;
+                }
+            }
+            for (k, c) in here {
+                let e = want.entry(k).or_insert(0);
+                *e = (*e).max(c);
+            }
+        }
+        match max_merge(runs) {
+            AnyRuns::Wide(r) => {
+                let got: Vec<(Vec<u32>, u32)> = r;
+                let want: Vec<(Vec<u32>, u32)> = want.into_iter().collect();
+                assert_eq!(got, want);
+            }
+            AnyRuns::Packed(_) => panic!("wide parts must merge to wide keys"),
+        }
+    }
+
+    #[test]
+    fn runs_report_totals_and_emptiness() {
+        assert_eq!(count(&[4, 4, 5], 1, 32).total(), 3);
+        assert_eq!(count(&[4, 4, 5, 6, 7, 8], 5, 32).total(), 2);
+        assert!(AnyRuns::Packed(Vec::new()).is_empty());
+        assert!(AnyRuns::Wide(Vec::new()).is_empty());
+        assert!(!count(&[1], 1, 32).is_empty());
+        assert!(!count(&[1, 2, 3, 4, 5], 5, 32).is_empty());
+    }
+}

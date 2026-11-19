@@ -256,3 +256,58 @@ thread_local! {
         u2: Vec::new(),
     });
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn interner_clear_restarts_ids() {
+        let mut i = Interner::default();
+        assert_eq!(i.id("a"), 0);
+        assert_eq!(i.id("b"), 1);
+        assert_eq!(i.id("a"), 0);
+        i.clear();
+        assert_eq!(i.id("c"), 0);
+    }
+
+    #[test]
+    fn closest_ref_len_matches_sacrebleu() {
+        // sacreBLEU `_get_closest_ref_len`: no references -> -1; ties go to the shorter reference.
+        assert_eq!(closest_ref_len(5, &[]), -1);
+        assert_eq!(closest_ref_len(5, &[3, 7]), 3);
+        assert_eq!(closest_ref_len(5, &[7, 3]), 3);
+        assert_eq!(closest_ref_len(10, &[12, 8, 20]), 8);
+        assert_eq!(closest_ref_len(10, &[8, 12]), 8);
+    }
+
+    #[test]
+    fn remove_punctuation_matches_sacrebleu() {
+        for line in include_str!("../tests/fixtures/mut_punct.txt").lines() {
+            let cols: Vec<&str> = line.split('\t').collect();
+            assert_eq!(remove_punctuation(cols[0]), cols[1..].to_vec(), "input {:?}", cols[0]);
+        }
+    }
+
+    /// Segment statistics against sacreBLEU's `CHRF._compute_segment_statistics`, including
+    /// cases where two references tie on F-score: sacreBLEU keeps the first strict best.
+    #[test]
+    fn chrf_segment_matches_sacrebleu() {
+        for line in include_str!("../tests/fixtures/mut_chrf_seg.txt").lines() {
+            let c: Vec<&str> = line.split('\t').collect();
+            let cfg = ChrfConfig {
+                char_order: c[1].parse().unwrap(),
+                word_order: c[2].parse().unwrap(),
+                whitespace: c[3] == "1",
+                eps_smoothing: c[4] == "1",
+                beta: c[5].parse().unwrap(),
+            };
+            let hyp = c[6];
+            let refs: Vec<&str> = c[7..c.len() - 1].to_vec();
+            let want: Vec<i64> = c[c.len() - 1].split_whitespace().map(|x| x.parse().unwrap()).collect();
+            let mut out = Vec::new();
+            chrf_segment(&cfg, hyp, &refs, &mut out);
+            assert_eq!(out, want, "hyp {hyp:?} refs {refs:?}");
+        }
+    }
+}

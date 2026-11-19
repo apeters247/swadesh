@@ -1,0 +1,5 @@
+# cargo-mutants configuration for the swadesh-core mutation track.
+# Run via tools/mutants/cargo-wrap.sh (CARGO=...), see docs/mutation-report.md.
+examine_globs = ["crates/swadesh-core/src/**/*.rs"]
+additional_cargo_test_args = ["-p", "swadesh-core", "--release"]
+additional_cargo_args = ["-p", "swadesh-core"]
