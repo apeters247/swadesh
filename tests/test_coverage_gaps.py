@@ -356,10 +356,6 @@ def _mcp_call(name, args):
     return asyncio.run(server.call_tool(name, args))
 
 
-@pytest.mark.xfail(
-    strict=True, raises=Exception,
-    reason="BUG: mcp_server raises plain ValueError for bad arguments; the MCP framework turns that "
-           "into 'Error executing tool X' and hides the message, so agents never see 'unknown metric'.")
 def test_mcp_errors_for_bad_arguments():
     pytest.importorskip("mcp")
     bad = [
@@ -368,10 +364,17 @@ def test_mcp_errors_for_bad_arguments():
         ("sentence_scores", {"hypotheses": H, "references": R, "metric": "nope"}, "unknown metric"),
         ("mbr_select", {"candidates": ["only one"]}, "at least two"),
     ]
+    from mcp.server.mcpserver.exceptions import ToolError
     for name, args, msg in bad:
-        res = _mcp_call(name, args)
-        assert res.is_error, name
-        assert msg in res.content[0].text, (name, res.content[0].text)
+        # In-process, the SDK re-raises the ToolError; over a transport it becomes an
+        # is_error result. Either way the agent must see our message.
+        try:
+            res = _mcp_call(name, args)
+            assert res.is_error, name
+            text = res.content[0].text
+        except ToolError as e:
+            text = str(e)
+        assert msg in text, (name, text)
 
 
 def test_mcp_confidence_interval_matches_reference():

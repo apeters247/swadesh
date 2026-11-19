@@ -7,7 +7,7 @@
 //! at every position, tries the two-character match and on success emits the
 //! replacement and skips both characters.  That is what [`sub2`] does.
 
-use crate::unicode::{is_number, is_punct, is_py_space, is_symbol, py_rstrip, py_split, py_strip};
+use crate::unicode::{is_number, is_punct, is_symbol, py_rstrip, py_split, py_strip};
 
 /// Tokenizers that are implemented natively.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -47,74 +47,6 @@ impl Tokenizer {
 /// BLEU's `_preprocess_segment` minus lowercasing: `tokenizer(sent.rstrip())`.
 pub fn preprocess_bleu(tok: Tokenizer, sent: &str, out: &mut String) {
     tok.apply(py_rstrip(sent), out);
-}
-
-/// Two-character `re.sub` emulation.
-#[inline]
-fn sub2(
-    input: &[char],
-    out: &mut Vec<char>,
-    m: impl Fn(char, char) -> bool,
-    emit: impl Fn(char, char, &mut Vec<char>),
-) {
-    out.clear();
-    let n = input.len();
-    let mut i = 0;
-    while i < n {
-        if i + 1 < n && m(input[i], input[i + 1]) {
-            emit(input[i], input[i + 1], out);
-            i += 2;
-        } else {
-            out.push(input[i]);
-            i += 1;
-        }
-    }
-}
-
-/// Single-character class `re.sub(r'(X)', r' \1 ')`.
-#[inline]
-fn sub1(input: &[char], out: &mut Vec<char>, m: impl Fn(char) -> bool) {
-    out.clear();
-    for &c in input {
-        if m(c) {
-            out.push(' ');
-            out.push(c);
-            out.push(' ');
-        } else {
-            out.push(c);
-        }
-    }
-}
-
-/// `' '.join(line.split())`
-#[inline]
-fn join_split_chars(chars: &[char], out: &mut String) {
-    out.clear();
-    let mut pending_space = false;
-    for &c in chars {
-        if is_py_space(c) {
-            if !out.is_empty() {
-                pending_space = true;
-            }
-        } else {
-            if pending_space {
-                out.push(' ');
-                pending_space = false;
-            }
-            out.push(c);
-        }
-    }
-}
-
-#[inline]
-fn is_13a_class1(c: char) -> bool {
-    // [\{-\~\[-\` -\&\(-\+\:-\@\/]
-    matches!(c, '{'..='~' | '['..='`' | ' '..='&' | '('..='+' | ':'..='@' | '/')
-}
-
-#[inline]
-fn is_ascii_digit(c: char) -> bool {
-    c.is_ascii_digit()
 }
 
 /// sacreBLEU `TokenizerRegexp.__call__`.
@@ -215,53 +147,7 @@ pub fn tok_re_unjoined(input: &[u8], out: &mut String) {
     });
 }
 
-#[allow(dead_code)]
-#[inline(always)]
-fn sub2b(input: &[u8], out: &mut Vec<u8>, m: impl Fn(u8, u8) -> bool, emit: impl Fn(u8, u8, &mut Vec<u8>)) {
-    out.clear();
-    out.reserve(input.len() + input.len() / 2 + 4);
-    let n = input.len();
-    let mut i = 0;
-    while i < n {
-        let x = input[i];
-        if i + 1 < n && m(x, input[i + 1]) {
-            emit(x, input[i + 1], out);
-            i += 2;
-        } else {
-            out.push(x);
-            i += 1;
-        }
-    }
-}
 
-#[allow(dead_code)]
-fn tok_re_chars(a: &[char], out: &mut String) {
-    let mut b = Vec::with_capacity(a.len() * 2 + 8);
-    sub1(a, &mut b, is_13a_class1);
-    let mut c = Vec::with_capacity(b.len() + 8);
-    // ([^0-9])([\.,]) -> \1 \2_
-    sub2(&b, &mut c, |x, y| !is_ascii_digit(x) && (y == '.' || y == ','), |x, y, o| {
-        o.push(x);
-        o.push(' ');
-        o.push(y);
-        o.push(' ');
-    });
-    // ([\.,])([^0-9]) -> _\1 \2
-    sub2(&c, &mut b, |x, y| (x == '.' || x == ',') && !is_ascii_digit(y), |x, y, o| {
-        o.push(' ');
-        o.push(x);
-        o.push(' ');
-        o.push(y);
-    });
-    // ([0-9])(-) -> \1 \2_
-    sub2(&b, &mut c, |x, y| is_ascii_digit(x) && y == '-', |x, y, o| {
-        o.push(x);
-        o.push(' ');
-        o.push(y);
-        o.push(' ');
-    });
-    join_split_chars(&c, out);
-}
 
 /// sacreBLEU `Tokenizer13a.__call__`.
 pub fn tok_13a(line: &str, out: &mut String) {
@@ -352,14 +238,29 @@ fn intl_flags(c: char) -> u8 {
             let mut t = [0u8; 128];
             for (i, f) in t.iter_mut().enumerate() {
                 let ch = i as u8 as char;
-                *f = (is_number(ch) as u8) * F_N | (is_punct(ch) as u8) * F_P | (is_symbol(ch) as u8) * F_S;
+                *f = classify(ch);
             }
             t
         });
         t[c as usize]
     } else {
-        (is_number(c) as u8) * F_N | (is_punct(c) as u8) * F_P | (is_symbol(c) as u8) * F_S
+        classify(c)
     }
+}
+
+#[inline]
+fn classify(c: char) -> u8 {
+    let mut f = 0;
+    if is_number(c) {
+        f |= F_N;
+    }
+    if is_punct(c) {
+        f |= F_P;
+    }
+    if is_symbol(c) {
+        f |= F_S;
+    }
+    f
 }
 
 /// `intl` without the final join (same `py_split` tokens). Each character is

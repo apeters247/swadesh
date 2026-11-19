@@ -17,6 +17,7 @@ import swadesh
 
 try:
     from mcp.server.mcpserver import MCPServer
+    from mcp.server.mcpserver.exceptions import ToolError as _MCPToolError
 except ImportError as e:  # pragma: no cover
     raise ImportError('The MCP server needs the "mcp" package: pip install "swadesh[mcp]"') from e
 
@@ -36,6 +37,11 @@ server = MCPServer(
 _METRICS = {"bleu", "chrf", "chrf++", "ter"}
 
 
+class ToolError(_MCPToolError, ValueError):
+    """Bad tool arguments. MCP forwards the message to the agent (an anticipated
+    tool failure), and Python callers can still catch it as a ValueError."""
+
+
 def _metric(name: str, tokenize: Optional[str], lowercase: bool):
     name = name.lower()
     if name == "bleu":
@@ -46,14 +52,14 @@ def _metric(name: str, tokenize: Optional[str], lowercase: bool):
         return swadesh.CHRF(word_order=2, lowercase=lowercase)
     if name == "ter":
         return swadesh.TER()  # sacreBLEU's default: case-insensitive
-    raise ValueError(f"unknown metric {name!r}; choose from {sorted(_METRICS)}")
+    raise ToolError(f"unknown metric {name!r}; choose from {sorted(_METRICS)}")
 
 
 def _check(hypotheses: List[str], references: List[List[str]]):
     if not hypotheses:
-        raise ValueError("hypotheses is empty")
+        raise ToolError("hypotheses is empty")
     if not references or any(len(r) != len(hypotheses) for r in references):
-        raise ValueError("references must be a list of streams, each as long as hypotheses")
+        raise ToolError("references must be a list of streams, each as long as hypotheses")
 
 
 @server.tool()
@@ -102,7 +108,7 @@ def sentence_scores(
     if name == "ter":
         m = swadesh.TER()
         return {"scores": [m.sentence_score(h, [r[i] for r in references]).score for i, h in enumerate(hypotheses)]}
-    raise ValueError(f"unknown metric {metric!r}")
+    raise ToolError(f"unknown metric {metric!r}")
 
 
 @server.tool()
@@ -110,7 +116,7 @@ def mbr_select(candidates: List[str], metric: str = "chrf") -> dict:
     """Minimum Bayes risk selection: pick the candidate that agrees most with the others
     (each scored against all other candidates as pseudo-references)."""
     if len(candidates) < 2:
-        raise ValueError("need at least two candidates")
+        raise ToolError("need at least two candidates")
     m = swadesh.BLEU(effective_order=True) if metric.lower() == "bleu" else _metric(metric, None, False)
     best, util = swadesh.mbr(candidates, metric=m)
     return {"best_index": best, "best": candidates[best], "expected_utility": [float(u) for u in util]}
