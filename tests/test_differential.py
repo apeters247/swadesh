@@ -352,3 +352,23 @@ def test_native_bootstrap_chrf_scoring_rowwise(data):
     ours = [s.score for s in _native_bleu_scores(m, sums)]
     theirs = [m._compute_score_from_stats(r.copy()).score for r in sums]
     assert [(type(x), x) for x in ours] == [(type(x), x) for x in theirs]
+
+
+@pytest.mark.parametrize("test_type", ["bs", "ar"])
+@pytest.mark.parametrize("variant", ["floor-eff", "addk", "none", "chrfpp", "chrf-eps-beta1"])
+def test_paired_tests_exact_variants(test_type, variant):
+    from sacrebleu.significance import PairedTest as SPT
+    hyps, refs = _rand_corpus(31, 300)
+    named = [("baseline", hyps), ("a", _rand_corpus(32, 300)[0]), ("b", _rand_corpus(33, 300)[0])]
+    mk = {"floor-eff": lambda M: M.BLEU(smooth_method="floor", effective_order=True, references=refs),
+          "addk": lambda M: M.BLEU(smooth_method="add-k", smooth_value=2, references=refs),
+          "none": lambda M: M.BLEU(smooth_method="none", references=refs),
+          "chrfpp": lambda M: M.CHRF(word_order=2, references=refs),
+          "chrf-eps-beta1": lambda M: M.CHRF(eps_smoothing=True, beta=1, references=refs)}[variant]
+    kw = dict(test_type=test_type, n_samples=300, n_ar_confidence=100)
+    ours = swadesh.PairedTest(named, {"m": mk(swadesh)}, None, **kw)()
+    theirs = SPT(named, {"m": mk(sacrebleu)}, None, **kw)()
+    assert {k: str(v) for k, v in ours[0].items()} == {k: str(v) for k, v in theirs[0].items()}
+    assert list(ours[1]) == list(theirs[1])
+    for key in theirs[1]:
+        assert [repr(x) for x in ours[1][key]] == [repr(y) for y in theirs[1][key]], key

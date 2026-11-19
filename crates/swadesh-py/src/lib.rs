@@ -397,6 +397,50 @@ fn chrf_scores_np2_f32(sums: &[u8], width: usize, order: usize, beta: i64, eps_s
         .unzip())
 }
 
+/// BLEU scores for exact integer statistic rows (as in the paired AR test,
+/// where sacreBLEU sums int64 rows and scores them with Python/float64 arithmetic).
+#[pyfunction]
+#[pyo3(signature = (rows, width, max_order, smooth_method, smooth_value, effective_order))]
+fn bleu_scores_i64(
+    py: Python<'_>,
+    rows: &[u8],
+    width: usize,
+    max_order: usize,
+    smooth_method: &str,
+    smooth_value: Option<f64>,
+    effective_order: bool,
+) -> PyResult<Vec<f64>> {
+    let smooth = Smooth::from_name(smooth_method)
+        .ok_or_else(|| PyValueError::new_err(format!("unknown smooth_method {smooth_method:?}")))?;
+    if max_order == 0 || width != 2 + 2 * max_order || !rows.len().is_multiple_of(8 * width) {
+        return Err(PyValueError::new_err("bleu_scores_i64: rows must have 2 + 2 * max_order int64 values"));
+    }
+    let cfg = BleuScoreConfig {
+        smooth,
+        smooth_value: smooth_value.unwrap_or(smooth.default_value()),
+        effective_order,
+        max_order,
+        sum_mode: sum_mode(py),
+    };
+    let v = i64_vec(rows);
+    Ok(v.chunks(width)
+        .map(|r| {
+            let f: Vec<f64> = r.iter().map(|&x| x as f64).collect();
+            compute_bleu(&f, &cfg).score
+        })
+        .collect())
+}
+
+/// chrF scores for exact integer statistic rows.
+#[pyfunction]
+fn chrf_scores_i64(rows: &[u8], width: usize, order: usize, beta: i64, eps_smoothing: bool) -> PyResult<Vec<f64>> {
+    if order == 0 || width != 3 * order || !rows.len().is_multiple_of(8 * width) {
+        return Err(PyValueError::new_err("chrf_scores_i64: rows must have 3 * order int64 values"));
+    }
+    let v = i64_vec(rows);
+    Ok(v.chunks(width).map(|r| chrf_f_score(r, order, beta, eps_smoothing)).collect())
+}
+
 /// Paired approximate randomization sums (exact int64). Returns (a, b) bytes.
 #[pyfunction]
 fn ar_sums_i64<'py>(
@@ -602,6 +646,8 @@ fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(bootstrap_sums_f32_seeded, m)?)?;
     m.add_function(wrap_pyfunction!(bleu_scores_np2_f32, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_scores_np2_f32, m)?)?;
+    m.add_function(wrap_pyfunction!(bleu_scores_i64, m)?)?;
+    m.add_function(wrap_pyfunction!(chrf_scores_i64, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_matrix, m)?)?;
     m.add_function(wrap_pyfunction!(bleu_stats_one, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_stats_one, m)?)?;

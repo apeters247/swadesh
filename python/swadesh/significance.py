@@ -114,6 +114,49 @@ def _native_bleu_scores(metric, sums: np.ndarray):
     return None
 
 
+def _f32_scores(metric, sums):
+    """Scores of float32 resample rows: native when exact, else sacreBLEU's code."""
+    native = _native_bleu_scores(metric, sums)
+    if native is not None:
+        return np.array([x.score for x in native])
+    return np.array([metric._compute_score_from_stats(_s).score for _s in sums])
+
+
+def _i64_scores(metric, rows):
+    """Scores of exact int64 statistic rows (paired AR test), natively when the
+    metric is plain BLEU/chrF; else via the metric's own ``_aggregate_and_compute``."""
+    from sacrebleu.metrics.bleu import BLEU as _SB
+    from sacrebleu.metrics.chrf import CHRF as _SC
+
+    rows = np.ascontiguousarray(rows, dtype=np.int64)
+    width = rows.shape[1] if rows.ndim == 2 else -1
+    if isinstance(metric, _SB) and type(metric).compute_bleu is _SB.compute_bleu \
+            and type(metric)._compute_score_from_stats is _SB._compute_score_from_stats \
+            and metric.max_ngram_order >= 1 and width == 2 + 2 * metric.max_ngram_order:
+        sv = metric.smooth_value
+        return np.array(_swadesh.bleu_scores_i64(rows.tobytes(), width, metric.max_ngram_order, metric.smooth_method,
+                                                 None if sv is None else float(sv), bool(metric.effective_order)))
+    if isinstance(metric, _SC) and type(metric)._compute_f_score is _SC._compute_f_score \
+            and type(metric)._compute_score_from_stats is _SC._compute_score_from_stats \
+            and metric.order >= 1 and width == 3 * metric.order:
+        return np.array(_swadesh.chrf_scores_i64(rows.tobytes(), width, metric.order, int(metric.beta),
+                                                 bool(metric.eps_smoothing)))
+    return np.array([metric._aggregate_and_compute(x).score for x in rows[:, None]])
+
+
+def _paired_sums(stats, idxs, seed, n_samples, n):
+    """Resampled float32 row sums for the paired bootstrap test. With an integer
+    seed and stats as long as the system output, the indices
+    ``default_rng(seed).choice(n, (n_samples, n))`` are drawn natively."""
+    if idxs is None:
+        s32 = np.ascontiguousarray(np.array(stats, dtype="float32"))
+        if s32.ndim == 2 and s32.shape[0] == n and s32.shape[1] > 0:
+            buf = _swadesh.bootstrap_sums_f32_seeded(s32.tobytes(), s32.shape[1], n, n_samples, seed)
+            return np.frombuffer(buf, dtype=np.float32).reshape(n_samples, s32.shape[1]).copy()
+        idxs = np.random.default_rng(seed).choice(n, size=(n_samples, n), replace=True)
+    return _resampled_sums(stats, idxs)
+
+
 def _ar_shuffle(bl_stats, sys_stats, pos_sel):
     """``pos_sel @ bl + neg_sel @ sys`` and its mirror, exact for int stats.
     Returns None when the stats are not integral (falls back to numpy)."""
@@ -157,14 +200,17 @@ def _paired_ar_test(baseline_info, sys_name, hypotheses, references, metrics,
             shuf_b = neg_sel @ bl_stats + pos_sel @ sys_stats
         else:
             shuf_a, shuf_b = fast
-        scores_a = np.array([metric._aggregate_and_compute(x).score for x in shuf_a[:, None]])
-        scores_b = np.array([metric._aggregate_and_compute(x).score for x in shuf_b[:, None]])
+        if fast is None:
+            scores_a = np.array([metric._aggregate_and_compute(x).score for x in shuf_a[:, None]])
+            scores_b = np.array([metric._aggregate_and_compute(x).score for x in shuf_b[:, None]])
+        else:
+            scores_a, scores_b = _i64_scores(metric, shuf_a), _i64_scores(metric, shuf_b)
         p = _compute_p_value(np.abs(np.array(scores_a) - np.array(scores_b)), diff)
         res = Result(sys_score.score, p)
         if n_ar_confidence > 0:
             sacrelogger.info(f' > Performing bootstrap resampling for confidence interval (# resamples: {n_ar_confidence})')
             sums = _resampled_sums(sys_stats, bs_idxs)
-            sys_scores = np.array([metric._compute_score_from_stats(_s).score for _s in sums])
+            sys_scores = _f32_scores(metric, sums)
             res.mean, res.ci = estimate_ci(sys_scores)
         results[name] = res
     return sys_name, results
@@ -175,7 +221,10 @@ def _paired_bs_test(baseline_info, sys_name, hypotheses, references, metrics,
     """Drop-in for ``sacrebleu.significance._paired_bs_test``."""
     rng = np.random.default_rng(seed)
     results = {}
-    idxs = rng.choice(len(hypotheses), size=(n_samples, len(hypotheses)), replace=True)
+    native_seed = isinstance(seed, int) and 0 <= seed < 2**128 and len(hypotheses) > 0
+    # With an integer seed the indices are re-drawn natively (identical stream);
+    # numpy draws them only when needed.
+    idxs = None if native_seed else rng.choice(len(hypotheses), size=(n_samples, len(hypotheses)), replace=True)
     for name, metric in metrics.items():
         bl_stats, bl_result = baseline_info[name]
         sacrelogger.info(f'Computing {name} for {sys_name!r} and extracting sufficient statistics')
@@ -183,8 +232,8 @@ def _paired_bs_test(baseline_info, sys_name, hypotheses, references, metrics,
         sys_score = metric._aggregate_and_compute(sys_stats)
         diff = abs(bl_result.score - sys_score.score)
         sacrelogger.info(f' > Performing paired bootstrap resampling test (# resamples: {n_samples})')
-        scores_bl = np.array([metric._compute_score_from_stats(_s).score for _s in _resampled_sums(bl_stats, idxs)])
-        scores_sys = np.array([metric._compute_score_from_stats(_s).score for _s in _resampled_sums(sys_stats, idxs)])
+        scores_bl = _f32_scores(metric, _paired_sums(bl_stats, idxs, seed, n_samples, len(hypotheses)))
+        scores_sys = _f32_scores(metric, _paired_sums(sys_stats, idxs, seed, n_samples, len(hypotheses)))
         sys_mean, sys_ci = estimate_ci(scores_sys)
         sample_diffs = np.abs(scores_sys - scores_bl)
         stats = sample_diffs - sample_diffs.mean()
