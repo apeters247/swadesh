@@ -9,3 +9,5 @@ repository.workspace = true
 [dependencies]
 rayon = "1"
 rustc-hash = "2"
+num-bigint = "0.4"
+num-traits = "0.2"

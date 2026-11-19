@@ -3,6 +3,7 @@
 
 pub mod ngram;
 pub mod resample;
+pub mod nprng;
 pub mod score;
 pub mod stats;
 pub mod table;
