@@ -10,8 +10,10 @@ import random
 
 import pytest
 import sacrebleu
-from hypothesis import HealthCheck, given, settings
+from hypothesis import given
 from hypothesis import strategies as st
+
+from fuzzsupport import budget
 
 import swadesh
 
@@ -34,8 +36,8 @@ segment = st.lists(st.sampled_from(ALPHABET), min_size=0, max_size=25).map("".jo
 # Small vocabulary so that the same words recur and shifts actually trigger.
 VOCAB = ["the", "cat", "sat", "on", "mat", "a", "dog", "is", "of", "it", "and", "to", "x,", "y.", "'s", "3-4"]
 
-FAST = settings(max_examples=150, deadline=None, suppress_health_check=list(HealthCheck))
-SLOW = settings(max_examples=40, deadline=None, suppress_health_check=list(HealthCheck))
+FAST = budget(150)
+SLOW = budget(40)
 
 OPTION_COMBOS = list(itertools.product([False, True], repeat=4))
 

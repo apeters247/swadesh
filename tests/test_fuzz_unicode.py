@@ -10,11 +10,12 @@ Budget: UNI_EXAMPLES env var (default 1500 per test).
 import os
 import unicodedata
 
-from hypothesis import HealthCheck, given, settings
+from hypothesis import given
 from hypothesis import strategies as st
 
 import sacrebleu
 import swadesh
+from fuzzsupport import budget
 from test_differential import TOKENIZERS, _refs_like, assert_same_score
 
 EXAMPLES = int(os.environ.get("UNI_EXAMPLES", "1500"))
@@ -47,7 +48,7 @@ _ANY = st.integers(0, 0x10FFFF - 0x800).map(lambda x: x if x < SURR_LO else x + 
 CHAR = st.one_of(*([_P] * 15 + [_S] * 10 + [_N] * 10 + [_Z] * 10 + [_CC] * 10
                    + [_HAN] * 15 + [_HANGUL] * 8 + [_KANA] * 8 + [_ANY] * 8))
 segment = st.lists(CHAR, min_size=0, max_size=300).map("".join)
-FUZZ = settings(max_examples=EXAMPLES, deadline=None, suppress_health_check=list(HealthCheck))
+FUZZ = budget(EXAMPLES)
 
 
 def corpus(min_size=1, max_size=5):
