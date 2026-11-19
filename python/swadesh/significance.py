@@ -34,9 +34,15 @@ def _seed_from_env() -> Tuple[str, Optional[int]]:
 def _resampled_sums(stats, idxs: np.ndarray) -> np.ndarray:
     """``np.array(stats, dtype='float32')[idxs].sum(1)``, computed natively."""
     s32 = np.ascontiguousarray(np.array(stats, dtype="float32"))
-    n, width = s32.shape
     ix = np.ascontiguousarray(idxs, dtype=np.int64)
-    buf = _swadesh.bootstrap_sums_f32(s32.tobytes(), width, ix.tobytes(), n)
+    if (s32.ndim != 2 or ix.ndim != 2 or ix.shape[1] == 0
+            or (ix.size and (ix.min() < 0 or ix.max() >= s32.shape[0]))):
+        # Empty, negative or out-of-range indices (e.g. systems of different length):
+        # numpy itself decides, so the error or the wrap-around is exactly sacreBLEU's.
+        return s32[idxs].sum(1)
+    width = s32.shape[1]
+    # The kernel's `n` is the number of indices per resample (ix.shape[1]), not len(stats).
+    buf = _swadesh.bootstrap_sums_f32(s32.tobytes(), width, ix.tobytes(), ix.shape[1])
     return np.frombuffer(buf, dtype=np.float32).reshape(ix.shape[0], width).copy()
 
 
@@ -80,6 +86,9 @@ def _native_bleu_scores(metric, sums: np.ndarray):
 
     if not _NUMPY2 or not isinstance(metric, _SB):
         return None
+    if metric.max_ngram_order < 1 or sums.ndim != 2 or sums.shape[1] != 2 + 2 * metric.max_ngram_order:
+        # Rows that are not BLEU statistics of this order: sacreBLEU's own scorer decides.
+        return None
     if type(metric)._compute_score_from_stats is not _SB._compute_score_from_stats \
             or type(metric).compute_bleu is not _SB.compute_bleu:
         return None
@@ -97,9 +106,12 @@ def _ar_shuffle(bl_stats, sys_stats, pos_sel):
     sy = np.asarray(sys_stats)
     if bl.dtype.kind not in "iu" or sy.dtype.kind not in "iu":
         return None
+    sel = np.ascontiguousarray(pos_sel, dtype=np.uint8)
+    if bl.ndim != 2 or bl.shape != sy.shape or sel.ndim != 2 or sel.shape[1] != bl.shape[0]:
+        # Mismatched shapes: numpy's matmul below raises sacreBLEU's own error.
+        return None
     bl = np.ascontiguousarray(bl, dtype=np.int64)
     sy = np.ascontiguousarray(sy, dtype=np.int64)
-    sel = np.ascontiguousarray(pos_sel, dtype=np.uint8)
     n, width = bl.shape
     a, b = _swadesh.ar_sums_i64(bl.tobytes(), sy.tobytes(), width, sel.tobytes(), n)
     shape = (sel.shape[0], width)

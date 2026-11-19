@@ -5,15 +5,20 @@ hot path -- tokenization, n-gram extraction and matching, i.e. the segment
 level sufficient statistics -- is replaced by Rust. Everything else (score
 objects, signatures, formatting, final score arithmetic) is sacreBLEU's own
 code, so corpus-level results are identical by construction.
-"""
 
-from __future__ import annotations
+Inputs the native kernels do not cover (invalid parameter values, non-string
+items, segments with no reference) are not guessed at: they go through
+sacreBLEU's own Python statistics loop (``_FastMixin._py_statistics``), so
+the result or the exception is sacreBLEU's, not an artefact of the Rust layer.
+"""
 
 import logging
 from typing import Any, List, Optional, Sequence
 
 import numpy as np
+from sacrebleu.metrics.base import Metric as _SacreMetric
 from sacrebleu.metrics.bleu import BLEU as _SacreBLEU
+from sacrebleu.metrics.bleu import MAX_NGRAM_ORDER
 from sacrebleu.metrics.chrf import CHRF as _SacreCHRF
 from sacrebleu.metrics.ter import TER as _SacreTER
 
@@ -26,18 +31,25 @@ sacrelogger = logging.getLogger("sacrebleu")
 #: matched natively.
 NATIVE_TOKENIZERS = frozenset({"none", "13a", "intl", "zh", "char"})
 
+#: Errors the native layer raises for inputs it cannot take (non-str items,
+#: negative counts, wrong container types). The Python reference path then
+#: runs and raises or returns exactly what sacreBLEU does.
+_FALLBACK_ERRORS = (TypeError, AttributeError, OverflowError)
+
 
 class _RefCache:
-    """Raw reference streams. Truthy so that sacreBLEU's ``elif self._ref_cache``
-    checks behave as with its own cache."""
+    """Raw reference streams, plus whether some segment has no reference at all.
 
-    __slots__ = ("streams",)
+    Its truth value matches sacreBLEU's per-segment cache list, which is empty
+    (falsy) exactly when there are no segments.
+    """
 
-    def __init__(self, streams):
+    def __init__(self, streams, has_empty: bool = False):
         self.streams = streams
+        self.has_empty = has_empty
 
     def __bool__(self):
-        return True
+        return len(self) > 0
 
     def __len__(self):
         return min((len(s) for s in self.streams), default=0)
@@ -73,21 +85,48 @@ def _matrix(buf: bytes, n: int, width: int) -> np.ndarray:
 class _FastMixin:
     """Shared plumbing between the accelerated metrics."""
 
+    def _native_ok(self) -> bool:
+        """False when the parameters are outside what the native kernels implement."""
+        return True
+
     def _cache_references(self, references):
         streams = _normalize_refs(references)
         # num_refs semantics identical to sacreBLEU's _cache_references
         nums = set()
+        has_empty = False
         for refs in zip(*streams):
-            nums.add(sum(1 for x in refs if x is not None))
+            n = sum(1 for x in refs if x is not None)
+            nums.add(n)
+            has_empty = has_empty or n == 0
         self.num_refs = nums.pop() if len(nums) == 1 else -1
-        return _RefCache(streams)
+        return _RefCache(streams, has_empty)
 
-    def _resolve_refs(self, references):
+    def _resolve_refs(self, references) -> _RefCache:
+        """The reference cache for this call, with sacreBLEU's precedence and errors."""
         if references:
-            return self._cache_references(references).streams
+            return self._cache_references(references)
         if self._ref_cache:
-            return self._ref_cache.streams
+            return self._ref_cache
         raise RuntimeError("No references provided and the cache is empty.")
+
+    def _py_statistics(self, hypotheses, references) -> list:
+        """sacreBLEU's own statistics loop (its own reference cache, its own warnings)."""
+        if references:
+            ref_cache = _SacreMetric._cache_references(self, references)
+        elif self._ref_cache:
+            ref_cache = _SacreMetric._cache_references(self, self._ref_cache.streams)
+        else:
+            raise RuntimeError("No references provided and the cache is empty.")
+        stats = []
+        tok_count = 0
+        for hyp, ref_kwargs in zip(hypotheses, ref_cache):
+            if not self._force and hyp.endswith(" ."):
+                tok_count += 1
+            hyp = self._preprocess_segment(hyp)
+            stats.append(self._compute_segment_statistics(hyp, ref_kwargs))
+        if not self._force:
+            _tok_warning(tok_count)
+        return stats
 
     def corpus_score(self, hypotheses, references, n_bootstrap: int = 1):
         """Same as sacreBLEU's ``corpus_score``; bootstrap resampling is native."""
@@ -109,16 +148,29 @@ class _FastMixin:
         return super()._aggregate_and_compute(stats)
 
 
+def _is_int(x) -> bool:
+    return isinstance(x, int)
+
+
 class BLEU(_FastMixin, _SacreBLEU):
     """Bit-exact, accelerated ``sacrebleu.metrics.BLEU``.
 
     Same constructor and API. Additional method: :meth:`sentence_scores`.
     """
 
-    def __init__(self, *args, references: Optional[Sequence[Sequence[str]]] = None, **kwargs):
-        super().__init__(*args, references=None, **kwargs)
+    def __init__(self, lowercase: bool = False, force: bool = False, tokenize: Optional[str] = None,
+                 smooth_method: str = 'exp', smooth_value: Optional[float] = None,
+                 max_ngram_order: int = MAX_NGRAM_ORDER, effective_order: bool = False,
+                 trg_lang: str = '', references: Optional[Sequence[Sequence[str]]] = None):
+        super().__init__(lowercase=lowercase, force=force, tokenize=tokenize,
+                         smooth_method=smooth_method, smooth_value=smooth_value,
+                         max_ngram_order=max_ngram_order, effective_order=effective_order,
+                         trg_lang=trg_lang, references=None)
         if references is not None:
             self._ref_cache = self._cache_references(references)
+
+    def _native_ok(self) -> bool:
+        return _is_int(self.max_ngram_order) and self.max_ngram_order >= 1
 
     @property
     def _native_tokenizer(self) -> Optional[str]:
@@ -138,12 +190,17 @@ class BLEU(_FastMixin, _SacreBLEU):
         return hyps, streams, "none", False, tok_count
 
     def _extract_corpus_statistics(self, hypotheses: Sequence[str], references) -> Any:
-        streams = self._resolve_refs(references)
-        hypotheses, streams = _truncate(hypotheses, streams)
-        hyps, streams, tok, lc, tok_count = self._prepare(hypotheses, streams)
-        buf, n, width, _nmin, _nmax, native_tok_count = _swadesh.bleu_stats(
-            hyps, streams, tok, lc, self.max_ngram_order
-        )
+        cache = self._resolve_refs(references)
+        if cache.has_empty or not self._native_ok():
+            return self._py_statistics(hypotheses, references)
+        try:
+            hyps, streams = _truncate(hypotheses, cache.streams)
+            hyps, streams, tok, lc, tok_count = self._prepare(hyps, streams)
+            buf, n, width, _nmin, _nmax, native_tok_count = _swadesh.bleu_stats(
+                hyps, streams, tok, lc, self.max_ngram_order
+            )
+        except _FALLBACK_ERRORS:
+            return self._py_statistics(hypotheses, references)
         if not self._force:
             _tok_warning(native_tok_count if tok_count is None else tok_count)
         return _matrix(buf, n, width)
@@ -154,11 +211,14 @@ class BLEU(_FastMixin, _SacreBLEU):
             sacrelogger.warning('It is recommended to enable `effective_order` for sentence-level BLEU.')
         self._check_sentence_score_args(hypothesis, references)
         tok = self._native_tokenizer
-        if tok is None:
-            return super().sentence_score(hypothesis, references)
         refs = [r for r in references if r is not None]
+        if tok is None or not refs or not self._native_ok():
+            return _SacreMetric.sentence_score(self, hypothesis, references)
         self.num_refs = len(refs)
-        stats = _swadesh.bleu_stats_one(hypothesis, refs, tok, bool(self.lowercase), self.max_ngram_order)
+        try:
+            stats = _swadesh.bleu_stats_one(hypothesis, refs, tok, bool(self.lowercase), self.max_ngram_order)
+        except _FALLBACK_ERRORS:
+            return _SacreMetric.sentence_score(self, hypothesis, references)
         return self._compute_score_from_stats(stats)
 
     def sentence_scores(self, hypotheses: Sequence[str], references: Sequence[Sequence[str]]) -> List[float]:
@@ -207,19 +267,31 @@ class CHRF(_FastMixin, _SacreCHRF):
     Same constructor and API. Additional method: :meth:`sentence_scores`.
     """
 
-    def __init__(self, *args, references: Optional[Sequence[Sequence[str]]] = None, **kwargs):
-        super().__init__(*args, references=None, **kwargs)
+    def __init__(self, char_order: int = _SacreCHRF.CHAR_ORDER, word_order: int = _SacreCHRF.WORD_ORDER,
+                 beta: int = _SacreCHRF.BETA, lowercase: bool = False, whitespace: bool = False,
+                 eps_smoothing: bool = False, references: Optional[Sequence[Sequence[str]]] = None):
+        super().__init__(char_order=char_order, word_order=word_order, beta=beta, lowercase=lowercase,
+                         whitespace=whitespace, eps_smoothing=eps_smoothing, references=None)
         if references is not None:
             self._ref_cache = self._cache_references(references)
+
+    def _native_ok(self) -> bool:
+        return (_is_int(self.char_order) and self.char_order >= 1
+                and _is_int(self.word_order) and self.word_order >= 0 and _is_int(self.beta))
 
     def _args(self):
         return (self.char_order, self.word_order, self.beta, bool(self.lowercase),
                 bool(self.whitespace), bool(self.eps_smoothing))
 
     def _extract_corpus_statistics(self, hypotheses: Sequence[str], references) -> Any:
-        streams = self._resolve_refs(references)
-        hypotheses, streams = _truncate(hypotheses, streams)
-        buf, n, width, _nmin, _nmax, tok_count = _swadesh.chrf_stats(hypotheses, streams, *self._args())
+        cache = self._resolve_refs(references)
+        if cache.has_empty or not self._native_ok():
+            return self._py_statistics(hypotheses, references)
+        try:
+            hyps, streams = _truncate(hypotheses, cache.streams)
+            buf, n, width, _nmin, _nmax, tok_count = _swadesh.chrf_stats(hyps, streams, *self._args())
+        except _FALLBACK_ERRORS:
+            return self._py_statistics(hypotheses, references)
         if not self._force:
             _tok_warning(tok_count)
         return _matrix(buf, n, width)
@@ -228,8 +300,14 @@ class CHRF(_FastMixin, _SacreCHRF):
         """Same as sacreBLEU's ``sentence_score`` (native statistics, no numpy round-trip)."""
         self._check_sentence_score_args(hypothesis, references)
         refs = [r for r in references if r is not None]
+        if not refs or not self._native_ok():
+            return _SacreMetric.sentence_score(self, hypothesis, references)
         self.num_refs = len(refs)
-        return self._compute_score_from_stats(_swadesh.chrf_stats_one(hypothesis, refs, *self._args()))
+        try:
+            stats = _swadesh.chrf_stats_one(hypothesis, refs, *self._args())
+        except _FALLBACK_ERRORS:
+            return _SacreMetric.sentence_score(self, hypothesis, references)
+        return self._compute_score_from_stats(stats)
 
     def sentence_scores(self, hypotheses: Sequence[str], references: Sequence[Sequence[str]]) -> List[float]:
         """Sentence-level chrF for every segment, computed in parallel."""
@@ -264,6 +342,7 @@ def mbr(candidates: Sequence[str], metric=None, exclude_self: bool = True):
     best = int(np.argmax(util))
     return best, util
 
+
 class TER(_FastMixin, _SacreTER):
     """Bit-exact, accelerated ``sacrebleu.metrics.TER``.
 
@@ -272,18 +351,25 @@ class TER(_FastMixin, _SacreTER):
     ``sum_of_lists`` and score code on the same floats, so the results are identical.
     """
 
-    def __init__(self, *args, references: Optional[Sequence[Sequence[str]]] = None, **kwargs):
-        super().__init__(*args, references=None, **kwargs)
+    def __init__(self, normalized: bool = False, no_punct: bool = False, asian_support: bool = False,
+                 case_sensitive: bool = False, references: Optional[Sequence[Sequence[str]]] = None):
+        super().__init__(normalized=normalized, no_punct=no_punct, asian_support=asian_support,
+                         case_sensitive=case_sensitive, references=None)
         if references is not None:
             self._ref_cache = self._cache_references(references)
 
     def _extract_corpus_statistics(self, hypotheses: Sequence[str], references) -> Any:
-        streams = self._resolve_refs(references)
-        hypotheses, streams = _truncate(hypotheses, streams)
-        buf, n, width = _swadesh.ter_stats(
-            hypotheses, streams, bool(self.normalized), bool(self.no_punct),
-            bool(self.asian_support), bool(self.case_sensitive),
-        )
+        cache = self._resolve_refs(references)
+        if cache.has_empty:
+            return self._py_statistics(hypotheses, references)
+        try:
+            hyps, streams = _truncate(hypotheses, cache.streams)
+            buf, n, width = _swadesh.ter_stats(
+                hyps, streams, bool(self.normalized), bool(self.no_punct),
+                bool(self.asian_support), bool(self.case_sensitive),
+            )
+        except _FALLBACK_ERRORS:
+            return self._py_statistics(hypotheses, references)
         return np.frombuffer(buf, dtype=np.float64).reshape(n, width).copy()
 
     def _aggregate_and_compute(self, stats):
