@@ -74,7 +74,7 @@ Every swadesh result below was checked `==` against sacreBLEU 2.6.0 on the same 
 Times are best of 3 (BLEU/chrF corpus) or a single run (TER, sentence-level, bootstrap).
 Source: [`bench/results/SUMMARY.md`](bench/results/SUMMARY.md) · reproduce with `bench/get_data.sh && python bench/bench.py`.
 
-**AMD Ryzen 9 7900X, idle machine** (`bench/results/final-troy1-*.json`)
+**AMD Ryzen 9 7900X, idle machine** (`bench/results/final-troy1-*.json`; bootstrap row from `final2-troy1-*`)
 
 | | sacreBLEU | swadesh, 24 threads | speedup | swadesh, 1 core | speedup |
 |---|---:|---:|---:|---:|---:|
@@ -84,8 +84,9 @@ Source: [`bench/results/SUMMARY.md`](bench/results/SUMMARY.md) · reproduce with
 | corpus TER (10k) | 6.34 s | 0.038 s | **165×** | 0.165 s | 38.8× |
 | sentence BLEU ×20k | 0.97 s | 0.0072 s | **134×** | 0.044 s | 22.5× |
 | sentence chrF ×20k | 2.71 s | 0.0085 s | **318×** | 0.073 s | 37.3× |
-| BLEU + 1000 bootstrap resamples (5k) | 0.48 s | 0.015 s | **31×** | 0.036 s | 13.3× |
+| BLEU + 1000 bootstrap resamples (5k) | 0.46 s | 0.016 s | **28×** | 0.030 s | 15.3× |
 
+Bootstrap is bounded by numpy's sequential random-number stream, which swadesh must reproduce draw for draw.
 Earlier builds were also benchmarked on an ARM Cortex-X925 (GX10, up to 379× on chrF) and an
 Apple M4 (up to 242×); see [`bench/results/SUMMARY.md`](bench/results/SUMMARY.md).
 
