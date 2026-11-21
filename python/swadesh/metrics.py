@@ -111,18 +111,12 @@ class _FastMixin:
 
     def _cache_references(self, references):
         streams = _normalize_refs(references)
-        # num_refs semantics identical to sacreBLEU's per-segment reference count. Only reference
-        # lines are removed per segment, and a hypothesis None (which only reaches here through
-        # _py_statistics, and still raises in the parse) counts as a reference too. So a single
-        # reference column decides it by C-level counting; more columns only need comparing.
-        has_empty = None in streams[0] if streams else False
-        if len(streams) == 1:
-            count = len(streams[0]) - streams[0].count(None)
-            self.num_refs = count
-        else:
-            counts = {sum(x is not None for x in refs) for refs in zip(*streams)}
-            self.num_refs = counts.pop() if len(counts) == 1 else -1
-        return _RefCache(streams, has_empty)
+        # num_refs semantics identical to sacreBLEU's per-segment reference count, counted by
+        # C-level iteration rather than one generator per segment. A segment with no reference
+        # has a count of 0, so the set of counts also decides has_empty.
+        counts = {sum(x is not None for x in refs) for refs in zip(*streams)}
+        self.num_refs = counts.pop() if len(counts) == 1 else -1
+        return _RefCache(streams, 0 in counts)
 
     def _resolve_refs(self, references) -> _RefCache:
         """The reference cache for this call, with sacreBLEU's precedence and errors."""
