@@ -836,7 +836,9 @@ def _norm(text: str) -> str:
     argparse wraps usage lines at the program name's length, so usage and error text is
     compared with whitespace collapsed as well. Plain output (scores, tables, echoed data)
     is compared byte for byte."""
-    text = re.sub(r"\b(sacrebleu|swadesh|cli\.py)(?=[: ])", "PROG", text)
+    # "python -m swadesh.cli" (3.12+ sets __main__.__spec__) and the bare entry-point names.
+    text = re.sub(r"\bpython(\d+([.]\d+)*)? -m (sacrebleu|swadesh(cli)?(\.[a-z_]+)?)(?=[: ])", "PROG", text)
+    text = re.sub(r"\b(sacrebleu|swadesh|swadesh\.cli|cli\.py)(?=[: ])", "PROG", text)
     text = re.sub(r"\A(PROG) (\d+\.\d+\.\d+)\n", r"PROG \2\n", text)
     if "usage:" in text or "error:" in text:
         text = " ".join(text.split())
