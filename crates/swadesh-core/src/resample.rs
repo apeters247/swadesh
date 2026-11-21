@@ -139,6 +139,7 @@ mod tests {
 
     /// numpy's `stats[idxs].sum(0)` for each sample: rows added one at a time in float32.
     fn naive_sums(stats: &[f32], width: usize, idxs: &[i64], n: usize) -> Vec<f32> {
+        #[allow(clippy::manual_checked_ops)]  // n == 0 is the empty-index case, not a fallback
         let n_samples = if n == 0 { 0 } else { idxs.len() / n };
         let mut out = vec![0f32; n_samples * width];
         for s in 0..n_samples {

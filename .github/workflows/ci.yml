@@ -2,7 +2,7 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
   workflow_dispatch:
 
@@ -23,7 +23,10 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2.8.0
       - run: cargo test -p swadesh-core
-      - run: cargo clippy -p swadesh-core -- -D warnings
+      - run: cargo clippy -p swadesh-core --all-targets -- -D warnings
+      # swadesh-py links against Python; clippy lints it without the extension-module feature.
+      - run: cargo clippy -p swadesh-py -- -D warnings
+      - run: cargo clippy -p swadesh-cli -- -D warnings
 
   differential:
     name: Differential tests (${{ matrix.os }}, py${{ matrix.python }}, numpy 2)
