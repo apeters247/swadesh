@@ -9,6 +9,12 @@ out of memory: sacreBLEU's own runs needed 40–46 GB at 1M segments, together w
 The memory, thread and concurrency phases were re-run on the VPS under a 4–6 GB cgroup memory cap.
 Every result where both tools finished compared `==`.
 
+Note (2026-11-21, re-run on a quiet troy-1 with `ulimit -v 20000000`): at 1M segments sacreBLEU's
+chrF raises `MemoryError` after 19.9 GB of RSS; swadesh completes in 1.04 s with a 1.06 GB peak.
+SacreBLEU has never produced a chrF score at this size, so there is no exactness comparison to
+make for it. BLEU at 1M was re-confirmed bit-identical (score 64.60594655357025, sacreBLEU
+9.02 GB vs swadesh 0.97 GB).
+
 ## 1. Scaling (corpus scores; one reference; WMT22 en-de perturbed)
 
 | segments | metric | sacreBLEU | swadesh | speedup | peak RSS sacreBLEU / swadesh |
@@ -20,7 +26,7 @@ Every result where both tools finished compared `==`.
 | 100k | chrF | 28.86 s | 0.135 s | 214× | 4,063 / 148 MB |
 | 100k | TER | 85.35 s | 0.498 s | 171× | 276 / 253 MB |
 | 1M | BLEU | 106.7 s | 1.69 s | 63× | 8,770 / 951 MB |
-| 1M | chrF | 392.9 s | 2.26 s | 173× | **39,643** / 1,074 MB |
+| 1M | chrF | MemoryError (needs > 20 GB of RAM; no score produced) | 1.04 s | — | **> 19,882** / 1,063 MB |
 | 1M | TER | 859.1 s | 6.32 s | 136× | 2,156 / 1,200 MB |
 | 1M | BLEU + 1000 bootstrap | 270.7 s | 6.10 s → **8.4 s / 717 MB after fix** | 44× | **45,601** / 8,520 → **717** MB |
 | 10M | BLEU | crashed (OOM) | 10.8 s | — | — / 9,136 MB |
