@@ -111,10 +111,16 @@ class _FastMixin:
 
     def _cache_references(self, references):
         streams = _normalize_refs(references)
-        # num_refs semantics identical to sacreBLEU's per-segment reference count, counted by
-        # C-level iteration rather than one generator per segment. A segment with no reference
-        # has a count of 0, so the set of counts also decides has_empty.
-        counts = {sum(x is not None for x in refs) for refs in zip(*streams)}
+        # num_refs semantics identical to sacreBLEU's _cache_references: the per-segment count of
+        # non-None references, shared by every segment (else -1), and has_empty if any segment has
+        # none. Without a single None the count is len(streams) for every segment, so the common
+        # case never builds a generator; the None case falls back to sacreBLEU's own loop.
+        if all(None not in s for s in streams):
+            self.num_refs = len(streams)
+            return _RefCache(streams, len(streams) == 0)
+        counts = set()
+        for refs in zip(*streams):
+            counts.add(sum(1 for x in refs if x is not None))
         self.num_refs = counts.pop() if len(counts) == 1 else -1
         return _RefCache(streams, 0 in counts)
 
