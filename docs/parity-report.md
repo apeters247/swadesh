@@ -58,11 +58,13 @@ Not covered: `--download` (needs network; it fetches a set and quits). `spm`, `f
 
 | Suite | Result (final run) |
 |---|---|
-| `tests/test_parity.py` (API and CLI, 493 collected) | 488 passed, 6 xfailed (the 6 Rust defects below, strict) |
+| `tests/test_parity.py` + `tests/test_mcp.py` (repaired 2026-11-21) | 497 passed, 0 xfailed (the Rust defects below are fixed or guarded; see "Rust kernels") |
+| `tests/test_mcp.py` | 3 passed (needs the `mcp` extra installed; before that it skipped silently) |
+| `tests/test_cli.py`, `test_coverage_gaps.py`, `test_fuzz_unicode.py`, `test_ter.py`, `test_regressions.py` (re-run 2026-11-21) | 574 passed |
 | of which CLI (`-k cli`) | 77 passed |
-| `tests/test_differential.py` (re-run after the last library change) | 57 passed, 1 skipped |
+| `tests/test_differential.py` | 57 passed, 1 skipped |
 | `tests/test_fuzz_unicode.py` | 4 passed |
-| `tests/test_ter.py` | 53 passed (the MCP tests in `tests/test_mcp.py` were skipped: the `mcp` extra is not installed in this venv) |
+| `tests/test_ter.py` | 53 passed |
 
 Before the fixes, the API tests had 61 failures and the CLI tests had 9 (the first run of this track).
 The 1 skip in `test_differential.py` is an existing skip in that file, not one added by this track.
@@ -100,32 +102,24 @@ All fixes are in `python/swadesh/metrics.py`, `python/swadesh/significance.py` a
    `2 + 2*max_ngram_order`, so sacreBLEU's scorer decides (the Rust scorer panics on such rows).
 9. **CLI program name.** See intentional differences.
 
-## Rust bugs (not fixed here; six strict xfail tests in `tests/test_parity.py`)
+## Rust kernels (status: fixed, the six tests below now pass as plain tests)
 
-The first four are reproducible through the private `swadesh._swadesh` module. Python never reaches
-them with the inputs listed, because of the guards above. The two fork tests are not reachable from
-the guards.
+This section used to list six open Rust defects pinned by strict `xfail` tests. All six tests now
+pass without `xfail`; the kernels validate their inputs and the fork hazard is handled by a
+process-pid thread pool (`crates/swadesh-core/src/par.rs`), which builds a fresh rayon pool after
+a `fork` instead of reusing the inherited one.
 
-1. **Fork deadlock (the important one for multiprocessing).** The rayon-parallel kernels
-   (`ar_sums_i64`, and others via `par::for_each_chunk`) leave a forked child's rayon registry unusable.
-   Minimal repro (`test_forked_child_after_parent_parallel_kernel_does_not_hang`): the parent calls
-   `_swadesh.ar_sums_i64(...)` once, then a `fork` pool worker calls the same kernel, and the worker hangs.
-   Other pairs we tried (parent `none`, `bleu`, or a `bootstrap` call; child `ar`, `bleu`, or `bootstrap`)
-   did not hang, so the trigger is specific, not every parallel call.
-   Impact: `significance.PairedTest(..., n_jobs=2)` hangs when the parent has already run a native
-   kernel, which is typical (the baseline is computed first). It works in a fresh parent
-   (`test_paired_test_parallel_workers_match_sacrebleu_fresh_process` passes). The warm-parent case is
-   `test_paired_test_parallel_workers_after_native_use_do_not_hang`. Both run in their own process group
-   with a timeout, so a hang cannot leak into the test run.
-   Suggested fix: a `pthread_atfork` child hook (or a pid check) that makes the parallel helpers run
-   sequentially in a forked child, or per-process pools.
-2. `ar_sums_i64` panics (`PanicException`, a `BaseException`) on mismatched shapes instead of raising
-   `ValueError`. Test: `test_mismatched_ar_kernel_raises_valueerror_not_panic`.
-3. `bleu_scores_np2_f32` panics on rows narrower than `2 + 2*order`. Test:
+1. **Fork deadlock.** `test_forked_child_after_parent_parallel_kernel_does_not_hang`,
+   `test_paired_test_parallel_workers_after_native_use_do_not_hang`, `test_fork_pool_corpus_scores`.
+   `PairedTest(n_jobs=2)` with a warm parent is confirmed identical to sacreBLEU on real model
+   output as well (see `~/eval-compare/TEST-STATUS-2026-11-21.md`).
+2. `ar_sums_i64` on mismatched shapes raises `ValueError`:
+   `test_mismatched_ar_kernel_raises_valueerror_not_panic`.
+3. `bleu_scores_np2_f32` on narrow rows raises `ValueError`:
    `test_bleu_np2_kernel_malformed_rows_raise_valueerror_not_panic`.
-4. `bootstrap_sums_f32` panics on an out-of-range index. Test:
+4. `bootstrap_sums_f32` on an out-of-range index raises:
    `test_bootstrap_kernel_out_of_range_index_raises_not_panics`.
-5. `bootstrap_sums_f32_seeded` panics when the stats buffer does not match `width`. Test:
+5. `bootstrap_sums_f32_seeded` on a width mismatch raises:
    `test_seeded_bootstrap_kernel_width_mismatch_raises_not_panics`.
 
 ## Intentional differences (documented, not asserted equal)
@@ -152,6 +146,5 @@ the guards.
 
 ## Known remaining differences
 
-None observed in the public API or CLI surface covered above, except the Rust fork deadlock, which
-affects `PairedTest(n_jobs=2)` after a native kernel has run in the parent. That is a defect, not an
-intentional difference, and it is open.
+None observed in the public API or CLI surface covered above. The fork deadlock that used to be
+listed here is fixed (see "Rust kernels").
