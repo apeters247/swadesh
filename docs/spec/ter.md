@@ -88,6 +88,23 @@ character is **deleted** (not separated), so `"a.b"` becomes `"ab"` and `"Hello,
 
 7. Collapse spaces again and split.
 
+With `no_punct = true`, the deletion set of section 3.1 runs first, but **in normalized mode a
+deleted mark is replaced by a space, not removed**, so it still separates tokens. Measured on
+`_preprocess_segment`:
+
+| input | `no_punct` | `normalized, no_punct` |
+|---|---|---|
+| `a?b` | `ab` | `a b` |
+| `a?b?c` | `abc` | `a b c` |
+| `a.b` | `ab` | `a b` |
+| `a (b) c` | `a b c` | `a b c` |
+| `a[b]c` | `a[b]c` | `a [ b ] c` |
+
+The default mode removes the mark outright, so `a?b` stays one token; the normalized mode leaves a
+separator, so it becomes two. `[` and `]` are never deleted in either mode. The same rule applies to
+the fullwidth forms when `asian_support` is on (section 3.3.2): `a。b` becomes `ab` in the default
+mode and `a b` in normalized mode.
+
 ### 3.3 East Asian support (`asian_support = true`)
 
 The flag does two things, and they are gated differently. The per-character split only happens in
