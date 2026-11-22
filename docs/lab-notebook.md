@@ -1668,4 +1668,44 @@ are additive for the moment. Flipping them means porting the aggregate chain —
 lines) then `compute_bleu` / `chrf_f_score`, both already native in Rust — and the reference info.
 
 **Result.** Suite **508 passing, 1 failing** plus the 10 new score tests; the one failure is still
-`fuzz42 intl`. Rust untouched and green.
+`fuzz42 intl`. Rust untouched and green.---
+
+## 2026-11-22 (continued) — metrics.py switch attempted, reverted; 518 held
+
+I tried to flip `metrics.py`'s three classes onto their own score objects, so the aggregate step
+would stop constructing sacreBLEU types. It worked for the simple cases and failed the edge cases,
+and I reverted rather than leave the tree worse.
+
+**What worked.** `sum_of_lists`, a new `bleu_result_i64` binding (a summed row in, `score`, `bp`,
+`precisions` out), and overrides of `_compute_score_from_stats` for all three metrics. BLEU, chrF and
+TER then returned `swadesh.metrics.BLEUScore`/`CHRFScore`/`TERScore` with byte-identical text — the
+plain corpus case was right for all three.
+
+**What broke, in the order I found it.**
+
+1. **add-k counts.** `BLEUScore.counts` must carry the *smoothed* values, and the native result only
+   returns the score. Fixed by adding `k` in Python — 1 of 24 failures closed.
+2. **Degenerate constructors.** `max_ngram_order` of 0 or -1 produces sacreBLEU's quirky empty score
+   object rather than an error, and `smooth_value='x'` is accepted until it divides. My binding is
+   strict. Fixed with a fallback guard — another 8 closed.
+3. **Bootstrap rows are float32 sums**, not integers. Casting them to `int` moved the score in the
+   eighth decimal. Fixed by falling back when a row is fractional.
+4. **The bootstrap fast path stopped firing.** `_native_bleu_scores` guards on
+   `type(metric)._compute_score_from_stats is _SB._compute_score_from_stats` — my override broke
+   that identity, so the kernel was skipped and a slower, differently-rounded path ran instead. I
+   added a marker decorator so the guard accepts swadesh's own scorer too.
+
+After all four the count was still 16, which is how I knew I was trading one set for another rather
+than converging — the same pattern as the intl work. Two of the fixes were genuine and worth keeping
+in mind (`add-k` counts, the float32 row rule); they are written down here so the next attempt starts
+from them.
+
+**Reverted.** `metrics.py` and `significance.py` are back to their committed state. What I kept is
+`bleu_result_i64`, which is additive and unused, plus the `Score`/`BLEUScore`/`CHRFScore`/`TERScore`
+classes from the previous session, which are verified standalone and simply not wired in yet.
+
+**State.** **518 passed, 1 failed** — the one failure is `fuzz42 intl`. Rust 13 suites green.
+
+**Next attempt should start from:** the four findings above, and should expect the bootstrap identity
+guard to be the awkward part — the fast path's premise is that nothing has overridden the scorer,
+and the whole point of this phase is to override it.
