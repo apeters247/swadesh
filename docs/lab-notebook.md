@@ -1841,4 +1841,48 @@ failed** on both 3.12 and 3.14.
 remaining work is ~100 lines of fallback-only arithmetic: counter-based n-gram extraction and the
 clipped-match computation, neither of which the native path touches. It is the last piece of Phase 5
 apart from `cli.py`, and it is the piece with the worst effort-to-value ratio in the whole plan —
-removing one `import` from a file that already constructs nothing from sacreBLEU on the corpus path.
+removing one `import` from a file that already constructs nothing from sacreBLEU on the corpus path.---
+
+## 2026-11-22 (continued) — real-model tests on troy-1: two more models, zero mismatches
+
+The objective names real-model tests on troy-1 as a completion requirement and had never been run
+for the two models still missing. This session ran both.
+
+**GPU state before each run**, checked as the objective requires: `nvidia-smi` reported 2 MiB used of
+97,887 MiB and no compute processes. The card was entirely ours — no co-tenant `mitra_server.py`, and
+nothing was evicted.
+
+**Models.** `qwen3.8-27b` (`large2` in the objective, 19 GB) and `llama3.3:70b` (`large`, 42 GB). Both
+non-abliterated, as the objective requires: the cached `huihui_ai/qwen3.8-abliterated` fixture was
+*not* used for this run. WMT-style en-de, 150 segments each, translated in sequence through Ollama on
+this machine.
+
+**Translation cost.** `qwen3.8-27b` finished 150 segments in under 20 seconds. `llama3.3:70b` ran at
+0.3 sentences/second, about 9 minutes — far faster than the objective's "expect minutes per sentence"
+and comfortably inside a full 150 rather than the 50-segment fallback.
+
+**Scoring.** sacreBLEU 2.6.0 and swadesh, corpus score and every sentence score, across eleven
+configurations: BLEU (default, `intl`, `floor 0.1`, lowercase), chrF (default, char-only, β=3,
+lowercase), chrF++, and TER (default, case-sensitive, normalized).
+
+| model | corpus mismatches | sentence mismatches | speed |
+|---|---|---|---|
+| `qwen3.8-27b` | 0 of 11 configs | 0 of 150 per config | 2–160× faster |
+| `llama3.3:70b` | 0 of 11 configs | 0 of 150 per config | 2–220× faster |
+
+Both totals report `total mismatches: 0`.
+
+**The TER numbers are the notable ones.** Normalized TER took 8,939 ms in sacreBLEU against 56 ms in
+swadesh on `qwen3.8-27b`, and 8,965 ms against 41 ms on `llama3.3:70b` — a 160–220× speed-up, and it is
+the metric that needed the banded-distance work earlier in this project.
+
+**What this establishes.** With these two, five models now have real-output comparisons behind them:
+`qwen2.5vl:7b`, `devstral:24b`, `granite4:small-h`, `nxkd1-k-q5` from the frozen fixtures, and now
+`qwen3.8-27b` and `llama3.3:70b` measured live. Every metric swadesh implements reproduces sacreBLEU
+bit for bit on real LLM output.
+
+**One honest gap.** These runs were verified with the harness's own comparison, not by adding the
+new outputs to the frozen oracle fixtures, so they are evidence for this session rather than
+regression tests in the suite. Adding `real-qwen3.8-27b` and `real-llama3.3_70b` to `tests/oracle/`
+would lock them in; the translations are cached at
+`/home/kpeters/eval-compare/work/data/real-qwen3.8-27b.jsonl` and `real-llama3.3_70b.jsonl`.
