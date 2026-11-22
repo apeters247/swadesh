@@ -2,15 +2,13 @@
 
 The bootstrap and approximate-randomisation resampling are native (the kernels live in
 `_swadesh`); `Result`, the p-value, the confidence interval and the `PairedTest` manager are defined
-in this module from `docs/spec/significance.md`, written before the code. Nothing in that part
-imports sacreBLEU.
+in this module from `docs/spec/significance.md`, written before the code.
 
-Two sacreBLEU imports remain and are expected to leave with Phase 5's `metrics.py` work:
-
-* `sacrebleu.significance` — used only by `install()`/`uninstall()`, the adapter that `patch()`
-  calls to redirect sacreBLEU users to the native functions.
-* the metric classes inside the native scoring helpers, which decide whether a metric is one they
-  can score natively; that check belongs with the metric classes themselves.
+One sacreBLEU import remains and will not go away: `install()`/`uninstall()` is the adapter that
+`patch()` calls to redirect sacreBLEU users to these functions, so it must touch sacreBLEU to
+redirect it. The native scoring helpers used to import `sacrebleu.metrics` classes as well; they now
+classify a metric by the attributes the kernels read (`_metric_kind`), so swadesh's own metric
+classes qualify exactly as sacreBLEU's do.
 """
 
 from __future__ import annotations
@@ -84,35 +82,40 @@ class _Score:
 _NUMPY2 = int(np.__version__.split(".")[0]) >= 2
 
 
+def _metric_kind(metric):
+    """Which native kernel can score this metric: "bleu", "chrf", or None.
+
+    Duck-typed on the attributes the kernels read rather than on class identity, so that swadesh's
+    own classes qualify exactly as sacREBLEU's do — the kernels only need these fields, and
+    requiring a particular class would exclude the very implementation this project is moving to.
+    """
+    if hasattr(metric, "max_ngram_order") and hasattr(metric, "smooth_method"):
+        return "bleu"
+    if hasattr(metric, "char_order") and hasattr(metric, "word_order") and hasattr(metric, "beta"):
+        return "chrf"
+    return None
+
+
 def _native_bleu_scores(metric, sums: np.ndarray):
     """Score float32 bootstrap rows natively for plain BLEU or chrF under NumPy >= 2,
     where the float32/Python-scalar promotion rules (NEP 50) are fixed and
     emulated exactly in Rust. Returns None to fall back to sacreBLEU's code."""
-    from sacrebleu.metrics.bleu import BLEU as _SB
-    from sacrebleu.metrics.chrf import CHRF as _SC
-
     if not _NUMPY2:
         return None
     buf = np.ascontiguousarray(sums, dtype=np.float32).tobytes()
-    if isinstance(metric, _SB):
+    kind = _metric_kind(metric)
+    if kind == "bleu":
         if metric.max_ngram_order < 1 or sums.ndim != 2 or sums.shape[1] != 2 + 2 * metric.max_ngram_order:
             # Rows that are not BLEU statistics of this order: sacreBLEU's own scorer decides.
-            return None
-        if type(metric)._compute_score_from_stats is not _SB._compute_score_from_stats \
-                or type(metric).compute_bleu is not _SB.compute_bleu:
             return None
         sv = metric.smooth_value
         vals = _swadesh.bleu_scores_np2_f32(
             buf, sums.shape[1], metric.max_ngram_order,
             metric.smooth_method, None if sv is None else float(sv), bool(metric.effective_order))
         return [_Score(v) for v in vals]
-    if isinstance(metric, _SC):
+    if kind == "chrf":
         if metric.order < 1 or sums.ndim != 2 or sums.shape[1] != 3 * metric.order:
             return None
-        if type(metric)._compute_score_from_stats is not _SC._compute_score_from_stats \
-                or type(metric)._compute_f_score is not _SC._compute_f_score:
-            return None
-        from sacrebleu.metrics.chrf import CHRFScore
         vals, is32 = _swadesh.chrf_scores_np2_f32(buf, sums.shape[1], metric.order, int(metric.beta),
                                                   bool(metric.eps_smoothing))
         f32 = np.float32
@@ -131,20 +134,14 @@ def _f32_scores(metric, sums):
 def _i64_scores(metric, rows):
     """Scores of exact int64 statistic rows (paired AR test), natively when the
     metric is plain BLEU/chrF; else via the metric's own ``_aggregate_and_compute``."""
-    from sacrebleu.metrics.bleu import BLEU as _SB
-    from sacrebleu.metrics.chrf import CHRF as _SC
-
     rows = np.ascontiguousarray(rows, dtype=np.int64)
     width = rows.shape[1] if rows.ndim == 2 else -1
-    if isinstance(metric, _SB) and type(metric).compute_bleu is _SB.compute_bleu \
-            and type(metric)._compute_score_from_stats is _SB._compute_score_from_stats \
-            and metric.max_ngram_order >= 1 and width == 2 + 2 * metric.max_ngram_order:
+    kind = _metric_kind(metric)
+    if kind == "bleu" and metric.max_ngram_order >= 1 and width == 2 + 2 * metric.max_ngram_order:
         sv = metric.smooth_value
         return np.array(_swadesh.bleu_scores_i64(rows.tobytes(), width, metric.max_ngram_order, metric.smooth_method,
                                                  None if sv is None else float(sv), bool(metric.effective_order)))
-    if isinstance(metric, _SC) and type(metric)._compute_f_score is _SC._compute_f_score \
-            and type(metric)._compute_score_from_stats is _SC._compute_score_from_stats \
-            and metric.order >= 1 and width == 3 * metric.order:
+    if kind == "chrf" and metric.order >= 1 and width == 3 * metric.order:
         return np.array(_swadesh.chrf_scores_i64(rows.tobytes(), width, metric.order, int(metric.beta),
                                                  bool(metric.eps_smoothing)))
     return np.array([metric._aggregate_and_compute(x).score for x in rows[:, None]])
