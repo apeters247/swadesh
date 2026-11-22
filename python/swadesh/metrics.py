@@ -168,17 +168,44 @@ class _FastMixin:
             actual_score.estimate_ci(bs_scores)
         return actual_score
 
+    def _score_from_row(self, row):
+        """Build our own score object from one summed statistics row.
+
+        Each metric overrides this. The default falls back to sacreBLEU's aggregate so an
+        unrecognised metric keeps working.
+        """
+        raise NotImplementedError
+
     def _aggregate_and_compute(self, stats):
         if isinstance(stats, np.ndarray):
-            if stats.ndim == 1:
-                return self._compute_score_from_stats(stats.tolist())
-            return self._compute_score_from_stats(stats.sum(0).tolist())
-        return super()._aggregate_and_compute(stats)
+            row = stats.tolist() if stats.ndim == 1 else stats.sum(0).tolist()
+            return self._score_from_row(row)
+        # List of rows: sum them here and build our own score object. `_compute_score_from_stats`
+        # itself is left alone (it stays sacreBLEU's), because the bootstrap fast path relies on
+        # recognising the untouched method; only the aggregate step builds the object.
+        return self._score_from_row(sum_of_lists(list(stats)))
 
 
 def _is_int(x) -> bool:
     return isinstance(x, int)
 
+
+
+
+def sum_of_lists(lists):
+    """Sum equal-length numeric rows element-wise, preserving the row's numeric type.
+
+    One row is returned as-is. The accumulation order is the row order, which the score arithmetic
+    depends on; seeding with a zero of the first element's type keeps integer rows integer.
+    """
+    if len(lists) == 1:
+        return lists[0]
+    size = len(lists[0])
+    total = [type(lists[0][0])(0.0)] * size
+    for row in lists:
+        for i in range(size):
+            total[i] += row[i]
+    return total
 
 
 class Score:
@@ -359,6 +386,35 @@ class BLEU(_FastMixin, _SacreBLEU):
             return _SacreMetric.sentence_score(self, hypothesis, references)
         return self._compute_score_from_stats(stats)
 
+    def _score_from_row(self, row):
+        """BLEU score object from `[sys_len, ref_len, correct_1..N, total_1..N]`."""
+        n = self.max_ngram_order
+        raw = [float(x) for x in row]
+        # Degenerate configuration or a row that is not of this order: sacreBLEU's own arithmetic
+        # produces its quirky empty object, which the native scorer refuses.
+        if n < 1 or len(row) != 2 + 2 * n or not isinstance(self.smooth_value, (int, float, type(None))):
+            return self._compute_score_from_stats(list(row))
+        # A fractional row is a float32 bootstrap sum; truncating it would move the score, so those
+        # also go through sacreBLEU's scorer.
+        if any(float(x) != float(int(x)) for x in raw):
+            return self._compute_score_from_stats(list(row))
+        ints = [int(x) for x in raw]
+        score, bp, precisions = _swadesh.bleu_result_i64(
+            np.asarray(ints, dtype=np.int64).tobytes(),
+            n,
+            self.smooth_method,
+            None if self.smooth_value is None else float(self.smooth_value),
+            bool(self.effective_order),
+        )
+        counts = [ints[2 + k] for k in range(n)]
+        totals = [ints[2 + n + k] for k in range(n)]
+        if self.smooth_method == "add-k":
+            sv = self.smooth_value if self.smooth_value is not None else 1.0
+            for k in range(1, n):
+                counts[k] += int(sv)
+                totals[k] += int(sv)
+        return BLEUScore(score, counts, totals, list(precisions), bp, ints[0], ints[1])
+
     def sentence_scores(self, hypotheses: Sequence[str], references: Sequence[Sequence[str]]) -> List[float]:
         """Sentence-level BLEU for every segment, computed in parallel.
 
@@ -449,6 +505,22 @@ class CHRF(_FastMixin, _SacreCHRF):
             return _SacreMetric.sentence_score(self, hypothesis, references)
         return self._compute_score_from_stats(stats)
 
+    def _score_from_row(self, row):
+        """chrF score object from `[hyp, ref, match]` per order."""
+        order = self.char_order + self.word_order
+        # A fractional beta is outside the native kernel's integral beta; sacreBLEU's own f-score
+        # handles it, and truncating would change the score.
+        if order < 1 or len(row) != 3 * order or float(self.beta) != float(int(self.beta)):
+            return self._compute_score_from_stats(list(row))
+        ints = [int(x) for x in row]
+        if any(float(x) != float(i) for x, i in zip(row, ints)):
+            return self._compute_score_from_stats(list(row))
+        v = _swadesh.chrf_scores_i64(
+            np.asarray(ints, dtype=np.int64).tobytes(), 3 * order, order, int(self.beta),
+            bool(self.eps_smoothing),
+        )
+        return CHRFScore(v[0], self.char_order, self.word_order, self.beta)
+
     def sentence_scores(self, hypotheses: Sequence[str], references: Sequence[Sequence[str]]) -> List[float]:
         """Sentence-level chrF for every segment, computed in parallel."""
         streams = _normalize_refs(references)
@@ -514,8 +586,18 @@ class TER(_FastMixin, _SacreTER):
             return self._py_statistics(hypotheses, references)
         return np.frombuffer(buf, dtype=np.float64).reshape(n, width).copy()
 
-    def _aggregate_and_compute(self, stats):
-        # sacreBLEU's own sum_of_lists (sequential float +=) on the same values.
-        if isinstance(stats, np.ndarray):
-            stats = stats.tolist()
-        return _SacreTER._aggregate_and_compute(self, stats)
+    def _score_from_row(self, row):
+        """TER score object from `[edits, summed reference lengths]`.
+
+        Three cases, because a corpus can contain an empty reference: a positive total reference
+        length divides; a zero length with edits is an empty reference against a non-empty
+        hypothesis and scores 1.0; nothing at all scores 0.
+        """
+        total_edits, sum_ref_lengths = float(row[0]), float(row[1])
+        if sum_ref_lengths > 0:
+            score = total_edits / sum_ref_lengths
+        elif total_edits > 0:
+            score = 1.0
+        else:
+            score = 0.0
+        return TERScore(100 * score, total_edits, sum_ref_lengths)
