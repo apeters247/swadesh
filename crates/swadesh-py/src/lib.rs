@@ -432,6 +432,39 @@ fn bleu_scores_i64(
         .collect())
 }
 
+/// BLEU score components for one already-summed statistics row.
+///
+/// Returns `(score, bp, precisions)` — everything a `BLEUScore` needs beyond the row itself. The
+/// Python aggregate prefers this over scoring through sacreBLEU so the score object can be built
+/// without it.
+#[pyfunction]
+fn bleu_result_i64(
+    py: Python<'_>,
+    row: &[u8],
+    max_order: usize,
+    smooth_method: &str,
+    smooth_value: Option<f64>,
+    effective_order: bool,
+) -> PyResult<(f64, f64, Vec<f64>)> {
+    let smooth = Smooth::from_name(smooth_method)
+        .ok_or_else(|| PyValueError::new_err(format!("unknown smooth_method {smooth_method:?}")))?;
+    let width = 2 + 2 * max_order;
+    if max_order == 0 || !row.len().is_multiple_of(8) || row.len() / 8 != width {
+        return Err(PyValueError::new_err("bleu_result_i64: row must have 2 + 2 * max_order int64 values"));
+    }
+    let cfg = BleuScoreConfig {
+        smooth,
+        smooth_value: smooth_value.unwrap_or(smooth.default_value()),
+        effective_order,
+        max_order,
+        sum_mode: sum_mode(py),
+    };
+    let v = i64_vec(row);
+    let f: Vec<f64> = v.iter().map(|&x| x as f64).collect();
+    let r = compute_bleu(&f, &cfg);
+    Ok((r.score, r.bp, r.precisions))
+}
+
 /// chrF scores for exact integer statistic rows.
 #[pyfunction]
 fn chrf_scores_i64(rows: &[u8], width: usize, order: usize, beta: i64, eps_smoothing: bool) -> PyResult<Vec<f64>> {
@@ -686,6 +719,7 @@ fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(_extract_bench, m)?)?;
     m.add_function(wrap_pyfunction!(tokenize_batch, m)?)?;
     m.add_function(wrap_pyfunction!(run_cli, m)?)?;
+    m.add_function(wrap_pyfunction!(bleu_result_i64, m)?)?;
     m.add("GENERATED_PYTHON", swadesh_core::tables::GENERATED_PYTHON)?;
     m.add("GENERATED_REGEX", swadesh_core::tables::GENERATED_REGEX)?;
     Ok(())
