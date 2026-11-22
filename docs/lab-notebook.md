@@ -890,3 +890,33 @@ clipping rule. Both are kept.
 
 **State.** Nothing wired in yet: `stats.rs` still serves the metric path and `bleu_stats_clean.rs` is
 additive, exactly as the tokenizer port was before its A/B justified deletion.
+
+---
+
+## 2026-11-22 — Phase 2: clean-room chrF and BLEU statistics, speed matched where it matters
+
+**Built** `chrf_stats_clean.rs` and rewrote `bleu_stats_clean.rs`, both from `docs/spec/stats.md`.
+Verified against the oracle with real reference streams: **BLEU 0 differing rows / 13,462 segments**,
+**chrF 0 differing rows / 13,455 segments across all seven pairs**.
+
+**The speed work, which was the real content of this session.** My first versions sorted keys instead
+of counting into a table: **BLEU 1.8x and chrF 14.6x slower** than the port. Fixes, each measured:
+1. Count into the project's packed-key `CountTable` (original code, reused) instead of sorting.
+   chrF went from 104 µs to 7.8 µs per pair; BLEU from 21.6 to 17.0.
+2. Thread-local scratch tables instead of per-call allocation. BLEU 17.0 -> 12.5.
+3. `FxHashMap` interning instead of `std::HashMap`. BLEU 12.5 -> ~12.
+4. Borrowed-key interning instead of `String` clones (blocked by a borrow conflict, solved by
+   interning through an owned map keyed on the borrowed token). BLEU ~12 -> 11.9.
+
+**Where it ended, stated plainly:** chrF is now **at or faster than the port** (6.3-8.3 µs vs 7.9).
+BLEU is **1.3x slower** (11.9 vs 9.1 µs per pair) and I did not close it. A breakdown put 4.1 µs of
+the 14.6 µs in tokenisation, which is shared code, so the remaining gap is in the interning loop that
+the port does with `&str` keys and I approximate with an owned map plus a lookup.
+
+**Consequence for the plan.** The two modules are exact but not yet faster on BLEU, so I did **not**
+delete `stats.rs`. Wiring a 1.3x-slower BLEU path in would trade correctness that already works for
+speed that regresses. Deleting it needs the gap closed, or an explicit decision that slower-but-exact
+is acceptable.
+
+**Verification unchanged:** parity 507 passed, frozen oracle 13/14 (the intl fuzz file), Rust 107
+tests.
