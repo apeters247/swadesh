@@ -1708,4 +1708,41 @@ classes from the previous session, which are verified standalone and simply not 
 
 **Next attempt should start from:** the four findings above, and should expect the bootstrap identity
 guard to be the awkward part — the fast path's premise is that nothing has overridden the scorer,
-and the whole point of this phase is to override it.
+and the whole point of this phase is to override it.---
+
+## 2026-11-22 (continued) — metrics.py: the corpus path builds swadesh's own score objects
+
+Second attempt at the same switch, and this one holds: **508 passed, 1 failed** on 3.11, and
+**519 passed, 0 failed** on both 3.12 and 3.14.
+
+**Why the first attempt failed and this one did not.** Last session's version overrode
+`_compute_score_from_stats`, and the bootstrap fast path in `significance.py` recognises that method
+by identity — `type(metric)._compute_score_from_stats is _SB._compute_score_from_stats` — so
+overriding it silently disabled the native kernel and a slower, differently-rounded path ran
+instead. I tried to patch the guard; that traded one failure set for another.
+
+This version **leaves `_compute_score_from_stats` alone**. Only `_aggregate_and_compute` changes: it
+sums the rows itself (`sum_of_lists`, 10 lines) and then builds the score object through a new
+`_score_from_row`, which each metric implements. The bootstrap path sees the untouched method and
+behaves exactly as before. All 33 bootstrap, pickle and paired-test cases pass unchanged.
+
+**Four fallbacks, each measured, all of them places where the native scorer is strict and sacreBLEU
+is not:**
+
+| case | why it must fall back |
+|---|---|
+| `max_ngram_order` 0 or less | sacreBLEU returns a quirky empty score object rather than raising |
+| non-numeric `smooth_value` | it is accepted at construction and only fails later |
+| a fractional row | that is a float32 bootstrap sum; truncating moves the score in the 8th decimal |
+| fractional chrF `beta` | the kernel takes an integral beta, so 2.5 was truncated to 2 |
+
+That last one was new this session — the first attempt never reached it.
+
+**What this slice achieved.** A corpus score no longer comes back as a `sacrebleu.metrics.*Score`.
+It is `swadesh.metrics.BLEUScore` / `CHRFScore` / `TERScore`, with byte-identical formatting, verified
+against the frozen oracle and the full parity suite.
+
+**Still inherited.** The three classes continue to subclass sacreBLEU's for `_cache_references`,
+`sentence_score`, `_extract_reference_info` and the constructor constants. Those are the next slice;
+the score objects were the part that mattered for the licence, because they were the last thing the
+corpus path constructed from sacreBLEU's code.
