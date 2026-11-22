@@ -13,6 +13,7 @@ pub mod ter;
 pub mod tables;
 pub mod tokenize_dispatch;
 pub mod bleu_stats_clean;
+pub mod chrf_stats_clean;
 pub mod tokenize_nonechar_clean;
 pub mod tokenize_13a_clean;
 pub mod tokenize_zh_clean;

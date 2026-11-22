@@ -83,10 +83,18 @@ For a hypothesis string and reference strings:
 
    Two earlier drafts of this document guessed the opposite (punctuation stripped), twice.
    The measurement above is the specification.
-3. **Orders.** Char orders `1..char_order` and, for chrF++, word orders `1..word_order`. Each order
-   produces a triple: matching n-grams, hyp total, ref total.
-4. **Matching count.** For chrF the per-order match count is again `min(count_H, max_i count_{r_i})`
-   summed over n-grams — the same clipping rule as BLEU, over characters or words.
+3. **Orders.** Char orders `1..char_order` and, for chrF++, word orders `1..word_order`. **Each
+   order produces the triple `[hyp_total, ref_total, matches]`** — hypothesis total first, then
+   reference total, then matches. Measured on a WMT22 segment with a 194-character hypothesis and a
+   202-character reference, whose first order reports `[194, 202, 194]`.
+
+   Two earlier readings of this triple in this session were wrong because the test strings happened
+   to have the lengths I expected; measure with a segment whose lengths plainly differ.
+4. **Matching count.** For chrF the per-order match count is `min(count_H, count_r)` summed over
+   n-grams, per reference. **With several references the row kept is the one whose f-score is
+   highest** (the first strictly better), NOT a merge of counts across references. Measured: a
+   hypothesis matching one of two references perfectly scores 100.0 against `[good, bad]` and
+   against `[bad, good]` alike.
 
 ## 4. What the scoring stage does with these (for orientation, not implemented here)
 
