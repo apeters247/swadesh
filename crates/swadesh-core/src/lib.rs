@@ -11,7 +11,7 @@ pub mod stats;
 pub mod table;
 pub mod ter;
 pub mod tables;
-pub mod tokenize;
+pub mod tokenize_dispatch;
 pub mod tokenize_nonechar_clean;
 pub mod tokenize_13a_clean;
 pub mod tokenize_zh_clean;
@@ -21,7 +21,7 @@ pub mod unicode;
 
 pub use score::{chrf_f_score, compute_bleu, BleuScoreConfig, Smooth, SumMode};
 pub use stats::{bleu_segment, chrf_segment, BleuConfig, ChrfConfig};
-pub use tokenize::Tokenizer;
+pub use tokenize_dispatch::{join_split_str, preprocess_bleu, tokens, Tokenizer};
 pub use ter::{ter_segment, TerConfig, TerError};
 
 /// Segments below this size are processed serially (thread overhead dominates).

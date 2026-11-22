@@ -712,3 +712,34 @@ not the rule — that lesson closed both the zh and intl stalemates.
 
 **Next.** Wire the four clean-room tokenizers into the metric layer, re-run the frozen-oracle and
 parity suites, then delete `tokenize.rs` in a separate commit.
+
+---
+
+## 2026-11-22 — Phase 1: tokenize.rs DELETED; Python path 13/14
+
+**Wired and deleted.** `tokenize_dispatch.rs` replaces the old port: a `Tokenizer` enum dispatching
+to the four clean-room implementations, plus `tokenize_unjoined`, `preprocess_bleu`, `tokens` and
+`join_split_str` reimplemented on top of them. `crates/swadesh-core/src/tokenize.rs` is **gone**;
+`stats.rs`, `pairwise.rs`, the `prof` example and `coverage_gaps.rs` now point at the dispatch.
+
+**A/B before deleting.** Built two binaries — one calling the old port, one the dispatch — and
+compared on all 13,462 corpus lines for 13a: **0 differing**. Deletion followed evidence, not
+optimism.
+
+**Three bugs found by running the suites, all mine:**
+1. **Duplicate module declaration** — a `sed` replaced `pub mod tokenize;` with a second
+   `pub mod tokenize_dispatch;`. Caught by the compiler.
+2. **Wrong separator contract.** I invented a `\0`-separated `tokenize_unjoined`; the old port
+   emitted **space-joined** text, and `stats.rs` splits with `py_split` (whitespace). With NUL,
+   every corpus collapsed to one token and BLEU returned 0.0. The frozen-oracle suite caught this
+   as 13/14 failures — exactly what it is for.
+3. **`preprocess_bleu` did not clear `out`.** The old one did; an existing test caught it.
+
+**Current state.** Rust suite **100 passed, 0 failed** with the port deleted. Python path via the
+rebuilt extension: frozen-oracle **13 of 14 pass**, one fuzz case fails —
+`fuzz18:BLEU intl`, where `½}` must stay whole and `@½}` glues `@` to the fraction. `½` is not an
+ASCII digit, so the end-of-line glue logic does not fire, and `@` is not in my leading-glue class.
+A niche shape, unmeasured until now.
+
+**Next.** Close that one case, then run the parity suite against the rebuilt extension and commit
+the deletion.

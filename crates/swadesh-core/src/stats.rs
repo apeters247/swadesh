@@ -8,7 +8,7 @@ use rustc_hash::FxHashMap;
 use crate::ngram::{clipped_matches, count, max_merge};
 use crate::score::chrf_f_score;
 use crate::table::{fits, packed_windows, CountTable};
-use crate::tokenize::{tokenize_unjoined, Tokenizer};
+use crate::tokenize_dispatch::{tokenize_unjoined, Tokenizer};
 use crate::unicode::{is_py_space, py_rstrip, py_split};
 
 /// Interns string tokens into dense u32 ids (per segment).

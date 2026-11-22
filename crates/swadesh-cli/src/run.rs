@@ -4,7 +4,7 @@ use std::borrow::Cow;
 use std::io::Write;
 
 use swadesh_core::stats::{bleu_segment, chrf_segment, BleuConfig, ChrfConfig};
-use swadesh_core::tokenize::Tokenizer;
+use swadesh_core::Tokenizer;
 use swadesh_core::{
     bleu_corpus_stats, chrf_corpus_stats, chrf_f_score, compute_bleu, ter_corpus_stats,
     ter_segment, BleuScoreConfig, Smooth, SumMode, TerConfig, TerError,

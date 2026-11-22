@@ -380,15 +380,15 @@ fn ter_unbalanced_length_pairs_match_sacrebleu() {
 fn preprocess_bleu_rstrips_then_tokenizes_like_sacrebleu() {
     // sacrebleu _preprocess_segment: tokenizer(sent.rstrip()); 13a output from sacrebleu Tokenizer13a.
     let mut out = String::new();
-    swadesh_core::tokenize::preprocess_bleu(Tokenizer::T13a, "Hello, world!   ", &mut out);
+    swadesh_core::preprocess_bleu(Tokenizer::T13a, "Hello, world!   ", &mut out);
     assert_eq!(out, "Hello , world !");
-    swadesh_core::tokenize::preprocess_bleu(Tokenizer::None, "keep  this \t", &mut out);
+    swadesh_core::preprocess_bleu(Tokenizer::None, "keep  this \t", &mut out);
     assert_eq!(out, "keep  this");
 }
 
 #[test]
 fn tokens_splits_on_python_whitespace() {
     // str.split() semantics: runs of any Unicode whitespace separate tokens.
-    let toks: Vec<&str> = swadesh_core::tokenize::tokens("a  b\tc\u{a0}d").collect();
+    let toks: Vec<&str> = swadesh_core::tokens("a  b\tc\u{a0}d").collect();
     assert_eq!(toks, vec!["a", "b", "c", "d"]);
 }

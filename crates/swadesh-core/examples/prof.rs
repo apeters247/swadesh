@@ -10,11 +10,11 @@ fn main() {
     let mut out = String::new();
     let t = Instant::now();
     let mut acc = 0usize;
-    for l in &lines { tokenize::tokenize_unjoined(Tokenizer::T13a, l, &mut out); acc += out.len(); }
+    for l in &lines { tokenize_dispatch::tokenize_unjoined(Tokenizer::T13a, l, &mut out); acc += out.len(); }
     println!("13a tokenize      {:6.0} ns/line ({acc})", t.elapsed().as_nanos() as f64 / n);
     let t = Instant::now();
     let mut toks = 0usize;
-    for l in &lines { tokenize::tokenize_unjoined(Tokenizer::T13a, l, &mut out); toks += unicode::py_split(&out).count(); }
+    for l in &lines { tokenize_dispatch::tokenize_unjoined(Tokenizer::T13a, l, &mut out); toks += unicode::py_split(&out).count(); }
     println!("13a tok+split     {:6.0} ns/line ({toks} toks)", t.elapsed().as_nanos() as f64 / n);
     let cfg = BleuConfig { tokenizer: Tokenizer::T13a, max_order: 4 };
     let mut row = Vec::new();
