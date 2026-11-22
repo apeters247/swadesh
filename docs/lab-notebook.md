@@ -239,3 +239,41 @@ committed to the repo, and no Rust was written from them.
 `13a`, and `zh` before the port can be deleted, and `13a` has the same numeric-protection problem
 plus its own class. At this rate Phase 1 alone is several more sessions. That is worth knowing now
 rather than at the end: the clean-room is a multi-week effort and 30% of it is four tokenizers.
+
+---
+
+## 2026-11-22 — Phase 1: assessment, not another attempt
+
+**Attempted.** Two structural models, quickly, to test whether the tokenizers are converging:
+1. A single substitution pattern with numeric clusters as consuming alternatives.
+2. The same, with "any digit-bearing run" as the number definition.
+
+**Measured.** 99 mismatches on two files (3,485 lines) for model 1, 115 for model 2, against 30 for
+the best rule-list model from the previous session. Neither converges; each new case
+(`20x16` → `20x16` but `16 x 12` → `16 x 12`, `£ 25 ( $ 33 )` but `(4)` → `(4)`) contradicts the
+previous generalisation.
+
+**Assessment, stated plainly.** Five sessions of Phase 1 have produced one of four tokenizers
+(`none`/`char`, verified), plus one genuinely reusable result (the `re.sub` insertion emulator,
+0/20,018). `intl` is stuck at 99.78% and `13a` / `zh` are untouched. The bottleneck is not effort:
+it is that these tokenizers are *programs* whose behaviour is produced by the interaction of a
+padding pass, a numeric-protection pass and CPython's write-boundary rule, and I have been trying to
+reconstruct them from input–output samples. That is the wrong tool for the job, and I can see it now
+clearly enough to stop.
+
+**The two honest routes from here, for the owner to decide:**
+- **A. Read the documented algorithm, not the examples.** The `intl`/`13a` tokenizers are described in
+  the Moses documentation and in the papers; deriving the padding-then-protection algorithm from
+  those descriptions, rather than fitting regexes to samples, is the correct method and is roughly
+  one focused session per tokenizer. This keeps the clean-room claim clean.
+- **B. Carve the tokenizers out of the commercial licence.** Keep `tokenize.rs` as Apache-2.0
+  (derived from sacreBLEU), dual-licence everything else, and say so in `NOTICE` and the README. The
+  product then has one Apache-2.0 component and a documented boundary. Faster and honest, but the
+  "fully commercialisable" claim becomes "commercial except the tokenizers".
+
+Route A is what the goal asks for. Route B is what a business decision might prefer. I am not
+choosing between them unilaterally because the first costs several more sessions and the second
+changes what the licence means — that is the owner's call.
+
+**State.** Committed this session: nothing beyond notebook entries; no code changes (the prototype
+work lives outside the repo). Repo is green: 517 tests passed as of the last full run.
