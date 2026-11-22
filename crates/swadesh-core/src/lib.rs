@@ -12,6 +12,8 @@ pub mod table;
 pub mod ter;
 pub mod tables;
 pub mod tokenize;
+pub mod tokenize_nonechar_clean;
+pub mod tokenize_zh_clean;
 pub mod unicode;
 
 

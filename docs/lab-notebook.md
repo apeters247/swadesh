@@ -86,3 +86,47 @@ against the frozen corpus (zero mismatches), then delete the port in a separate 
 
 **Blockers carried forward.** No GitHub credentials on the VPS, so nothing is pushed; two Phase 0
 commits (`9f9e6e3`, `0f77954`) are local only. Deploy key still needs to be added by the owner.
+
+---
+
+## 2026-11-22 — Phase 1 implementation, partial (swarm of 4)
+
+**Attempted.** Reimplement the tokenizers from the spec, one subagent per tokenizer.
+
+**Delivered and verified.**
+- `tokenize_nonechar_clean.rs` — `none` and `char`. 8/8 unit tests pass; the agent
+  differentially tested 31,552 strings (hex-encoded output equality) against sacreBLEU as a
+  black box with zero mismatches. Wired into `lib.rs` and committed.
+- `tokenize_zh_clean.rs` — installed but **not accepted**: 6/7 tests, and the failing one is the
+  `.`/`,` number rule. Its author measured 23/2037 mismatches on WMT22 en-zh and 130/1875 on
+  zh-en, and traced them to hyphens and decimals. Left out of the commit.
+
+**Not delivered.** `intl` (agent returned a one-line reply and no file) and `13a` (agent wrote
+nothing, reporting it ran on the OMEN laptop with a different repo layout and no access to the
+frozen corpus).
+
+**Spec errors found by measurement, all corrected in `docs/spec/tokenizers.md`.**
+1. The `char` postcondition is false: `char` keeps whitespace as tokens (`"ab cd"` → `"a b   c d"`),
+   collapsing would change scores.
+2. `13a`'s class is not `\p{P} \p{S}`: it is exactly 30 ASCII characters, and non-ASCII punctuation
+   (`§ ° £ « » —`) is never split. `\p{N}` has no observable effect beyond ASCII digits.
+3. The `.,-` rules are a Moses-style numeric-key rule, not the naive "non-digit + `.`" I spec'd;
+   `12,34` stays whole, `5.,6` splits, and the write-boundary semantics do not decompose into
+   independent passes.
+
+That is three specifications in a row where the document I wrote from published sources was wrong
+and measurement corrected it. The lesson is not "the spec is useless" — it is that the spec must be
+written *with* the oracle in hand and corrected before implementation, which is what now happens.
+
+**Toolchain.** The `zh` agent claimed the VPS rustc was a broken custom build. It is stock rustup
+1.100.0; its failing test reproduces here honestly, and its `none`/`char` sibling compiled and
+passed 8/8 on the same toolchain. Treat that claim as unfounded.
+
+**Swarm lesson.** Two of four subagents ran in a place that could not see the repo and produced
+nothing usable, without failing loudly. For Phase 2–3, give each subagent an explicit first step:
+"`ssh vps-public 'ls /var/www/llmeval'` and confirm it works; if not, stop and report" before any
+code is written.
+
+**Next.** `13a` is the hard one and needs the numeric-key rule pinned down against the frozen
+corpus. Get `intl` and `13a` done, then run `tests/test_frozen_oracle.py` and delete the port only
+after zero mismatches.

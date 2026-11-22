@@ -25,11 +25,20 @@ for `--lowercase`, lowered by the caller. Tokenizers do not lowercase.
 
 ## Common postcondition
 
-Each tokenizer maps a string to a string. The result is always `" ".join(result.split())` — i.e.
-tokens separated by exactly one ASCII space, no leading or trailing space. Where a rule below can
-produce adjacent spaces, they are collapsed by that final step. The "unjoined" variants (`tok_*_
-unjoined`) emit the same tokens separated by `\0` and are an internal optimisation; they are not
-observable.
+Each tokenizer maps a string to a string. For `13a`, `intl` and `zh` the result is
+`" ".join(result.split())`: tokens separated by exactly one ASCII space, no leading or trailing
+space. Where a rule can produce adjacent spaces, they are collapsed by that final step.
+
+**`char` is the exception, and the first draft of this document got it wrong.** `char` emits one
+token per Unicode scalar value and keeps whitespace as its own token, so runs do not collapse:
+measured `"ab cd"` → `"a b   c d"`, `"a  b"` → `"a     b"`, `" x "` → `"  x  "`. Collapsing would
+change the token count and therefore the score.
+
+`none` is the identity, whitespace included: `"ab cd"` → `"ab cd"`. At token level this agrees with
+the postcondition, because the consumer splits on Python whitespace anyway.
+
+The "unjoined" variants emit the same tokens separated by `\0` and are an internal optimisation;
+they are not observable.
 
 ## 1. `none`
 
