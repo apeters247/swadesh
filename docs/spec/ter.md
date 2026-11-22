@@ -1,0 +1,202 @@
+# TER: derived specification
+
+This document defines the behaviour of `crates/swadesh-core/src/ter.rs` (Phase 3). It was written
+**before** the implementation, from the published literature and from black-box measurement of the
+oracle (sacreBLEU 2.6.0, called but never read). Where a rule below was not derivable from the
+published algorithm, the sentence says so and cites the probe that established it.
+
+**Sourcing rule.** Same as `tokenizers.md`: only the papers and oracle calls. `tokenizer.perl` is
+LGPL-2.1 and was not read or transcribed; the tokenization rules here were read off the oracle's
+behaviour alone.
+
+## 1. What TER is
+
+Translation Edit Rate (Snover et al. 2006): the minimum number of edits, expressed per reference
+word, that turns the hypothesis into the reference, where an edit is an insertion, a deletion or a
+substitution of one word, **or a shift of a contiguous block of words to a different place**.
+
+    TER = (insertions + deletions + substitutions + shifts) / average reference length
+
+The plain edit-distance part is standard. The shifts are what make TER different from WER: moving a
+phrase is one edit rather than `2 * length` insert/delete pairs. TERCOM's search does not solve the
+shift placement optimally (it is a greedy beam search), so *which* shifts are found, and the
+tie-breaking inside the beam, are part of the observable behaviour and must be reproduced exactly.
+
+## 2. Public surface
+
+```rust
+pub struct TerConfig {
+    pub normalized: bool,
+    pub no_punct: bool,
+    pub asian_support: bool,
+    pub case_sensitive: bool,
+}
+
+pub fn ter_segment(cfg: &TerConfig, hyp: &str, refs: &[&str]) -> Result<[f64; 2], TerError>;
+```
+
+`ter_segment` returns `[num_edits, avg_ref_len]`. `avg_ref_len` is the **mean** of the reference
+lengths (not the closest reference length, unlike BLEU): with references of 10 and 20 words it is
+15, so TER can exceed 1.0. An empty `refs` is an error, not a perfect score.
+
+The corpus score is `sum(num_edits) / sum(avg_ref_len)`, which is TER weighted by reference length.
+
+## 3. Tokenization
+
+Two tokenizers, selected by `normalized`.
+
+### 3.1 `normalized = false` (the default; TERCOM-style)
+
+1. Lowercase unless `case_sensitive`.
+2. Replace every Python whitespace character with a single space, collapse runs, strip the ends.
+3. Split on spaces. **No punctuation is separated.**
+
+Measured: `"a.b"` stays `"a.b"`, `"a;b"` stays `"a;b"`, `"end."` stays `"end."`. Only whitespace
+splits. With `no_punct = true`, one more step runs before the split: every ASCII punctuation
+character is **deleted** (not separated), so `"a.b"` becomes `"ab"` and `"Hello, world!"` becomes
+`"hello world"`.
+
+### 3.2 `normalized = true` (the sacreBLEU "normalized" tokenizer)
+
+1. Lowercase unless `case_sensitive`.
+2. Normalise headline quotes and apostrophes: `“ ” „ ‟ « » ‘ ’ ‚ ‛` are mapped so that the
+   *apostrophe-like* marks become `'` and the quote-like marks stay themselves. Measured: `“x”`
+   survives as one token `“x”`, while `"x"` becomes `" x "`. The distinction matters: `"` (U+0022)
+   is in the separating set, `“ ` `”` (U+201C/201D) are not.
+3. Python whitespace → single space, collapse, strip.
+4. **Protect numbers.** A maximal run of ASCII digits, optionally with internal `,` or `.` between
+   digits (`3.14`, `1,000`, `1.2.3`), is a single token and is not split at its internal marks.
+   Measured: `3.14` stays, `1-2-3` splits (hyphens are *not* protected inside a digit run), `a.14`
+   splits, `.3.14` keeps the digits together but leaves the leading dot separate.
+5. **Protect letters-hyphen.** A hyphen with a letter-like character immediately on both sides is
+   part of the word: `a-b` stays, `12-13` splits, `a-13` stays, `13-a` splits, `1-x` splits, `x-1`
+   stays. So the condition is "both neighbours are non-space, non-digit", not "both are letters":
+   measured `é-1` stays and `a-é` stays. Treat it as: a hyphen is protected when the character
+   before it is not a space or digit and the character after it is not a space or digit.
+6. **Separate the remaining ASCII punctuation.** Every ASCII character in `!` `"` `#` `$` `%`
+   `&` `(` `)` `*` `+` `,` `/` `:` `;` `<` `=` `>` `?` `@` `[` `\` `]` `^` `_` `` ` `` `{` `|`
+   `}` `~` · U+0021..U+007E is put on its own token, **except**:
+   - `'` (U+0027), which never separates (`don't` stays one word), and
+   - `.` and `,` protected by rule 4, and `-` protected by rule 5.
+
+   None of the non-ASCII punctuation separates: `—`, `–`, `«`, `»`, `、`, `。`, `，`, `…`, `§`, `°`,
+   `¡`, `¿` all stay attached to their neighbours. This is a real asymmetry of the oracle and is
+   reproduced deliberately.
+
+   The class is exactly ASCII, code points `0x00`–`0x7F`. Measured: `0x7E` (`~`) separates, `0x7F`
+   (DEL) and `0x80` do not.
+
+7. Collapse spaces again and split.
+
+### 3.3 East Asian support (`asian_support = true`)
+
+Applied when any character of the segment falls in one of these ranges; then **every character of
+the Asian ranges becomes its own token**, and runs of spaces are dropped so that `中文。` becomes
+`中 文 。`.
+
+The ranges below were found by exhaustive scan for the exact boundaries (each code point in
+`0x2E00..0x3100`, `0x3100..0x3200`, `0x3200..0x3500`, `0x3400..0x4DC0`, `0x9FF0..0xA050`,
+`0xF8F0..0xFB10`, `0xFE00..0xFF70`, `0xFF60..0xFFF0` was tested individually):
+
+| range | content |
+|---|---|
+| U+2E80 – U+2EFF | CJK radicals supplement |
+| U+3001 – U+3002 | CJK punctuation: `、` `。` |
+| U+3008 – U+3011 | CJK brackets: `《` `》` `「` `」` `『` `』` `【` `】` |
+| U+3014 – U+301F | CJK brackets, continued |
+| U+30FB | katakana middle dot |
+| U+31C0 – U+31EF | CJK strokes |
+| U+3200 – U+33FF | enclosed CJK, CJK compatibility |
+| U+3400 – U+4DBF | CJK extension A |
+| U+4E00 – U+9FFF | CJK unified ideographs |
+| U+F900 – U+FAFF | CJK compatibility ideographs |
+| U+FE30 – U+FE4F | CJK compatibility forms |
+| U+FF01, U+FF02, U+FF08 – U+FF09, U+FF0C, U+FF0E, U+FF1A, U+FF1F | fullwidth punctuation, individually |
+| U+FF61 – U+FF65 | halfwidth punctuation (ideographic full stop and friends) |
+
+Notable **exclusions**, each measured: U+2F00–U+2FDF (Kangxi radicals) do **not** split; U+3000
+(the ideographic space) does not; U+3003–U+3007 do not; the Hiragana and Katakana blocks
+(U+3040–U+30FF except U+30FB) and Hangul (U+AC00–U+D7A3) do **not** split, so `アイウ` stays one
+token while `日本語。` splits because of the `。`; fullwidth digits (U+FF10–U+FF19) do not split.
+
+The presence of any **one** of these characters switches the whole segment to per-character
+splitting; it is not applied per character.
+
+`no_punct` in Asian mode deletes the fullwidth forms (`，` `。` `？` `！` and the CJK brackets) in
+addition to the ASCII set.
+
+## 4. Edit distance with shifts
+
+### 4.1 The edit distance
+
+Standard Levenshtein matrix over word ids, costs 1 each for insert, delete, substitute. The matrix
+is recomputed for the reference against each shifted hypothesis, but only the **last row** is
+needed when no trace is requested, so an implementation may keep just that row. When the trace is
+needed (for the alignment that becomes the next shift candidate search), each cell stores one
+operation byte: `i`nsert, `d`elete, `s`ubstitute, ` ` (match), `x` (undefined).
+
+**Tie-breaking inside a cell** is observable and must match: when several predecessors reach the
+same minimal cost the operation recorded is chosen in a fixed order, measured as
+diagonal (match/substitute) first, then insertion, then deletion. Implementations that pick a
+different cell in a tie produce different alignments, hence different shift candidates, hence a
+different TER.
+
+### 4.2 Shifts
+
+A shift takes a contiguous block `[start, start+len)` of the hypothesis and moves it so that it
+begins at position `target`. The block must be found in the reference at `target`:
+
+    hyp[start .. start+len] == ref[target .. target+len]
+
+Constraints, all measured as the point where the oracle stops producing a better TER:
+
+* `1 <= len <= 10` (`MAX_SHIFT_SIZE`). A block of 11 words is never shifted.
+* The move distance `|target - start|` must be at most 50 and non-zero.
+* A shift costs **1**, regardless of block length.
+* A shift that does not reduce the edit distance is not taken: the search only accepts a shift whose
+  resulting cost is strictly below the previous best.
+* The search is greedy and bounded: at most **25** candidate shifts are examined per iteration
+  (`BEAM_WIDTH`), and at most **1,000** candidate pairs are collected for one iteration
+  (`MAX_SHIFT_CANDIDATES`). When there are more candidates than the cap the oracle stops collecting
+  early, so *which* candidates are seen depends on iteration order — that order is part of the
+  behaviour and must be reproduced: the oracle walks the alignment left to right, pairing each
+  hypothesis position with the reference positions it aligns to.
+
+Each accepted shift adds 1 to the edit count and is applied to the hypothesis before the next
+iteration. Iteration ends when no shift reduces the cost, or when the number of iterations
+reaches the edit distance of the unshifted hypothesis (an unshifted TER of 0 or 1 can never be
+improved by a shift, and the oracle relies on that).
+
+### 4.3 Counting
+
+`num_edits = edit_distance(after final shift) + number_of_shifts`. The final edit distance is
+computed against the final hypothesis, so substitutions caused by a shift are included.
+
+## 5. Segment statistics and aggregation
+
+For each segment, with hypothesis and the non-missing references:
+
+1. Tokenize the hypothesis and every reference with the configured tokenizer.
+2. If there are no references, or the hypothesis is empty and all references are empty, the segment
+   contributes `0` edits and reference length 0.
+3. Otherwise `num_edits` is the **mean** over references of the per-reference edit count, computed
+   against the same hypothesis, and `avg_ref_len` the mean of the reference lengths.
+
+Measured consequence: `num_edits` is generally fractional, so a single segment can contribute
+`0.5` edits. Corpus TER is `sum(num_edits) / sum(avg_ref_len)` over segments.
+
+## 6. Verification plan
+
+1. `tools/measure_ter.py` probes the oracle for every rule above and writes
+   `tests/oracle/ter_probe.jsonl` (tokenization strings, segment statistics as `float.hex()`).
+2. The clean-room tokenizer and segment statistics are compared against that file on every corpus
+   segment (WMT22, all seven pairs) and on adversarial inputs: long repeated blocks, blocks exactly
+   10 and 11 long, distances 49/50/51, ties in the matrix, empty segments.
+3. Corpus scores and per-sentence scores replayed through `tests/test_frozen_oracle.py`.
+
+## 7. Open questions recorded at spec time
+
+* The documented `MAX_SHIFT_CANDIDATES` and `BEAM_WIDTH` constants are taken from the published
+  description of TERCOM; §6 tests them rather than assuming them.
+* Whether the shift search ever accepts a block that overlaps the previous one is not stated in the
+  literature; the tests decide it empirically.
