@@ -1934,3 +1934,38 @@ that are not in the brief's numbers: `tests/test_coverage_gaps.py` (8) and `test
 Almost all are `type(ours) is type(theirs)` assertions written before the score objects became
 swadesh's own; they are stale, not regressions. Two of the coverage-gap failures are real and are
 recorded in the next entry. None of them is caused by this port.
+
+
+---
+
+## 2026-11-22 (continued) — the two real-model runs are now frozen oracle fixtures
+
+The `qwen3.8-27b` and `llama3.3:70b` en-de runs were evidence but not regression tests. Both are now
+`tests/oracle/model-real-*.jsonl` cases, frozen with the unmodified freezer exactly like the five
+existing `real-*` models.
+
+**Provenance.** The cached translations are
+`/home/kpeters/eval-compare/work/data/real-qwen3.8-27b.jsonl` (117,394 bytes, md5
+`37fa86b3d722cbf64f6fcbaf79c035c3`) and `real-llama3.3_70b.jsonl` (116,246 bytes, md5
+`84a537a9312f43b2ba4232b459a6030a`), 150 records each, `i` 0..149, every `src` equal to
+`src_150.txt` line by line. The scored reference is `ref0_150.txt` (md5
+`d5d074e057ceadcc33b454df96dcd1d0`), byte-identical to the repo's existing `ref-*.txt` files. Both
+are plain copies into `tests/corpus/model/`, the repo convention; unlike the older `nxkd1` (250/150)
+and `qwen2.5vl` (600/150) entries there is no truncation quirk — 150 hypotheses against 150
+references.
+
+**What the freezer wrote.** Eight records per case — BLEU, BLEU floor0.1, BLEU intl, chrF, chrF b3,
+chrF++, TER, TER norm — each a corpus score plus 150 sentence scores, no exceptions. `MANIFEST.json`
+gains ten lines and now lists 15 cases, still `sacrebleu: 2.6.0`, `python: 3.11.14`. An md5 snapshot
+of the 14 pre-existing oracle files was identical after the run; the only tracked change is the two
+MANIFEST entries.
+
+**Result.** `tests/test_frozen_oracle.py`: **16 passed, 1 failed** on 3.11.14 — both new cases pass,
+the one failure is the pre-existing `fuzz42:BLEU intl`; **2 passed, 15 skipped** on 3.12.13 and
+3.14.4, the new cases skipping with the BLEU cross-version reason like every other BLEU fixture. The
+five-file selection is now **648 passed, 1 failed** on 3.11.14 and **634 passed, 15 skipped** on
+3.12.13 and 3.14.4.
+
+**Why it matters.** The "zero mismatches" claim for these two models is now a test the suite runs,
+not a number in a log. A future change to any metric that moves a real-output score fails here.
+

@@ -58,6 +58,11 @@
    "n": 150
   },
   {
+   "case": "real-llama3.3_70b",
+   "file": "model-real-llama3.3_70b.jsonl",
+   "n": 150
+  },
+  {
    "case": "real-nxkd1-k-q5",
    "file": "model-real-nxkd1-k-q5.jsonl",
    "n": 250
@@ -66,6 +71,11 @@
    "case": "real-qwen2.5vl_7b",
    "file": "model-real-qwen2.5vl_7b.jsonl",
    "n": 600
+  },
+  {
+   "case": "real-qwen3.8-27b",
+   "file": "model-real-qwen3.8-27b.jsonl",
+   "n": 150
   }
  ]
 }
