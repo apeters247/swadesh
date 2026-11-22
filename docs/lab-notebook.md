@@ -336,3 +336,32 @@ how `13a`'s attachment passes became tractable. Do that next rather than more al
 **Next.** Write the cluster pass as an explicit left-to-right scanner in Rust (not a regex), where the
 "consume what you matched" behaviour is natural, and test it against the frozen oracle. If that fails,
 `intl` is the one tokenizer to document as a known limitation.
+
+---
+
+## 2026-11-22 — Phase 1: intl scanner, 477 → 34
+
+**Attempted.** Replace the regex-alternative cluster model with an explicit left-to-right consuming
+scanner, as planned.
+
+**Result.** 34 mismatches on 13,455 lines (from 477; from 67 at the last plateau). Per pair:
+cs-en **0**, de-en 1, en-de **0**, en-ja 29, en-ru **0**, en-zh 3, zh-en 1.
+
+**What the scanner gained.** Every fix since adopting it held without regressing a previous shape:
+digit clusters consumed left to right, trailing class char at end of line, line-initial bracket
+atom, and the separator set (ASCII and full-width). That is qualitatively different from the regex
+attempts, where each fix broke another family.
+
+**What remains.** 29 of 34 are Japanese: the CJK comma `、` sometimes glues to a following full-width
+digit run ("、２つ" one token) and sometimes splits ("また 、 14金"), and the condition is not
+"what follows the comma" — isolated probes of "、３００万人" glue, the same shape in corpus context
+does not. This is context that depends on something I have not isolated: possibly the token before
+the comma, possibly width interaction.
+
+**Decision.** Stop here for this session rather than continue guessing. 34/13,455 on a tokenizer
+that is 0 on the four Latin/Cyrillic pairs is a real result worth keeping, but it is not exact, so
+nothing is committed to the repo. The scanner lives at `/var/www/llmeval-wt/scan_intl.py`.
+
+**Next.** Isolate the `、` condition with a targeted probe series (vary the token before the comma,
+the width of digits, the character after the run) before changing the scanner again. If it resolves,
+intl reaches 0 and both 13a and intl can be ported to Rust together.
