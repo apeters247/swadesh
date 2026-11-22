@@ -1,0 +1,71 @@
+{
+ "sacrebleu": "2.6.0",
+ "python": "3.11.14",
+ "cases": [
+  {
+   "case": "wmt22.cs-en",
+   "file": "wmt22.cs-en.jsonl",
+   "n": 400
+  },
+  {
+   "case": "wmt22.de-en",
+   "file": "wmt22.de-en.jsonl",
+   "n": 400
+  },
+  {
+   "case": "wmt22.en-de",
+   "file": "wmt22.en-de.jsonl",
+   "n": 400
+  },
+  {
+   "case": "wmt22.en-ja",
+   "file": "wmt22.en-ja.jsonl",
+   "n": 400
+  },
+  {
+   "case": "wmt22.en-ru",
+   "file": "wmt22.en-ru.jsonl",
+   "n": 400
+  },
+  {
+   "case": "wmt22.en-zh",
+   "file": "wmt22.en-zh.jsonl",
+   "n": 400
+  },
+  {
+   "case": "wmt22.zh-en",
+   "file": "wmt22.zh-en.jsonl",
+   "n": 400
+  },
+  {
+   "case": "fuzz",
+   "file": "fuzz.jsonl",
+   "n": 200
+  },
+  {
+   "case": "real-devstral_24b",
+   "file": "model-real-devstral_24b.jsonl",
+   "n": 150
+  },
+  {
+   "case": "real-granite4_small-h",
+   "file": "model-real-granite4_small-h.jsonl",
+   "n": 150
+  },
+  {
+   "case": "real-huihui_ai_qwen3.8-abliterated_latest",
+   "file": "model-real-huihui_ai_qwen3.8-abliterated_latest.jsonl",
+   "n": 150
+  },
+  {
+   "case": "real-nxkd1-k-q5",
+   "file": "model-real-nxkd1-k-q5.jsonl",
+   "n": 250
+  },
+  {
+   "case": "real-qwen2.5vl_7b",
+   "file": "model-real-qwen2.5vl_7b.jsonl",
+   "n": 600
+  }
+ ]
+}
