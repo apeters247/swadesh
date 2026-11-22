@@ -5,11 +5,18 @@ implementations, from published sources only. The implementations are written ag
 document; where a rule here is ambiguous, the frozen oracle corpus (`tests/oracle/`) decides, and
 this document is corrected.
 
+**Governing sourcing rule (owner instruction, 2026-11-22):** derive the algorithm from published
+prose and from measured behaviour of the oracle as a black box. **Do not read or copy any
+implementation source** — not sacreBLEU's, not Moses `tokenizer.perl` (LGPL-2.1; its rule sequence
+must not be transcribed), not any other tokenizer. Where this document cites "Moses behaviour", it
+means *the documented behaviour in the literature*, not its code.
+
 **Sources used** (none of them sacreBLEU source code):
 
 - Koehn & Knowles, *Six Challenges for Neural Machine Translation* (WMT 2017), which states the
   rule set used for the `13a` tokenizer and which Moses implements in `moses/baseline/moses-scripts`.
-- Moses `tokenizer.perl` behaviour, as documented in the Moses manual and its README.
+- The Moses tokenizer's *documented* behaviour as described in the literature and the manual —
+  never its source, which is LGPL-2.1 and may not be transcribed.
 - The Unicode Standard, Annex #29 (text segmentation) and the character database, for whitespace
   and the punctuation/symbol/number general categories.
 - Python's `str` documentation for the semantics of `str.split()`, `str.strip()` and `str.lower()`,
