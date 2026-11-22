@@ -500,3 +500,33 @@ latter, so this stays open rather than being waved through.
 character shape is the point of diminishing returns for this session. The productive next steps are
 `zh` (untouched, character-level, no attachment engine needed) and Phase 2 (BLEU/chrF statistics),
 which are independent of this gap.
+
+---
+
+## 2026-11-22 — Phase 1: zh measured and ported; 287/13455 corpus, 11/5000 fuzz
+
+**Measured, exhaustively.** Swept all 1,112,032 Unicode scalars with `"a<c>b"`: 23 splitting ranges,
+carried as data in the Rust module. Confirms the historical defect (U+2060..U+2A6D admitted).
+
+**Built.** `crates/swadesh-core/src/tokenize_zh_clean.rs`: range table + binary search, Latin runs
+accumulate, plus a second measured rule the table does not capture (a `-` splits when the previous
+character is a digit).
+
+**Measured result.** 287 / 13,455 corpus lines and 11 / 5,000 fuzz cases. Down from 1,606 / 847 at
+first run, so the port is converging, but it is not exact.
+
+**Two bugs found by the harness, both mine:**
+1. **A transcription error in the range table** — I wrote `0x200B..0x2017` where the measurement says
+   `0x200B..0x2027`. That silently un-split ellipsis and curly quotes, costing 1,300 corpus lines.
+   A diff of the Rust table against the JSON measurement now catches this class of error in seconds;
+   it should have been the first thing I ran.
+2. **A false "measured" class.** My first `splits_any` probe (OR-ing several contexts) reported
+   1,112,012 code points as splitting, i.e. everything. A probe that says "all" is broken, not a
+   finding; the single-context probe was the correct instrument.
+
+**Correction to my own prediction.** I said `zh` would be easy because it is character-level. It is
+not: the `.` attachment (`a.9` splits, `.5` and `5.5` do not) is the same number-attachment family
+that made `13a` and `intl` hard. Character-level refers to the *splitting*, not to the exceptions.
+
+**State.** Not committed: 287 mismatches is not exact. 13a remains the one tokenizer that passes on
+corpus data (0/13,455, 1 fuzz case open).
