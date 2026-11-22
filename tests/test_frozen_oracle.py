@@ -21,6 +21,33 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "bench" / "data"
 CORPUS = Path(__file__).resolve().parent / "corpus" / "model"
 
+def _fixture_python() -> str:
+    """The interpreter the frozen expectations were recorded on, from MANIFEST.json."""
+    manifest = ORACLE / "MANIFEST.json"
+    if not manifest.exists():
+        return ""
+    return json.loads(manifest.read_text(encoding="utf-8")).get("python", "")
+
+
+FIXTURE_PYTHON = _fixture_python()
+
+
+def _running() -> str:
+    import platform
+
+    return platform.python_version()
+
+
+def _version_sensitive(base: str) -> bool:
+    """BLEU's score depends on CPython's float summation, which changed in 3.12 and 3.14.
+
+    The frozen expectations were recorded on one interpreter, so on another the scores legitimately
+    differ by a few ulp; `--python-version` exists to reproduce a chosen one deliberately. Comparing
+    them across versions would test CPython, not swadesh.
+    """
+    return base.startswith("BLEU")
+
+
 METRICS = {
     "BLEU": lambda tok: swadesh.BLEU(tokenize=tok),
     "BLEU floor0.1": lambda tok: swadesh.BLEU(tokenize=tok, smooth_method="floor", smooth_value=0.1),
@@ -89,6 +116,12 @@ def _compare(entry):
             m.corpus_score(hyps, refs)
         assert type(ei.value).__name__ == want["exc"], name
         return
+
+    if _version_sensitive(base) and FIXTURE_PYTHON and FIXTURE_PYTHON != _running():
+        pytest.skip(
+            f"BLEU expectations were recorded on Python {FIXTURE_PYTHON}; "
+            f"this is {_running()}, where CPython sums floats differently"
+        )
 
     got = m.corpus_score(hyps, refs)
     assert got.score.hex() == want["score"], f"{name}: corpus score"
