@@ -1313,4 +1313,35 @@ reference 150. There the oracle reports **121** edits and I report **125** — m
 shifts than the oracle's, with 131 candidate pairs available. Reordering those candidates the way the
 oracle walks them is the remaining work, and it is now the only TER difference.
 
-Also still open: the `fuzz42` intl row layout, unchanged from the previous session.
+Also still open: the `fuzz42` intl row layout, unchanged from the previous session.---
+
+## 2026-11-22 (continued) — last TER case diagnosed to the candidate scoring, not fixed
+
+The remaining TER difference is `real-qwen2.5vl_7b:TER`, 3 of 600 segments. On segment 3 (87
+hypothesis words against 150 reference words) the oracle reports **121** edits and swadesh **125**.
+
+**Everything upstream of the scoring now matches.** Measured on that segment:
+
+| quantity | oracle | swadesh |
+|---|---|---|
+| alignment (`align`) | `[-1,-1,-1,0,1,2,…]`, 150 entries | identical |
+| `hyp_err` | `[0,1,1,1,1,0,1,0,1,…]` | identical |
+| `ref_err` | `[1,1,1,0,1,1,1,1,0,0,…]` | identical |
+| candidate pairs | 131 | 131 |
+| pairs passing the filters | 34 | 34 |
+| candidates evaluated in round 0 | 65 | 67 |
+
+So the tokenizer agrees, the derivation of the alignment agrees, the pair enumeration agrees and the
+filter logic agrees. The divergence is in **how a candidate is scored**, which moves the chosen
+shift: the oracle's round 0 takes gain 3 in 65 candidates, mine takes gain 1 in 67. Downstream that
+compounds over seven-ish rounds into 121 against 125.
+
+**Where to look next.** The candidate score is `pre_score - cost`, where `cost` is the banded
+distance of the shifted hypothesis. Both sides are banded with the same width formula, so the
+difference is probably *which* `pre_score` each round starts from, or an off-by-one in the shifted
+hypothesis itself. The cheapest next probe is to log the per-candidate `cost` on both sides for round
+0 and diff the two lists — the first candidate that differs names the bug.
+
+**State.** No code change this session; the tree is back to the committed state and the suite stands
+at **517 passing, 3 failing** (this case, `real-granite4_small-h:TER`, and the `fuzz42` intl row).
+Rust 13 suites green. I reverted rather than leave instrumentation in the tree.
