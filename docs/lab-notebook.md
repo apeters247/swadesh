@@ -277,3 +277,34 @@ changes what the licence means — that is the owner's call.
 
 **State.** Committed this session: nothing beyond notebook entries; no code changes (the prototype
 work lives outside the repo). Repo is green: 517 tests passed as of the last full run.
+
+---
+
+## 2026-11-22 — Phase 1: 13a solved (route A)
+
+**Owner decision.** Route A, with a hard sourcing rule: derive from published prose and black-box
+behaviour, read no implementation (Moses `tokenizer.perl` is LGPL-2.1 and must not be transcribed).
+Recorded in `docs/spec/tokenizers.md`.
+
+**Result.** `docs/spec/13a-algorithm.md` — a derived five-stage algorithm, verified at **0 mismatches
+on all 13,455 WMT22 lines across seven language pairs, and 0 on 5,000 adversarial fuzz cases.**
+
+**How it got there.** The breakthrough from the previous session (CPython's `re.sub` insertion rule,
+0/20,018) made the attachment stage expressible. Then three measured corrections:
+1. The padding class is **exactly 30 ASCII characters** — measured over 1,112,032 Unicode scalars;
+   no non-ASCII code point ever pads. My prose-derived `[^\w\s.,'-]` gave 333 mismatches on one file.
+2. `.` and `,` must be **excluded** from padding and owned by the attachment stage — otherwise
+   `3.126` → `3 . 126`.
+3. Digit tests must be written as "digit", not "non-digit", and the end-of-line `.` always detaches.
+
+**Why this works where six sessions of rule-fitting did not.** The earlier attempts tried to express
+the *result* as one rule. This expresses the *process*: normalise, pad a measured class, then apply
+three attachment passes whose boundary interaction is the verified `re.sub` emulation. Each stage is
+checkable on its own, and the class is data measured from the oracle rather than inferred from prose.
+
+**Cost.** One focused session once the emulator existed. `intl` should be cheap by comparison: its
+padding class is already measured as `\p{P} ∪ \p{S}` (0 differences over the full range), which is
+the same shape. `zh` is character-level and needs no attachment engine.
+
+**Next.** Port `13a` and `intl` to Rust against the emulator, verify through the frozen oracle, then
+delete `tokenize.rs`.
