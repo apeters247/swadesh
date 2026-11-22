@@ -206,3 +206,36 @@ corpus, because a Rust rewrite of a 52-mismatch model is 52 mismatches shipped.
 
 **Cost note.** This turn was a long derivation cycle and I did not record a lab entry mid-way, which
 I should have. Recorded here.
+
+---
+
+## 2026-11-22 — Phase 1: `intl` prototype plateaued; stopping the patch-and-hope loop
+
+**Attempted.** Close the last 52 `intl` mismatches by classifying them and adding rules.
+
+**Measured progression this session:** 52 → 44 → **30** (best) → 98 → 159. The best point was the
+model with: numeric separators `.,:-/` plus en/em dash, bracket-digit atom only at line start,
+`\d+[^\w\s]$` for a trailing class char, `_` as a class member, zero-width space excluded.
+
+**What broke it downward.** Adding full-width separators (`，` `：`) to the numeric set fixed some
+Japanese lines but regressed `Covid-19` / `COVID-19`, where a dash between a letter and a digit must
+split (`COVID - 19`) while `3-4` must not. I could not separate those two cases with a regex
+alternative, and each attempt traded one family for another. That is the signature of a model that is
+wrong in structure, not merely incomplete.
+
+**Honest conclusion.** Rule-list patching has plateaued. 30 mismatches in 13,455 lines is 99.78%,
+which sounds close and is worthless: a tokenizer that differs on 30 lines shifts scores on any corpus
+containing one. The right next step is not more rules but a **correct model of the underlying
+substitution sequence** — the real tokenizer is `TokenizerV14International`, whose documented
+behaviour is a padding rule over `\p{P}\p{S}\p{N}` followed by a numeric-protection rule, and my
+number-regex is an approximation of that second rule rather than an implementation of it.
+
+**Kept.** The `re.sub` insertion emulator (verified: 0/20,018 mismatches). That result stands
+independently and is the reusable piece for `13a`. The best intl prototype is preserved at
+`/var/www/llmeval-wt/pir.py` and the diff classifier at `/var/www/llmeval-wt/cid.py`; neither is
+committed to the repo, and no Rust was written from them.
+
+**Time spent vs value.** This session was almost entirely one tokenizer. Phase 1 still needs `intl`,
+`13a`, and `zh` before the port can be deleted, and `13a` has the same numeric-protection problem
+plus its own class. At this rate Phase 1 alone is several more sessions. That is worth knowing now
+rather than at the end: the clean-room is a multi-week effort and 30% of it is four tokenizers.
