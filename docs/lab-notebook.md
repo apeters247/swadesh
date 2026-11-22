@@ -834,3 +834,32 @@ optimising for inputs that never occur at the cost of inputs that do.
 documented 22-line fuzz divergence, and record the fuzz file as advisory rather than a gate. The
 alternative — matching all 22 — requires the oracle's exact internal ordering, which four sessions
 have not reproduced and which changes nothing anyone can measure on real data.
+
+---
+
+## 2026-11-22 — Phase 7 pre-work: provenance guard added
+
+**Built.** `tests/test_provenance.py` — the Phase 7 criterion, written now so it catches regressions
+as the remaining phases land rather than at the end. **11 passed.**
+
+It enforces four things:
+1. No Python module imports `sacrebleu` outside the allowed set. The set is `__init__.py` (the
+   `patch()` adapter), `verify.py` (which compares against sacrebleu **on purpose** — that is the
+   tool's job), and `metrics.py` / `significance.py` / `cli.py`, which are Phase 5 targets and leave
+   the list as each is rewritten.
+2. No Rust source describes itself as a port unless it is on `KNOWN_PORTS`, which currently holds
+   only `crates/swadesh-core/src/ter.rs` (Phase 3). **The list may only shrink**; adding an entry is
+   the regression the guard exists to catch.
+3. `KNOWN_PORTS` may not list deleted files, so a completed phase must be recorded by removal.
+4. The four clean-room tokenizer modules exist and `tokenize.rs` has not come back.
+
+**It found two things on the first run**, both correct and both informative: `verify.py`'s import
+legitimate, and `ter.rs` still a port — which is exactly the remaining Phase 3 work, now tracked.
+
+**Slow suites.** `test_cli`, `test_ter`, `test_regressions`, `test_coverage_gaps` ran past the
+3000 s budget at ~63% with **zero failures** recorded. Not a failure — an environment limit; these
+suites are slow because they shell out per case. They need splitting or a longer budget per run.
+
+**Incidental measurement.** The in-tree speed check, running through the new clean-room tokenizers
+and the dispatch, reports **127.2× vs sacreBLEU on 20k lines** (7.71 s → 0.06 s) — so the tokenizer
+replacement did not cost performance.
