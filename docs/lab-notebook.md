@@ -863,3 +863,30 @@ suites are slow because they shell out per case. They need splitting or a longer
 **Incidental measurement.** The in-tree speed check, running through the new clean-room tokenizers
 and the dispatch, reports **127.2× vs sacreBLEU on 20k lines** (7.71 s → 0.06 s) — so the tokenizer
 replacement did not cost performance.
+
+---
+
+## 2026-11-22 — Phase 2: clean-room BLEU statistics implemented and verified
+
+**Built** `crates/swadesh-core/src/bleu_stats_clean.rs` from `docs/spec/stats.md`: tokenisation via
+the dispatch, per-order clipped counts, closest reference length, row assembly. 4 unit tests.
+
+**Verified two ways:**
+- **Against the existing port**: 0 differing rows over **13,462 segments** of WMT22 (tokenizer 13a,
+  hyp compared against itself per line), so the new code agrees with what ships today.
+- **Against the oracle**: 0 differing rows over **5,360 segments** with real single-reference
+  streams across en-de, cs-en and zh-en. This is the check that matters — the port could share a
+  bug with itself, but not with sacreBLEU.
+
+**Two spec errors found by the differential**, both fixed in the code and to be fixed in the spec:
+1. **The statistics row is NOT interleaved.** It is `[hyp_len, ref_len, correct_1..N, total_1..N]` —
+   counts first, then totals. My spec said `c1, t1, c2, t2…`, which made all 13,455 rows differ.
+2. That layout matters because the scoring stage indexes the two halves separately; an interleaved
+   row silently produces wrong precisions rather than an error.
+
+**Method note.** My first A/B harness passed each line as its own reference, which is a weaker test
+than it looked; the reference-stream harness (tab-separated hyp/refs) is what actually exercises the
+clipping rule. Both are kept.
+
+**State.** Nothing wired in yet: `stats.rs` still serves the metric path and `bleu_stats_clean.rs` is
+additive, exactly as the tokenizer port was before its A/B justified deletion.
