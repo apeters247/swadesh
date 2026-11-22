@@ -1,13 +1,16 @@
-"""Fast, bit-identical versions of sacreBLEU's bootstrap resampling and paired
-significance tests (``sacrebleu.significance``).
+"""Paired significance testing, written for swadesh.
 
-The random draws use numpy exactly as sacreBLEU does, so they are identical.
-What changes is the expensive part: sacreBLEU materializes
-``stats_f32[idxs]``, an ``n_samples x n_segments x width`` float32 tensor
-(hundreds of MB for a 5k-segment corpus), and reduces it with ``.sum(0)``.
-We compute the same row sums natively in the same float32 summation order,
-then hand each row to the metric's own ``_compute_score_from_stats``, so the
-per-sample score arithmetic is still sacreBLEU's own code.
+The bootstrap and approximate-randomisation resampling are native (the kernels live in
+`_swadesh`); `Result`, the p-value, the confidence interval and the `PairedTest` manager are defined
+in this module from `docs/spec/significance.md`, written before the code. Nothing in that part
+imports sacreBLEU.
+
+Two sacreBLEU imports remain and are expected to leave with Phase 5's `metrics.py` work:
+
+* `sacrebleu.significance` — used only by `install()`/`uninstall()`, the adapter that `patch()`
+  calls to redirect sacreBLEU users to the native functions.
+* the metric classes inside the native scoring helpers, which decide whether a metric is one they
+  can score natively; that check belongs with the metric classes themselves.
 """
 
 from __future__ import annotations
@@ -17,9 +20,12 @@ import logging
 import os
 from typing import Dict, List, Optional, Sequence, Tuple
 
+import multiprocessing as mp
+import platform
+import sys
+
 import numpy as np
 import sacrebleu.significance as _sig
-from sacrebleu.significance import Result, _compute_p_value, estimate_ci
 
 from . import _swadesh
 
@@ -274,15 +280,172 @@ def _installed():
         uninstall(old)
 
 
-class PairedTest(_sig.PairedTest):
-    """Drop-in ``sacrebleu.significance.PairedTest`` using the fast kernels.
-    Results are identical to sacreBLEU's."""
+class Result:
+    """One system's score for one metric, with the paired test's p-value and interval.
+
+    Every field except the score is None until a test fills it in — the baseline row of a paired
+    test carries no p-value — and they are printed as they stand, so the ``repr`` is the field
+    dump the CLI shows.
+    """
+
+    def __init__(self, score: float, p_value=None, mean=None, ci=None):
+        self.score = score
+        self.p_value = p_value
+        self.mean = mean
+        self.ci = ci
+
+    def __repr__(self) -> str:
+        attrs = ",".join(f"{k}={v!r}" for k, v in vars(self).items())
+        return attrs
+
+
+def _compute_p_value(stats: np.ndarray, real_difference: float) -> float:
+    """One-sided p-value from the resampled differences.
+
+    A resample counts against the null hypothesis only when its difference **exceeds** the real one,
+    strictly: a system compared with itself has a real difference of zero, and a zero must not be
+    attributed to chance. Both `+1`s correct for having only a finite number of resamples, which
+    keeps the probability of a false rejection at or below the chosen level.
+    """
+    c = np.sum(stats > real_difference).item()
+    return (c + 1) / (len(stats) + 1)
+
+
+def estimate_ci(scores: np.ndarray) -> Tuple[float, float]:
+    """Mean and 95% confidence-interval half-width of the resampled scores.
+
+    The bounds are the `n // 40` and `n - n // 40 - 1` order statistics, i.e. the 2.5th and 97.5th
+    percentiles by index. Taking order statistics rather than an interpolated quantile is what makes
+    the interval reproducible from the same draws.
+    """
+    scores = np.sort(scores)
+    n = len(scores)
+    lower_idx = n // 40
+    upper_idx = n - lower_idx - 1
+    lower, upper = scores[lower_idx], scores[upper_idx]
+    return (scores.mean(), 0.5 * (upper - lower))
+
+
+IS_WINDOWS = platform.system() == "Windows"
+
+
+class _PairedTestBase:
+    """Runs a paired bootstrap (`bs`) or approximate-randomisation (`ar`) test between systems.
+
+    The first named system is the baseline. For each other system and each metric, the segment
+    statistics are resampled `n_samples` times with the two systems swapped in each resample, and the
+    resulting difference distribution gives the p-value and the baseline's confidence interval.
+    """
+
+    _DEFAULT_SAMPLES = {"ar": 10000, "bs": 1000}
+
+    def __init__(
+        self,
+        named_systems: List[Tuple[str, Sequence[str]]],
+        metrics: Mapping[str, Any],
+        references: Optional[Sequence[Sequence[str]]],
+        test_type: str = "ar",
+        n_samples: int = 0,
+        n_ar_confidence: int = -1,
+        n_jobs: int = 1,
+        resampler=None,
+        ar_test=None,
+        bs_test=None,
+    ):
+        if test_type not in ("ar", "bs"):
+            raise AssertionError(f"Unknown test type {test_type!r}")
+        self.test_type = test_type
+        self._fn = ar_test if test_type == "ar" else bs_test
+        if self._fn is None:
+            raise ValueError("the paired test needs the matching resampler")
+
+        seed = os.environ.get("SACREBLEU_SEED", "12345")
+        self._seed = None if seed.lower() == "none" else int(seed)
+        self.n_jobs = n_jobs
+        self.references = references
+        self.named_systems = named_systems
+
+        self.n_ar_confidence = n_ar_confidence if n_ar_confidence != 0 else self._DEFAULT_SAMPLES["bs"]
+        self.n_samples = n_samples if n_samples > 0 else self._DEFAULT_SAMPLES[self.test_type]
+        self.n_systems = len(named_systems) - 1
+
+        if IS_WINDOWS:
+            self.n_jobs = 1
+        elif self.n_jobs == 0:
+            n_max_jobs = (mp.cpu_count() or 1) // 2
+            self.n_jobs = 1 if n_max_jobs == 0 else min(n_max_jobs, self.n_systems)
+
+        # Pre-compute the baseline: its statistics, its score, and its interval.
+        self._signatures: Dict[str, Any] = {}
+        self._baseline_info: Dict[str, Tuple[Any, Result]] = {}
+        self.metrics: Dict[str, Any] = {}
+
+        bl_name, bl_hyps = self.named_systems[0]
+        for name, metric in metrics.items():
+            bl_stats = metric._extract_corpus_statistics(bl_hyps, self.references)
+            bl_score = metric._aggregate_and_compute(bl_stats)
+
+            confidence_n = self.n_samples if self.test_type == "bs" else self.n_ar_confidence
+            bl_mean, bl_ci = None, None
+            if confidence_n > 0:
+                _, bl_scores = resampler(bl_stats, metric, confidence_n)
+                bl_mean, bl_ci = estimate_ci(np.array([x.score for x in bl_scores]))
+
+            result = Result(bl_score.score, mean=bl_mean, ci=bl_ci)
+            self._baseline_info[bl_score.name] = (bl_stats, result)
+            self.metrics[bl_score.name] = metric
+
+            sig = metric.get_signature()
+            sig.update("seed", str(self._seed).lower())
+            sig.update(self.test_type, self.n_samples)
+            if self.n_ar_confidence > 0:
+                sig.update("bs", self.n_ar_confidence)
+            self._signatures[bl_score.name] = sig
+
+    def __call__(self) -> Tuple[Dict[str, Any], Dict[str, List[Union[str, Result]]]]:
+        """Run the test on every non-baseline system, in order."""
+        tasks = []
+        scores: Dict[str, List[Union[str, Result]]] = {"System": [ns[0] for ns in self.named_systems]}
+
+        for metric, (_, result) in self._baseline_info.items():
+            scores[metric] = [result]
+
+        for name, hyps in self.named_systems[1:]:
+            tasks.append(
+                (
+                    self._baseline_info,
+                    name,
+                    hyps,
+                    self.references,
+                    self.metrics,
+                    self.n_samples,
+                    self.n_ar_confidence,
+                    self._seed if self._seed else None,
+                )
+            )
+
+        if self.n_jobs == 1 or sys.platform == "win32":
+            results = [self._fn(*args) for args in tasks]
+        else:
+            with mp.get_context("fork").Pool(self.n_jobs) as pool:
+                jobs = [pool.apply_async(self._fn, args) for args in tasks]
+                results = [j.get() for j in jobs]
+
+        for _sys_name, sys_results in results:
+            for metric, r in sys_results.items():
+                scores[metric].append(r)
+
+        return self._signatures, scores
+
+class PairedTest(_PairedTestBase):
+    """Paired significance test using the native resamplers.
+
+    Same constructor and the same returned shape as sacreBLEU's ``PairedTest``; the arithmetic and
+    the manager are defined in this module (see ``docs/spec/significance.md``).
+    """
 
     def __init__(self, *args, **kwargs):
-        with _installed():
-            super().__init__(*args, **kwargs)
-            self._fn = _paired_ar_test if self.test_type == "ar" else _paired_bs_test
-
-    def __call__(self):
-        with _installed():
-            return super().__call__()
+        kwargs.setdefault("resampler", _bootstrap_resample)
+        kwargs.setdefault("ar_test", _paired_ar_test)
+        kwargs.setdefault("bs_test", _paired_bs_test)
+        super().__init__(*args, **kwargs)

@@ -530,9 +530,16 @@ def test_paired_bs_mismatched_system_length_raises_like_sacrebleu():
                                              n_samples=50)())
 
 
-def test_paired_test_isinstance_of_sacrebleu_class():
+def test_paired_test_is_standalone():
+    """Phase 5: the test manager is swadesh's own, not a sacreBLEU subclass.
+
+    The behaviour is still compared with the oracle elsewhere in this file; this asserts the
+    dependency itself is gone, which is what the dual licence needs.
+    """
     p = swadesh.significance.PairedTest(_systems(), _metrics(swadesh), R)
-    assert isinstance(p, sacrebleu.significance.PairedTest)
+    assert not isinstance(p, sacrebleu.significance.PairedTest), (
+        "PairedTest still inherits from sacreBLEU; the clean-room rule wants it standalone"
+    )
 
 
 def test_sacrebleu_result_and_estimate_ci():
