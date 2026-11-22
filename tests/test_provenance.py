@@ -19,11 +19,17 @@ ROOT = Path(__file__).resolve().parents[1]
 PY = ROOT / "python" / "swadesh"
 RS = ROOT / "crates"
 
-# The only places allowed to touch sacrebleu:
-#   __init__.py     the patch() adapter and the original benchmark harness, both runtime interop
-#   verify.py       compares swadesh against sacrebleu ON PURPOSE -- that is the tool's job
-#   metrics.py, significance.py, cli.py   Phase 5 targets; each leaves this list as it is rewritten
-ALLOWED = {"__init__.py", "verify.py", "metrics.py", "significance.py", "cli.py"}
+# The only places allowed to touch sacrebleu, split by why.
+#
+# PERMANENT is the small set whose job IS to interoperate with sacreBLEU. It will never shrink:
+#   __init__.py   the patch() adapter, which redirects `import sacrebleu` users to swadesh
+#   verify.py     compares swadesh against sacrebleu on the user's data -- that is the tool's job
+#
+# PENDING is the Phase 5 backlog. Each module leaves this set as it is rewritten standalone, and the
+# test below fails if that set ever grows.
+PERMANENT = {"__init__.py", "verify.py"}
+PENDING = {"metrics.py", "significance.py", "cli.py"}
+ALLOWED = PERMANENT | PENDING
 
 IMPORT_RE = re.compile(r"^\s*(?:import\s+sacrebleu|from\s+sacrebleu)", re.M)
 PORT_RE = re.compile(r"(port of sacrebleu|ported from sacrebleu|identical to sacrebleu)", re.I)
@@ -35,12 +41,20 @@ def _py_files():
 
 @pytest.mark.parametrize("path", _py_files(), ids=[p.name for p in _py_files()])
 def test_python_imports_confined(path):
-    """Only the adapter files may import sacrebleu."""
+    """Only the adapter and the pending Phase 5 modules may import sacrebleu."""
     text = path.read_text(encoding="utf-8")
     if IMPORT_RE.search(text) and path.name not in ALLOWED:
         pytest.fail(
             f"{path.name} imports sacrebleu; the clean-room rule allows only {sorted(ALLOWED)}"
         )
+
+
+def test_pending_set_only_shrinks():
+    """Phase 5's backlog is a fixed list; a new entry would be a step backwards."""
+    assert PENDING <= {"metrics.py", "significance.py", "cli.py"}, (
+        f"PENDING gained an entry: {sorted(PENDING)}; the clean-room backlog must only shrink"
+    )
+    assert not (PERMANENT & PENDING), "a module cannot be both an adapter and pending work"
 
 
 # Files that are STILL ports, with the phase that will remove them. This list must only shrink;

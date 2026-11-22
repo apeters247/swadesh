@@ -1548,4 +1548,45 @@ moves with `metrics.py`.
 0 failing** on both 3.12 and 3.14. Rust untouched and green.
 
 **Next.** `metrics.py`, the largest of the five: it owns the score objects and `_aggregate_and_compute`,
-and the metric-class checks above move with it. Then `cli.py`, `verify.py`, `__init__.py`.
+and the metric-class checks above move with it. Then `cli.py`, `verify.py`, `__init__.py`.---
+
+## 2026-11-22 (continued) — Phase 5: the allowlist split, and two honest obstacles
+
+I set out to do `cli.py` and `verify.py`, the two small modules. Neither turned out to be the
+mechanical rewrite I expected, and the value of the session is that I now know why.
+
+**`verify.py` can never be standalone.** Its job is to compare swadesh against sacreBLEU *on the
+user's own data* and report any difference. Importing sacreBLEU is not a debt to pay off; it is the
+mechanism. The provenance test's comment had said as much ("that is the tool's job") but the module
+still sat in the same flat `ALLOWED` set as the Phase 5 backlog, which invites someone to try to
+"fix" it later.
+
+**The fix was structural.** `ALLOWED` is now `PERMANENT | PENDING`:
+
+* `PERMANENT` — `__init__.py` (the `patch()` adapter) and `verify.py` (the comparison tool).
+* `PENDING` — `metrics.py`, `significance.py`, `cli.py`, the actual backlog.
+
+Two new assertions: `PENDING` may never grow, and no module may appear in both sets. The distinction
+is now the test's, not a comment's.
+
+**`cli.py` is blocked on a packaging decision, not on code.** It is 19 lines that call
+`swadesh.patch()` and then delegate to sacreBLEU's `main`. The standalone replacement would be the
+**Rust CLI**, which already exists and is byte-verified against sacreBLEU. But maturin builds only
+the extension module, so a wheel carries no CLI binary, and `python -m swadesh.cli` could not find it.
+The parity tests also drive that entry point through 50+ flag combinations and compare stdout byte
+for byte, so changing what sits behind it is a re-verification job, not a rename. Adding a maturin
+binary target is the way through; I did not attempt it this session rather than half-wire a
+packaging change.
+
+**`metrics.py`, scoped precisely.** It subclasses sacreBLEU's three metric classes to inherit
+`_cache_references` (36 lines), `_aggregate_and_compute` (8 per metric), `_extract_reference_info`
+(26) and the `*Score` value objects whose formatting the CLI prints. swadesh already overrides
+`corpus_score` and `sentence_score`, so the inheritance is almost entirely for those. That is the day
+of work the plan anticipated.
+
+All of this is written up in `docs/phase5-status.md` so the next session starts from the obstacles
+rather than rediscovering them.
+
+**Result.** Suite **521 passing, 1 failing** — the extra pass is the new provenance assertion. Rust
+untouched and green. `PENDING` is down to `metrics.py` and `cli.py` in substance: `significance.py`
+is clean-room apart from its adapter seam, which leaves with `metrics.py`.
