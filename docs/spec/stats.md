@@ -41,17 +41,19 @@ For a hypothesis token sequence `h` of length `H` and reference sequences `r_1..
    The maximum is taken over references *before* clipping against the hypothesis, so a hypothesis
    count of 3 against references of 1 and 2 clips to 2, not to 1.
 3. **Closest reference length.** With `H` the hyp length, `R` is the reference length minimising
-   `|L - H|`. **On a tie the FIRST reference in order wins** — measured, and the opposite of the
-   commonly cited "shorter wins":
+   `|L - H|`. **On a tie the SHORTER reference wins** — provided the references arrive as separate
+   streams, which is the corpus layout:
 
-   | hyp | references | chosen |
+   | hyp | references (separate streams) | chosen |
    |---|---|---|
-   | 5 | 4, 6 | 4 |
-   | 5 | 6, 4 | 6 |
-   | 5 | 7, 4 | 7 |
-   | 5 | 4, 7 | 4 |
+   | 5 | `[7]`, `[3]` | 3 |
+   | 5 | `[3]`, `[7]` | 3 |
+   | 10 | `[12]`, `[8]`, `[20]` | 8 |
 
-   Ordering matters, so the implementation must preserve reference order.
+   **A caveat that cost a session to find:** several references packed into ONE stream behave
+   differently — `[r6, r2]` for hyp 4 gives 6, the first element. Two standard layouts therefore
+   disagree on ties, and a probe written with one layout will produce a rule that breaks the other.
+
 4. **Empty segments.** A segment with no tokens contributes `[0, R, 0…0]` with all `c_n` and `t_n`
    zero; the scoring stage handles it.
 5. **Effective order.** With `effective_order=True`, the scoring stage uses only orders below the
@@ -101,8 +103,10 @@ An implementation is acceptable iff:
 
 ## Questions settled by measurement (2026-11-22)
 
-1. **Closest-reference-length tie-break: first reference in order wins.** The table above; my draft
-   said "shorter wins" and that was wrong. This is why the spec is measured, not remembered.
+1. **Closest-reference-length tie-break: the SHORTER reference wins, with separate streams.** Two
+   drafts of this document were wrong in opposite directions ("shorter wins", then "first in
+   order"), and a third attempt to "fix" the implementation broke the parity suite. The table in
+   section 2.3 is the settled answer, including the single-stream caveat.
 2. **`whitespace=False` and `lowercase=True` are compatible in either order** for the case tested
    (`"A  B"` vs `"ab"` scores 100.0): whitespace removal happens on the raw text and lowercasing is
    independent, because deleting a space never changes a character's case.

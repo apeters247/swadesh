@@ -38,6 +38,10 @@ pub struct BleuConfig {
 
 /// sacreBLEU `BLEU._get_closest_ref_len`.
 pub fn closest_ref_len(hyp_len: i64, ref_lens: &[i64]) -> i64 {
+    // The original rule, restored after measurement: on an equal-distance tie the SHORTER
+    // reference wins. My "first reference wins" reading came from probes that passed several
+    // references inside ONE stream; with separate reference streams -- which is how corpus data
+    // arrives -- the shorter wins in both orders ("5 vs [7],[3]" -> 3 and "[3],[7]" -> 3).
     let (mut closest_diff, mut closest_len) = (-1i64, -1i64);
     for &r in ref_lens {
         let diff = (hyp_len - r).abs();
@@ -273,12 +277,20 @@ mod tests {
 
     #[test]
     fn closest_ref_len_matches_sacrebleu() {
-        // sacreBLEU `_get_closest_ref_len`: no references -> -1; ties go to the shorter reference.
+        // Measured against sacreBLEU 2.6.0. A tie goes to the SHORTER reference, provided the
+        // references arrive as separate streams -- the normal corpus layout:
+        //   5 vs [[7],[3]] -> 3 and 5 vs [[3],[7]] -> 3.
+        // Passing several references inside ONE stream behaves differently ([r6, r2] -> 6), and
+        // that difference is why an earlier draft of this test was wrong in both directions.
         assert_eq!(closest_ref_len(5, &[]), -1);
+        // Measured with SEPARATE reference streams, which is how corpus data arrives: the tie
+        // goes to the shorter reference in either order.
         assert_eq!(closest_ref_len(5, &[3, 7]), 3);
         assert_eq!(closest_ref_len(5, &[7, 3]), 3);
         assert_eq!(closest_ref_len(10, &[12, 8, 20]), 8);
-        assert_eq!(closest_ref_len(10, &[8, 12]), 8);
+        assert_eq!(closest_ref_len(10, &[8, 12, 20]), 8);
+        // Non-tie: the nearer reference wins regardless of order.
+        assert_eq!(closest_ref_len(10, &[20, 8]), 8);
     }
 
     #[test]
