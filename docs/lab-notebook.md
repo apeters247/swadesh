@@ -365,3 +365,32 @@ nothing is committed to the repo. The scanner lives at `/var/www/llmeval-wt/scan
 **Next.** Isolate the `、` condition with a targeted probe series (vary the token before the comma,
 the width of digits, the character after the run) before changing the scanner again. If it resolves,
 intl reaches 0 and both 13a and intl can be ported to Rust together.
+
+---
+
+## 2026-11-22 — Phase 1: intl at 9/13455, probe series resolved the main question
+
+**Probe series (the planned next step).** Varying one factor at a time around `、`:
+- **Decision before the comma matters, nothing else does.** `、２つ` glues at line start and after a
+  digit; `また、２つ` and `x、２つ` split. Digit width (ASCII vs full-width) and what follows the run
+  (`つ`, `万人`, nothing) are irrelevant.
+- That resolved 34 → **9** mismatches, with 87 attempted and reverted (allowing glue after any
+  separator token broke `また 、 14金`).
+
+**Remaining 9 shapes**, all one token starting with punctuation glued to a digit:
+`-22種類…`, `、２つのHDMI端子` (after `）`), `ロイヤルメール追跡24（1営業日`, `—2300`, `，4`,
+`，20`, `“2G`. Plus one genuinely different case: an emoji glued to a time (`19:06😅`).
+
+**The unresolved conflict, stated precisely.** `）` followed by `、２つ` glues; `また` followed by
+`, 14金` does not. Both have `、` after a separator-ended token, so "what precedes" alone does not
+decide it. Something about the *previous token's content* (it ends with a bracket vs a letter) does.
+One more probe series would answer it, but I have hit the "each fix breaks a family" pattern four
+times today and am stopping rather than adding a sixth rule on a guess.
+
+**State.** Scanner at `/var/www/llmeval-wt/scan_intl.py`, 9/13,455 = 99.93%. Not committed (not exact).
+13a remains the completed tokenizer (0/13,455 + 0/5,000 fuzz, committed as
+`docs/spec/13a-algorithm.md`).
+
+**Next.** One targeted probe on the previous-token content condition (`）` vs `また` vs `x` before
+`, digit`), then port 13a and intl to Rust together. Or, if it does not resolve in one probe, port
+13a and zh now and leave intl as the single documented gap.
