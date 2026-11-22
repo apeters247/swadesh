@@ -633,6 +633,35 @@ fn _py_sum<'py>(py: Python<'py>, items: &Bound<'py, PyList>, mode: Option<&str>)
     })
 }
 
+/// Run the command line in-process, returning `(exit_code, stdout, stderr)`.
+///
+/// The CLI writes to any `Write`, so it is captured here rather than run as a subprocess: the
+/// Python entry point `python -m swadesh.cli` calls this and the Rust CLI does the work, with no
+/// dependency on sacreBLEU and no second binary to ship.
+#[pyfunction]
+fn run_cli(py: Python<'_>, argv: Vec<String>) -> PyResult<(i32, String, String)> {
+    struct Buf(Vec<u8>);
+    impl std::io::Write for Buf {
+        fn write(&mut self, b: &[u8]) -> std::io::Result<usize> {
+            self.0.extend_from_slice(b);
+            Ok(b.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+    let (code, out, err) = py.detach(|| {
+        let mut buf = Buf(Vec::new());
+        let result = swadesh_cli::run_argv(&argv, &mut buf);
+        let text = String::from_utf8_lossy(&buf.0).into_owned();
+        match result {
+            Ok(()) => (0, text, String::new()),
+            Err(f) => (f.code, text, f.msg),
+        }
+    });
+    Ok((code, out, err))
+}
+
 #[pymodule(gil_used = false)]
 fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(_sum_mode, m)?)?;
@@ -656,6 +685,7 @@ fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(tokenize, m)?)?;
     m.add_function(wrap_pyfunction!(_extract_bench, m)?)?;
     m.add_function(wrap_pyfunction!(tokenize_batch, m)?)?;
+    m.add_function(wrap_pyfunction!(run_cli, m)?)?;
     m.add("GENERATED_PYTHON", swadesh_core::tables::GENERATED_PYTHON)?;
     m.add("GENERATED_REGEX", swadesh_core::tables::GENERATED_REGEX)?;
     Ok(())
