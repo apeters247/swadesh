@@ -139,10 +139,12 @@ class _FastMixin:
 
     def _py_statistics(self, hypotheses, references) -> list:
         """sacreBLEU's own statistics loop (its own reference cache, its own warnings)."""
-        if references:
-            ref_cache = _SacreMetric._cache_references(self, references)
+        # `references` may be a `_RefCache` (when the caller passed none) or a raw stream list.
+        streams = references.streams if isinstance(references, _RefCache) else references
+        if streams:
+            ref_cache = self._segment_ref_cache(streams)
         elif self._ref_cache:
-            ref_cache = _SacreMetric._cache_references(self, self._ref_cache.streams)
+            ref_cache = self._segment_ref_cache(self._ref_cache.streams)
         else:
             raise RuntimeError("No references provided and the cache is empty.")
         stats = []
@@ -175,6 +177,35 @@ class _FastMixin:
         unrecognised metric keeps working.
         """
         raise NotImplementedError
+
+    def _sentence_score(self, hypothesis, references):
+        """Score one segment against its references.
+
+        The reference list may contain `None` entries; they are not references, and a segment left
+        with none is the metric's own error path, which the statistics call decides.
+        """
+        self._check_sentence_score_args(hypothesis, references)
+        stats = self._extract_corpus_statistics([hypothesis], [[r] for r in references])
+        return self._aggregate_and_compute(stats)
+
+    def _segment_ref_cache(self, references):
+        """Per-segment reference info, and `num_refs` resolved from it.
+
+        For each segment the references are gathered across the streams and the `None` entries are
+        dropped *before* the count is taken — that is what makes a segment with one real reference
+        and one `None` a one-reference segment, and it is why `num_refs` can be -1: the counts vary
+        across segments. Each surviving line is preprocessed with this metric's segment
+        preprocessor before the per-metric reference info is extracted.
+        """
+        cache = []
+        seen = set()
+        for refs in zip(*references):
+            lines = [x for x in refs if x is not None]
+            seen.add(len(lines))
+            lines = [self._preprocess_segment(x) for x in lines]
+            cache.append(self._extract_reference_info(lines))
+        self.num_refs = seen.pop() if len(seen) == 1 else -1
+        return cache
 
     def _aggregate_and_compute(self, stats):
         if isinstance(stats, np.ndarray):
@@ -378,12 +409,12 @@ class BLEU(_FastMixin, _SacreBLEU):
         tok = self._native_tokenizer
         refs = [r for r in references if r is not None]
         if tok is None or not refs or not self._native_ok():
-            return _SacreMetric.sentence_score(self, hypothesis, references)
+            return self._sentence_score(hypothesis, references)
         self.num_refs = len(refs)
         try:
             stats = _swadesh.bleu_stats_one(hypothesis, refs, tok, bool(self.lowercase), self.max_ngram_order)
         except _FALLBACK_ERRORS:
-            return _SacreMetric.sentence_score(self, hypothesis, references)
+            return self._sentence_score(hypothesis, references)
         return self._compute_score_from_stats(stats)
 
     def _score_from_row(self, row):
@@ -497,12 +528,12 @@ class CHRF(_FastMixin, _SacreCHRF):
         self._check_sentence_score_args(hypothesis, references)
         refs = [r for r in references if r is not None]
         if not refs or not self._native_ok():
-            return _SacreMetric.sentence_score(self, hypothesis, references)
+            return self._sentence_score(hypothesis, references)
         self.num_refs = len(refs)
         try:
             stats = _swadesh.chrf_stats_one(hypothesis, refs, *self._args())
         except _FALLBACK_ERRORS:
-            return _SacreMetric.sentence_score(self, hypothesis, references)
+            return self._sentence_score(hypothesis, references)
         return self._compute_score_from_stats(stats)
 
     def _score_from_row(self, row):
