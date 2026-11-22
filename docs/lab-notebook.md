@@ -1511,4 +1511,41 @@ watching it fail.
 **One process note.** Getting the suite to run on 3.12/3.14 needed more than `PYTHONPATH`: the CLI
 parity tests spawn `python -m swadesh.cli` as a subprocess, which does not inherit the path, so the
 package had to be installed into those venvs (`uv pip install --no-deps -e .`). 58 parity tests
-failed until that was done.
+failed until that was done.---
+
+## 2026-11-22 (continued) — Phase 5 opened: significance is standalone
+
+Spec first, as the process requires: `docs/spec/significance.md` was committed before any code, with
+the p-value and interval written as definitions rather than as code to copy.
+
+**What moved out of sacreBLEU.** Four things, all small enough to write from the spec:
+
+* `Result` — the record the CLI prints.
+* `_compute_p_value` — the strict-greater resample count with `+1` on both numerator and denominator.
+* `estimate_ci` — the `n // 40` order statistics, not an interpolated quantile.
+* `PairedTest` — the manager: pre-compute the baseline, resample each system against it, collect.
+
+Both arithmetic functions were checked equal to the oracle on random inputs before anything else.
+
+**One detail the tests caught that my probe had not.** I tested `Result` with all four arguments
+supplied, so I never saw the defaults. The paired-test comparison failed on the **baseline** row:
+the oracle gives `p_value=None` there and I gave `-1.0`. The default is `None` for every field but
+the score, and the `repr` is a comma-separated field dump with no spaces. Both now match exactly.
+
+**A test that had to change, and why that is right.** `test_paired_test_isinstance_of_sacrebleu_class`
+asserted `isinstance(p, sacrebleu.significance.PairedTest)` — the inheritance this phase exists to
+remove. It now asserts the opposite, with a comment saying the behaviour is compared against the
+oracle elsewhere in the file. Changing a test to match a deliberate change is fine; changing one to
+make a failure go away would not be.
+
+**What still imports sacreBLEU here, and why it can wait.** Two places, both named in the module
+docstring: `install()`/`uninstall()`, which *is* the `patch()` adapter and must touch sacreBLEU to
+redirect it, and the metric-class checks inside the native scoring helpers, which ask "is this a
+BLEU/CHRF instance I can score natively" — that question belongs with the metric classes, so it
+moves with `metrics.py`.
+
+**Result.** Suite **520 passing, 1 failing** (the known intl case) on 3.11; **508 passing, 13 skipped,
+0 failing** on both 3.12 and 3.14. Rust untouched and green.
+
+**Next.** `metrics.py`, the largest of the five: it owns the score objects and `_aggregate_and_compute`,
+and the metric-class checks above move with it. Then `cli.py`, `verify.py`, `__init__.py`.
