@@ -421,3 +421,27 @@ in one day. Two plausible endings: one or two more rounds reach zero, or the rem
 each need their own positional rule, which is a sign the whole model should be restated as "a
 punctuation run is a token unless it is a `.`/`,`/`:`/bracket attached to digits" rather than patched
 case by case.
+
+---
+
+## 2026-11-22 — Phase 1: restatement tried, rejected; 6/13455 stands
+
+**Probe of all six remaining shapes at once.** Each was reproduced in miniature. One pattern looked
+promising — all six are "punctuation glued to a following digit run" — but the probes showed
+`$ 10,000` and ordinary quotes do **not** glue, and `(43)` mid-line does not either.
+
+**The restatement.** Rewrote the scanner as "a punctuation run glues a digit run when it starts a
+token", then exempted pure numbers, then restricted to a specific leading punctuation set. Results:
+124, 110, **73** mismatches — each attempt worse than the 6 it was meant to improve.
+
+**Reverted** to the 6-mismatch model. The lesson is concrete: "a punctuation starts a token" is not
+the right discriminator, because `$ 10,000`, `(43)` and `)=>２つ` all start tokens and all split.
+The discriminator the probe data supports is narrower and specific to the CJK comma and the
+line-start lead, which is what the current model encodes.
+
+**State.** 6/13,455 (99.96%), not committed. 13a remains complete and committed.
+
+**Decision.** Stop attempting intl in this session. Two restatements and four probe rounds in one
+day is the point where the returns are negative. The next step that makes sense is to port **13a**
+to Rust now (it is exact and ready), leave intl at 99.96% documented as an open gap, and continue the
+phase with zh.
