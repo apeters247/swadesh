@@ -1462,4 +1462,53 @@ The one failure remains `fuzz42:BLEU intl`, unchanged and documented.
 
 **A caveat I should state rather than bury.** `LICENSE.commercial` is written by me, not by a lawyer.
 It states the intent clearly and defers the binding terms to a written agreement, which is the
-defensible shape, but the wording should be reviewed before anyone is asked to sign it.
+defensible shape, but the wording should be reviewed before anyone is asked to sign it.---
+
+## 2026-11-22 (continued) — Phase 7: the version matrix runs, and it found something
+
+The goal requires suites green on Python 3.11, 3.12 and 3.14. That had never been run: every
+session so far used the 3.11 `.venv`. It matters, because BLEU's score depends on CPython's float
+summation semantics, which changed in 3.12 and again in 3.14.
+
+**What happened when it was run.** On 3.12 the suite failed 13 of 15 oracle files, every one of them
+a BLEU case — corpus scores and sentence scores both. On 3.14, the same.
+
+**What that turned out to be.** Not a defect. swadesh selects its summation from the *running*
+interpreter, which is what sacreBLEU does too. Checked side by side against a live sacreBLEU 2.6.0
+on all three interpreters:
+
+| Python | sum mode | sacreBLEU | swadesh | equal |
+|---|---|---|---|---|
+| 3.11.14 | naive | `0x1.9df158f02823cp+4` | `0x1.9df158f02823cp+4` | yes |
+| 3.12.12 | neumaier | same | same | yes |
+| 3.14.3 | neumaier_ints | same | same | yes |
+
+The failures were the frozen expectations being compared across interpreters: they were recorded on
+3.11.14 and a few ulp differ elsewhere. Comparing them on 3.14 would test CPython, not swadesh.
+
+**The fix.** The corpus-score assertion now skips BLEU cases when the running interpreter differs
+from `MANIFEST.json`'s recorded one, and the skip message says which and why. Deliberate reproduction
+is still available through `--python-version`, which is what it exists for. chrF and TER are not
+version-sensitive and still run everywhere.
+
+**Result, measured on all three:**
+
+    3.11  524 passed, 1 failed    (fuzz42 intl, the known case)
+    3.12  512 passed, 13 skipped, 0 failed
+    3.14  512 passed, 13 skipped, 0 failed
+
+**Dependency licences**, also Phase 7, from `cargo metadata`: 26 third-party crates, all permissive —
+20 `MIT OR Apache-2.0`, 2 `Apache-2.0 OR MIT`, one `(MIT OR Apache-2.0) AND Unicode-3.0`, one
+`Apache-2.0 WITH LLVM-exception`, one `Unlicense OR MIT`. No third-party crate is copyleft; the only
+copyleft entries are swadesh's own four. Python runtime dependencies are sacrebleu and numpy, both
+permissive.
+
+`tests/test_dependency_licences.py` adds four guards — workspace crates declare AGPL, no third-party
+crate is copyleft, the position is recorded in `docs/licensing.md`, and runtime dependencies stay
+sacrebleu and numpy. The AGPL guard was verified by setting the workspace licence to MIT and
+watching it fail.
+
+**One process note.** Getting the suite to run on 3.12/3.14 needed more than `PYTHONPATH`: the CLI
+parity tests spawn `python -m swadesh.cli` as a subprocess, which does not inherit the path, so the
+package had to be installed into those venvs (`uv pip install --no-deps -e .`). 58 parity tests
+failed until that was done.
