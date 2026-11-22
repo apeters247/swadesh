@@ -89,8 +89,15 @@ fn order_stats(hyp: &[u32], refs: &[u32], n: usize, bits: u32) -> (i64, i64, i64
     let r = refs;
     let h_total = (h.len() + 1).saturating_sub(n) as i64;
     let r_total = (r.len() + 1).saturating_sub(n) as i64;
-    if h_total == 0 || r_total == 0 || !fits(n, bits) {
+    if h_total == 0 || r_total == 0 {
         return (0, h_total, r_total);
+    }
+    if !fits(n, bits) {
+        // Too many elements for a u128 key (orders above six at 21 bits, above four at 32), so
+        // count the wide n-grams through the general run-length representation instead.
+        let hc = crate::ngram::count(h, n, bits);
+        let rc = crate::ngram::count(r, n, bits);
+        return (crate::ngram::clipped_matches(&hc, &rc) as i64, h_total, r_total);
     }
     let mut rtab = CountTable::new();
     rtab.reset(r.len().saturating_sub(n) + 1);

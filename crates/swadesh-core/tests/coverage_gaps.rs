@@ -10,7 +10,14 @@ use swadesh_core::resample::bootstrap_sums_f32_seeded;
 use swadesh_core::score::{compute_bleu, py_sum, BleuScoreConfig, PyNum, SumMode};
 use swadesh_core::unicode::Interner;
 use swadesh_core::table::CountTable;
-use swadesh_core::ter::{ter_segment, tercom_tokenize, TerConfig};
+use swadesh_core::ter_clean::tokenize as ter_tokenize;
+use swadesh_core::{ter_segment, TerConfig};
+
+/// The clean-room tokenizer returns tokens; this keeps the older call shape used below.
+fn tercom_tokenize(cfg: &TerConfig, sent: &str, out: &mut String) {
+    out.clear();
+    out.push_str(&ter_tokenize(cfg, sent).join(" "));
+}
 use swadesh_core::{Smooth, Tokenizer};
 
 fn ter_cfg(normalized: bool) -> TerConfig {

@@ -1085,4 +1085,32 @@ extension in the package directory and Python loaded it in preference; it masked
 moved aside. Any future "the fix did not take" should check which `.so` is actually imported before
 suspecting the code.
 
-**Next.** Close the intl divergence against the corpus evidence, then re-run the full oracle.
+**Next.** Close the intl divergence against the corpus evidence, then re-run the full oracle.---
+
+## 2026-11-22 (continued) — the last port is gone; parity 489 → 501
+
+**`ter.rs` deleted.** With the clean-room TER serving every path there were no callers left. The
+coverage test that imported `tercom_tokenize` grew a three-line shim over the clean tokenizer, and
+`KNOWN_PORTS` in the provenance guard is now an empty dict — nothing in the tree describes itself as
+a port. Rust: 64 + 27 + 2 + 3 tests green.
+
+**chrF at extreme orders.** Parity caught `char_order=20` scoring 29.69 where the oracle says 36.66:
+at 21 bits per character only six orders fit in a u128 key, and everything above silently reported
+zero matches. The packed path now falls back to the general run-length representation
+(`ngram::count` + `clipped_matches`) for orders that do not fit. Symptom was invisible at the
+default order of six and would have hit anyone using a large `char_order`.
+
+**Two `None`-reference experiments, both reverted.** I tried treating `None` as an empty reference
+in the reference assembly. It improved one compat case and broke four: `sentence_bleu` with
+`[None]` must raise, and `sentence_ter` with `[None]` must take the division-by-zero path. The
+correct rule is that `None` counts as an empty reference for corpus aggregation but as absent for a
+single-reference call, and I have not implemented that split. The binding is back to the committed
+behaviour; the open item is recorded here rather than half-done in the code.
+
+**Where parity stands.** 501 of 505 pass, against a **489 of 494** baseline measured by rebuilding
+the stashed tree — so this session closed five cases and regressed none. The three still failing are
+pre-existing and unrelated to the clean-room work: `corpus_bleu_nested_none` (the `None` split
+above), `test_patch_hf_evaluate_style_calls`, and `test_cli_dataset_flow_with_cached_wmt16`.
+
+**Next.** The intl tokenizer (the one Phase 1 leftover, now with corpus evidence), then the `None`
+split, then Phases 4-7.

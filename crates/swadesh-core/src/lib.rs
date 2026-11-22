@@ -9,7 +9,6 @@ pub mod nprng;
 pub mod score;
 pub mod stats;
 pub mod table;
-pub mod ter;
 pub mod ter_clean;
 pub mod tables;
 pub mod tokenize_dispatch;

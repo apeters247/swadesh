@@ -45,9 +45,8 @@ def test_python_imports_confined(path):
 
 # Files that are STILL ports, with the phase that will remove them. This list must only shrink;
 # adding an entry is a regression the guard is meant to catch.
-KNOWN_PORTS = {
-    "crates/swadesh-core/src/ter.rs": "Phase 3",
-}
+# Every phase has landed: nothing in the tree is a port any more.
+KNOWN_PORTS: dict[str, str] = {}
 
 
 def test_no_unlisted_source_describes_itself_as_a_port():
