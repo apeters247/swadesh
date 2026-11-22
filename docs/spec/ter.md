@@ -163,7 +163,7 @@ The ranges below were found by exhaustive scan for the exact boundaries (each co
 | U+4E00 – U+9FFF | CJK unified ideographs |
 | U+F900 – U+FAFF | CJK compatibility ideographs |
 | U+FE30 – U+FE4F | CJK compatibility forms |
-| U+FF01, U+FF02, U+FF08 – U+FF09, U+FF0C, U+FF0E, U+FF1A, U+FF1F | fullwidth punctuation, individually |
+| U+FF01, U+FF02, U+FF08 – U+FF09, U+FF0C, U+FF0E, U+FF1A, U+FF1B, U+FF1F | fullwidth punctuation, individually |
 | U+FF61 – U+FF65 | halfwidth punctuation (ideographic full stop and friends) |
 
 Notable **exclusions**, each measured: U+2F00–U+2FDF (Kangxi radicals) do **not** split; U+3000
@@ -173,6 +173,13 @@ token while `日本語。` splits because of the `。`; fullwidth digits (U+FF10
 
 The presence of any **one** of these characters switches the whole segment to per-character
 splitting; it is not applied per character.
+
+The punctuation subset is exactly 39 code points: the 128 radical code points of U+2E80–U+2EFF
+split per character but are not deleted by `no_punct`. A second exhaustive scan of
+`0x2E00..0x3100` and `0xFF00..0xFFF0`, comparing `_preprocess_segment` with and without
+`asian_support`, found the split set at 167 code points (128 radicals plus 39 punctuation) and the
+`no_punct` deletion set at exactly those 39 punctuation code points. U+FF1B `；` is in both sets;
+U+FF0D `－` is in neither.
 
 `no_punct` in Asian mode deletes the fullwidth forms (`，` `。` `？` `！` and the CJK brackets) in
 addition to the ASCII set.
