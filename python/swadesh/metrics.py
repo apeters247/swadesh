@@ -12,7 +12,9 @@ sacreBLEU's own Python statistics loop (``_FastMixin._py_statistics``), so
 the result or the exception is sacreBLEU's, not an artefact of the Rust layer.
 """
 
+import json as _json
 import logging
+import statistics as _statistics
 from typing import Any, List, Optional, Sequence
 
 
@@ -176,6 +178,116 @@ class _FastMixin:
 
 def _is_int(x) -> bool:
     return isinstance(x, int)
+
+
+
+class Score:
+    """A metric score: the number, its name and optionally a confidence interval.
+
+    `format` produces the three shapes the command line prints — the text line with its signature,
+    the bare score, and JSON — and `__repr__` is the text form. The JSON key order matters, so keys
+    are inserted in the order they appear: name, score, signature, the confidence fields, the
+    verbose breakdown, then the signature parts.
+    """
+
+    def __init__(self, name: str, score: float):
+        self.name = name
+        self.score = score
+        self._mean = -1.0
+        self._ci = -1.0
+        self._verbose = ""
+
+    def format(self, width: int = 2, score_only: bool = False, signature: str = "",
+               is_json: bool = False) -> str:
+        d = {
+            "name": self.name,
+            "score": float(f"{self.score:.{width}f}"),
+            "signature": signature,
+        }
+
+        sc = f"{self.score:.{width}f}"
+
+        if self._mean > 0:
+            confidence_mean = f"{self._mean:.{width}f}"
+            confidence_var = f"{self._ci:.{width}f}"
+            confidence_str = f"μ = {confidence_mean} ± {confidence_var}"
+            sc += f" ({confidence_str})"
+            if is_json:
+                d["confidence_mean"] = float(confidence_mean)
+                d["confidence_var"] = float(confidence_var)
+                d["confidence"] = confidence_str
+
+        full_score = f"{self.name}|{signature}" if signature else self.name
+        full_score = f"{full_score} = {sc}"
+        if self._verbose:
+            full_score += f" {self._verbose}"
+            d["verbose_score"] = self._verbose
+
+        if score_only:
+            return sc
+
+        if is_json:
+            for param in signature.split("|"):
+                key, value = param.split(":")
+                d[key] = value
+            return _json.dumps(d, indent=1, ensure_ascii=False)
+
+        return full_score
+
+    def estimate_ci(self, scores):
+        """Mean and 95% confidence interval from bootstrap resamples of this score."""
+        raw = sorted([x.score for x in scores])
+        n = len(raw)
+        lower_idx = n // 40
+        upper_idx = n - lower_idx - 1
+        lower, upper = raw[lower_idx], raw[upper_idx]
+        self._ci = 0.5 * (upper - lower)
+        self._mean = _statistics.mean(raw)
+
+    def __repr__(self):
+        return self.format()
+
+
+
+class BLEUScore(Score):
+    """BLEU's score object: the precisions, the brevity penalty and the lengths."""
+
+    def __init__(self, score: float, counts, totals, precisions, bp: float, sys_len: int, ref_len: int):
+        super().__init__("BLEU", score)
+        self.bp = bp
+        self.counts = counts
+        self.totals = totals
+        self.sys_len = sys_len
+        self.ref_len = ref_len
+        self.precisions = precisions
+
+        self.prec_str = "/".join([f"{p:.1f}" for p in self.precisions])
+        self.ratio = self.sys_len / self.ref_len if self.ref_len else 0
+
+        # The verbose part of the text line, which the JSON form also carries.
+        self._verbose = f"{self.prec_str} (BP = {self.bp:.3f} "
+        self._verbose += f"ratio = {self.ratio:.3f} hyp_len = {self.sys_len:d} "
+        self._verbose += f"ref_len = {self.ref_len:d})"
+
+
+class CHRFScore(Score):
+    """chrF's score object. The name carries the beta and one '+' per word order."""
+
+    def __init__(self, score: float, char_order: int, word_order: int, beta: int):
+        self.beta = beta
+        self.char_order = char_order
+        self.word_order = word_order
+        name = f"chrF{self.beta}" + "+" * self.word_order
+        super().__init__(name, score)
+
+
+class TERScore(Score):
+    """TER's score object: the cumulative edits and the cumulative reference length."""
+
+    def __init__(self, score: float, num_edits: float, ref_length: float):
+        super().__init__("TER", score)
+        self.num_edits = int(num_edits)
+        self.ref_length = ref_length
 
 
 class BLEU(_FastMixin, _SacreBLEU):
