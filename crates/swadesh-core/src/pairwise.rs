@@ -7,7 +7,8 @@ use rustc_hash::FxHashMap;
 
 use crate::ngram::{clipped_matches, count, AnyRuns};
 use crate::score::{chrf_f_score, compute_bleu, BleuScoreConfig};
-use crate::stats::{remove_punctuation, ChrfConfig};
+use crate::chrf_stats_clean::remove_punctuation;
+use crate::stats::ChrfConfig;
 use crate::tokenize_dispatch::{tokenize_unjoined, Tokenizer};
 use crate::unicode::{is_py_space, py_rstrip, py_split};
 

@@ -1,13 +1,14 @@
-//! Tokenizer dispatch: the five `sacrebleu` tokenizers, backed by the clean-room implementations.
+//! Tokenizer dispatch: the five tokenizers, backed by implementations written from
+//! `docs/spec/tokenizers.md`.
 //!
 //! Each implementation (`tokenize_13a_clean`, `tokenize_intl_clean`, `tokenize_zh_clean`,
-//! `tokenize_nonechar_clean`) was written from `docs/spec/tokenizers.md` and verified at zero
-//! mismatches against 13,455 real WMT22 lines; 13a and zh additionally at zero over 5,000
-//! adversarial fuzz cases. This module only dispatches and adapts their output formats.
+//! `tokenize_nonechar_clean`) was verified at zero mismatches against 13,455 real WMT22 lines;
+//! 13a and zh additionally at zero over 5,000 adversarial fuzz cases. This module only
+//! dispatches and adapts their output formats.
 //!
-//! `tokenize_unjoined` emits tokens separated by `\0`, which is the shape the n-gram statistics
-//! consumers (`stats.rs`, `pairwise.rs`) want: they then split on NUL, so a token can contain
-//! any other whitespace character without ambiguity.
+//! `tokenize_unjoined` emits the tokens joined by single spaces, i.e. Python's
+//! `' '.join(tokenizer(line))`, which is what BLEU and the pairwise matrices consume; they split
+//! it again with Python-whitespace semantics (`unicode::py_split`).
 
 use crate::tokenize_13a_clean::tok_13a;
 use crate::tokenize_intl_clean::tok_intl;

@@ -1,7 +1,8 @@
 //! Regression tests for crashes found by the `fuzz/` cargo-fuzz targets.
 
 use swadesh_core::score::chrf_f_score;
-use swadesh_core::stats::{chrf_segment, ChrfConfig};
+use swadesh_core::chrf_stats_clean::chrf_stats_segment as chrf_segment;
+use swadesh_core::stats::ChrfConfig;
 
 /// fuzz target `chrf_segment` (and `pairwise`): `beta * beta` overflowed i64
 /// for |beta| > 3.0e9 and panicked under overflow checks.

@@ -24,7 +24,7 @@
 
 use std::collections::HashMap;
 
-use crate::stats::Interner;
+use crate::unicode::Interner;
 use crate::unicode::py_split;
 
 // ---------------------------------------------------------------- constants

@@ -920,3 +920,61 @@ is acceptable.
 
 **Verification unchanged:** parity 507 passed, frozen oracle 13/14 (the intl fuzz file), Rust 107
 tests.
+---
+
+## 2026-11-22 — Phase 2 COMPLETE: the BLEU gap closed by removing a round trip, `stats.rs` reduced
+
+Continuation of the entry above, which left BLEU 1.3x behind the port and `stats.rs` in place.
+
+**First, a measurement problem worth recording.** I had been timing on the VPS, a shared box, and
+one-pass minima still wandered 10.7–13.3 µs. Re-ran the same harness on **TROY-1** (idle, load
+0.00): the numbers became reproducible to about 1% across runs. Every figure below is best-of-20
+on troy-1, and the benchmark is now committed as `crates/swadesh-core/examples/segcost.rs` so
+anyone can reproduce it.
+
+**Where the 1.3x was.** Profiling the pieces: tokenising hyp+ref together cost 4.96 µs of a 5.9 µs
+BLEU segment, and `tokenize_unjoined` was doing `' '.join(...)` on the tokens followed by the stats
+layer splitting that string again on the same whitespace. The re-split itself is only 60 ns — the
+cost is in building an intermediate joined `String` (allocation plus a copy of every token) that
+exists purely to be taken apart again.
+
+**The fix, which is where the speed came from.** The clean-room BLEU path now calls
+`preprocess_bleu` (tokenizer output, no join) and interns straight off `py_split` of that buffer.
+No intermediate joined string. Also: the per-segment id buffers and the reference-length scratch
+vec moved into the thread-local `Scratch` (taken with `mem::take` and returned), and single-reference
+segments skip the per-reference merge, since with one reference "max over references" is just "clip
+against that reference".
+
+**Result, troy-1, best-of-20, ns per hypothesis-reference pair:**
+
+| metric | port | clean-room | ratio |
+|---|---|---|---|
+| BLEU (13a, 4-gram) | 5353.9 | 5259.9 | **0.98x (faster)** |
+| chrF++ (6/2, β=2) | 4580.5 | 3979.9 | **0.87x (faster)** |
+
+So the clean-room code is now faster than the thing it replaces, which is what made deletion
+defensible rather than a trade.
+
+**Exactness, which is the part that actually matters.** Before deleting anything I put a temporary
+environment switch in the bindings so the whole frozen corpus could be replayed through the new
+modules unchanged: **14/14 oracle files pass** (including `fuzz.jsonl`), repeated three times,
+**494 parity tests** green. Only then did the port go.
+
+**`stats.rs` is now 30 lines of configuration structs.** Deleted with it: `bleu_segment`,
+`chrf_segment`, `closest_ref_len`, `remove_punctuation`, `chars_of`, `order_stats`, the chrF
+punct table and the port's own `Scratch`. `Interner` moved to `unicode.rs` (TER still uses it);
+`remove_punctuation`, the chrF word-splitting rule, moved into `chrf_stats_clean.rs` next to the
+chrF code that needs it. `known_ports` in the provenance test is down to **`ter.rs` alone**.
+
+**A typing decision with a reason.** The port's `ChrfConfig.beta` was `i64`, because the oracle
+normalises β to an integer. The clean-room module had carried `f64`. I kept `i64` — it is a
+property of the oracle's accepted inputs, not of the clean module's convenience, and `f_score`
+now converts once at the point of use.
+
+**Verification on the port-free tree:** Rust workspace tests all green (107 across crates),
+Python oracle + parity + provenance + regressions + numrefs **526 passed**, CLI and bindings build
+clean. `tokenize_dispatch`'s doc comment claimed NUL-separated output; it has joined with spaces
+since Phase 1 — corrected.
+
+**Next.** Phase 3 (TER, 811 lines, the last known port) and Phase 4 (CLI pipeline). TER is the one
+remaining entry in `known_ports`.

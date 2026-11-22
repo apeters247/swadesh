@@ -13,21 +13,45 @@
 //! with the highest f-score (the first strictly better one), NOT a merge of their counts. A
 //! hypothesis matching one reference perfectly scores 100.0 against `[good, bad]` in either order.
 
+use crate::stats::ChrfConfig;
 use crate::table::{fits, packed_windows, CountTable};
 use rustc_hash::FxHashMap;
 use crate::unicode::{py_split, py_strip};
 
-#[derive(Clone, Copy, Debug)]
-pub struct ChrfStatsConfig {
-    pub char_order: usize,
-    pub word_order: usize,
-    pub beta: f64,
-    pub whitespace: bool,
-    pub eps_smoothing: bool,
+/// Characters of a string as a `Vec<char>`, honouring the whitespace-removal option.
 
+const PUNCTS: &str = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+
+#[inline]
+fn is_chrf_punct(c: char) -> bool {
+    c.is_ascii() && PUNCTS.contains(c)
 }
 
-/// Characters of a string as a `Vec<char>`, honouring the whitespace-removal option.
+/// chrF word splitting: a word whose final character is ASCII punctuation is split into
+/// `(word minus that character, the character)`; failing that, the same with the leading
+/// character. Single-character words and words with no ASCII punctuation split at either end are
+/// returned unchanged. (spec `stats.md` 3.2, measured.)
+pub fn remove_punctuation(sent: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    for w in py_split(sent) {
+        let mut chars = w.chars();
+        let first = chars.next().expect("py_split never yields an empty word");
+        let last = w.chars().next_back().expect("a word has at least one char");
+        if chars.next().is_none() {
+            out.push(w);
+        } else if is_chrf_punct(last) {
+            out.push(&w[..w.len() - last.len_utf8()]);
+            out.push(&w[w.len() - last.len_utf8()..]);
+        } else if is_chrf_punct(first) {
+            out.push(&w[..first.len_utf8()]);
+            out.push(&w[first.len_utf8()..]);
+        } else {
+            out.push(w);
+        }
+    }
+    out
+}
+
 fn char_seq(s: &str, keep_whitespace: bool) -> Vec<u32> {
     let s = py_strip(s);
     if keep_whitespace {
@@ -75,7 +99,7 @@ fn order_stats(hyp: &[u32], refs: &[u32], n: usize) -> (i64, i64, i64) {
 }
 
 /// The f-score chrF uses to choose among references, computed from a stats row.
-fn f_score(stats: &[i64], order: usize, beta: f64, eps: bool) -> f64 {
+fn f_score(stats: &[i64], order: usize, beta: i64, eps: bool) -> f64 {
     let mut sum_p = 0.0;
     let mut sum_r = 0.0;
     let mut cnt = 0;
@@ -106,11 +130,12 @@ fn f_score(stats: &[i64], order: usize, beta: f64, eps: bool) -> f64 {
     if p + r == 0.0 {
         return 0.0;
     }
-    (1.0 + beta * beta) * (p * r) / (beta * beta * p + r)
+    let bb = beta as f64 * beta as f64;
+    (1.0 + bb) * (p * r) / (bb * p + r)
 }
 
 /// Compute the statistics row for one segment.
-pub fn chrf_stats_segment(cfg: &ChrfStatsConfig, hyp: &str, refs: &[&str], out: &mut Vec<i64>) {
+pub fn chrf_stats_segment(cfg: &ChrfConfig, hyp: &str, refs: &[&str], out: &mut Vec<i64>) {
     let order = cfg.char_order + cfg.word_order;
     let hc = char_seq(hyp, cfg.whitespace);
     let mut wids: FxHashMap<String, u32> = FxHashMap::default();
@@ -151,10 +176,10 @@ mod tests {
     use super::*;
 
     fn row(hyp: &str, refs: &[&str], char_order: usize, word_order: usize) -> Vec<i64> {
-        let cfg = ChrfStatsConfig {
+        let cfg = ChrfConfig {
             char_order,
             word_order,
-            beta: 2.0,
+            beta: 2,
             whitespace: false,
             eps_smoothing: false,
         };

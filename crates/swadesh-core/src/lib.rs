@@ -14,6 +14,7 @@ pub mod tables;
 pub mod tokenize_dispatch;
 pub mod bleu_stats_clean;
 pub mod chrf_stats_clean;
+pub mod stats_dispatch;
 pub mod tokenize_nonechar_clean;
 pub mod tokenize_13a_clean;
 pub mod tokenize_zh_clean;
@@ -22,7 +23,9 @@ pub mod unicode;
 
 
 pub use score::{chrf_f_score, compute_bleu, BleuScoreConfig, Smooth, SumMode};
-pub use stats::{bleu_segment, chrf_segment, BleuConfig, ChrfConfig};
+pub use stats::{BleuConfig, ChrfConfig};
+pub use bleu_stats_clean::bleu_stats_segment;
+pub use chrf_stats_clean::chrf_stats_segment;
 pub use tokenize_dispatch::{join_split_str, preprocess_bleu, tokens, Tokenizer};
 pub use ter::{ter_segment, TerConfig, TerError};
 
@@ -54,12 +57,12 @@ where
 
 pub fn bleu_corpus_stats(cfg: &BleuConfig, hyps: &[&str], refs: &[Vec<&str>]) -> Vec<i64> {
     let width = 2 + 2 * cfg.max_order;
-    corpus_stats(hyps, refs, width, |h, r, o| bleu_segment(cfg, h, r, o))
+    corpus_stats(hyps, refs, width, |h, r, o| bleu_stats_segment(cfg, h, r, o))
 }
 
 pub fn chrf_corpus_stats(cfg: &ChrfConfig, hyps: &[&str], refs: &[Vec<&str>]) -> Vec<i64> {
     let width = 3 * (cfg.char_order + cfg.word_order);
-    corpus_stats(hyps, refs, width, |h, r, o| chrf_segment(cfg, h, r, o))
+    corpus_stats(hyps, refs, width, |h, r, o| chrf_stats_segment(cfg, h, r, o))
 }
 
 /// Segment-level TER statistics `[num_edits, avg_ref_len]` per segment,

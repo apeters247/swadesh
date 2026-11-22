@@ -1,6 +1,8 @@
 //! Character-class predicates that mirror the exact semantics of the Python
 //! interpreter and `regex` module used by sacreBLEU (see `tables.rs`).
 
+use std::collections::HashMap;
+
 use crate::tables::{PY_WHITESPACE, REGEX_N, REGEX_P, REGEX_S};
 
 #[inline]
@@ -89,5 +91,25 @@ mod tests {
         assert!(is_symbol('$'));
         assert!(is_number('٣'));
         assert!(!is_punct('a'));
+    }
+}
+
+/// Interns string tokens into dense u32 ids, cleared per segment.
+///
+/// Shared by the statistics and TER paths; ids are only compared for equality, so the assignment
+/// order does not matter as long as it is stable within one segment.
+#[derive(Default)]
+pub struct Interner<'a> {
+    map: HashMap<&'a str, u32>,
+}
+
+impl<'a> Interner<'a> {
+    pub fn clear(&mut self) {
+        self.map.clear();
+    }
+    #[inline]
+    pub fn id(&mut self, s: &'a str) -> u32 {
+        let n = self.map.len() as u32;
+        *self.map.entry(s).or_insert(n)
     }
 }

@@ -531,7 +531,7 @@ fn bleu_stats_one(hyp: &Bound<'_, PyAny>, refs: &Bound<'_, PyAny>, tokenize: &st
     let rs: Vec<Cow<str>> = ro.iter().filter(|r| !r.is_none()).map(|r| text(r, lowercase)).collect::<PyResult<_>>()?;
     let rr: Vec<&str> = rs.iter().map(|s| s.as_ref()).collect();
     let mut out = Vec::new();
-    swadesh_core::bleu_segment(&BleuConfig { tokenizer: tok, max_order }, &h, &rr, &mut out);
+    swadesh_core::stats_dispatch::bleu_stats(&BleuConfig { tokenizer: tok, max_order }, &h, &rr, &mut out);
     Ok(out)
 }
 
@@ -554,7 +554,7 @@ fn chrf_stats_one(
     let rr: Vec<&str> = rs.iter().map(|s| s.as_ref()).collect();
     let mut out = Vec::new();
     let cfg = ChrfConfig { char_order, word_order, beta, whitespace, eps_smoothing };
-    swadesh_core::chrf_segment(&cfg, &h, &rr, &mut out);
+    swadesh_core::stats_dispatch::chrf_stats(&cfg, &h, &rr, &mut out);
     Ok(out)
 }
 

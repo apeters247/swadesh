@@ -8,7 +8,7 @@ use swadesh_core::ngram::{count, max_merge, AnyRuns};
 use swadesh_core::nprng::{default_rng, mean_f64};
 use swadesh_core::resample::bootstrap_sums_f32_seeded;
 use swadesh_core::score::{compute_bleu, py_sum, BleuScoreConfig, PyNum, SumMode};
-use swadesh_core::stats::Interner;
+use swadesh_core::unicode::Interner;
 use swadesh_core::table::CountTable;
 use swadesh_core::ter::{ter_segment, tercom_tokenize, TerConfig};
 use swadesh_core::{Smooth, Tokenizer};

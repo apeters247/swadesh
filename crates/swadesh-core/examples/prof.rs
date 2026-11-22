@@ -19,14 +19,14 @@ fn main() {
     let cfg = BleuConfig { tokenizer: Tokenizer::T13a, max_order: 4 };
     let mut row = Vec::new();
     let t = Instant::now();
-    for (h, r) in hyps.iter().zip(&lines) { bleu_segment(&cfg, h, &[r.as_str()], &mut row); }
+    for (h, r) in hyps.iter().zip(&lines) { swadesh_core::bleu_stats_segment(&cfg, h, &[r.as_str()], &mut row); }
     println!("bleu_segment 13a  {:6.0} ns/pair", t.elapsed().as_nanos() as f64 / n);
     let cfg0 = BleuConfig { tokenizer: Tokenizer::None, max_order: 4 };
     let t = Instant::now();
-    for (h, r) in hyps.iter().zip(&lines) { bleu_segment(&cfg0, h, &[r.as_str()], &mut row); }
+    for (h, r) in hyps.iter().zip(&lines) { swadesh_core::bleu_stats_segment(&cfg0, h, &[r.as_str()], &mut row); }
     println!("bleu_segment none {:6.0} ns/pair", t.elapsed().as_nanos() as f64 / n);
     let ccfg = ChrfConfig { char_order: 6, word_order: 0, beta: 2, whitespace: false, eps_smoothing: false };
     let t = Instant::now();
-    for (h, r) in hyps.iter().zip(&lines) { chrf_segment(&ccfg, h, &[r.as_str()], &mut row); }
+    for (h, r) in hyps.iter().zip(&lines) { swadesh_core::chrf_stats_segment(&ccfg, h, &[r.as_str()], &mut row); }
     println!("chrf_segment      {:6.0} ns/pair", t.elapsed().as_nanos() as f64 / n);
 }
