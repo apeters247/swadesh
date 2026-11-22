@@ -52,14 +52,17 @@ The rule set of Koehn & Knowles. Applied in this order; each rule is a global su
 3. Separately, for every `.` or `,` immediately followed by a non-digit, insert a space before the
    `.`/`,` and between it and the following character.
 4. For a digit immediately followed by `-`, insert a space between them and after the `-`.
-5. ` &amp; ` becomes ` & `; ` & ` becomes ` &amp; ` — the two swap, which preserves the information
-   in whichever direction it was encoded.
+5. **Entity decoding and cleanup, applied before the substitutions above:**
 
-   Reconciliation: the classic rule set reads "replace `&amp;` with `&`, then `&` with `&amp;`" and
-   a single pass of those two substitutions would oscillate. The observable requirement is that the
-   two encodings are **interchanged**: text containing a literal `&amp;` must tokenize to a token
-   `&`, and text containing `&` must tokenize to `&amp;`. Implementations achieve this with a
-   placeholder or a single scan; both are equivalent.
+   a. Remove every occurrence of `<skipped>`.
+   b. Remove every occurrence of `-\n` (hyphen followed by a newline).
+   c. Replace every `\n` with a single space.
+   d. If the line contains `&`, replace every `&quot;` with `"`, every `&amp;` with `&`,
+      every `&lt;` with `<`, every `&gt;` with `>`. There is **no** `&` → `&amp;` rule and no
+      interchange; a bare `&` stays bare.
+
+   Measured: `"a&amp;b"` → `a & b`; `"x<skipped>y"` → `xy`; `"line-\nnext"` → `linenext`;
+   `"&quot;hi&quot;"` → `" hi "`; `"AT&T"` → `AT & T` (the `&` is split by rule A).
 6. Every single character that is a Unicode **number** (`\p{N}`: decimal digits, letter numbers,
    other numbers) is surrounded by spaces.
 
@@ -87,13 +90,14 @@ Same skeleton as `13a`, with the internationalised class for rule A and **no** `
 1. Surround with spaces every character in the class `\p{P} \p{S} \p{N}`.
 2. Attach a trailing `.`/`,` to the preceding token unless it ends in a digit; detach a leading
    `.`/`,` from a following non-digit.
-3. No separate `%` rule. `%` is `\p{P}`-adjacent category and is split by rule 1 only where rule 1
+3. No separate `%` rule and no entity decoding. `%` is split by rule 1 only where rule 1
    applies; observed: `"100%"` stays `100%` under `intl` but becomes `100 %` under `13a`, because
    `%` is in `13a`'s rule-A class but not in `intl`'s.
    (`→` behaves the other way: not split by `13a`, split by `intl`.) The two classes therefore
    differ, and the implementation must not treat `intl` as `\p{P}\p{S}\p{N}` wholesale.
-4. No `&amp;` interchange: `"a&amp;b"` becomes `a & amp ; b` (the `;` splits by rule 1), whereas
-   `13a` gives `a & b`.
+4. No entity decoding and no `<skipped>`/`-\n` removal: `"a&amp;b"` becomes `a & amp ; b`
+   (the `;` splits by rule 1) and `"a<skipped>b"` becomes `a < skipped > b`, whereas `13a` gives
+   `a & b` and `ab`. Measured on both.
 
 Whitespace handling is identical to `13a`.
 
@@ -107,7 +111,8 @@ Character-level segmentation for Chinese, with alphanumeric runs kept whole:
 1. Split the line into runs separated by Python whitespace.
 2. Within a run, every character in the **CJK ranges** below starts and ends its own token.
 3. Every character in `\p{N}` likewise.
-4. Everything else (Latin letters, punctuation) accumulates into a token.
+4. Everything else (Latin letters, punctuation, and arrows such as `→`) accumulates into a token:
+   `"你 好 abc 世 界"` tokenizes to `你 好 abc 世 界`. No entity decoding, no `<skipped>` removal.
 
 **CJK ranges** (inclusive, code points), which the implementation must treat as data:
 
