@@ -1344,4 +1344,40 @@ hypothesis itself. The cheapest next probe is to log the per-candidate `cost` on
 
 **State.** No code change this session; the tree is back to the committed state and the suite stands
 at **517 passing, 3 failing** (this case, `real-granite4_small-h:TER`, and the `fuzz42` intl row).
-Rust 13 suites green. I reverted rather than leave instrumentation in the tree.
+Rust 13 suites green. I reverted rather than leave instrumentation in the tree.---
+
+## 2026-11-22 (continued) — last TER case: the alignment parts company at index 85
+
+Ran the probe the previous entry specified: dumped the per-candidate costs for round 0 on both sides
+and diffed them. It worked, and it located the divergence.
+
+**What the diff showed.** Round 0 has 65 candidates for the oracle and 22 for swadesh. The first
+candidates agree exactly, including costs and indices, so scoring is not the problem — enumeration
+stops early because the *alignment* differs. For pair `(56, 100, 1)` the oracle's offsets give
+`idx = 60` and mine give `idx = 75`, and `idx` is `align[s_r - 1] + 1`. So `align[99]` is 59 for the
+oracle and 74 for swadesh.
+
+**Where it parts.** Comparing the two 150-entry alignment arrays element by element:
+
+    index 84: oracle 58  mine 58     (agree)
+    index 85: oracle 59  mine 60
+    index 86: oracle 59  mine 61
+    index 87: oracle 59  mine 62
+    ...
+
+The oracle maps the whole reference tail 85..149 to a single hypothesis position (59) — a long run
+of deletions. swadesh advances the hypothesis through the same region with substitutions. Every
+alignment entry after 85 is consequently off, and that shifts every candidate that reads `align`.
+
+**What I ruled out.** The matrix tie order, which I had changed to `(sub, ins, del)` on the strength
+of earlier segments: swapping it back to the oracle's `(sub, del, ins)` leaves the result at 125
+unchanged, so the tie is not what decides this tail. My flipped trace does end in a long run of `d`,
+as the oracle's does, but at different positions.
+
+**State.** No code change; instrumentation reverted; suite at **517 passing, 3 failing** (this case,
+`real-granite4_small-h:TER`, `fuzz42` intl). Rust 13 suites green.
+
+**Next step, concretely.** Compare the two *raw* traces (before the flip) element by element from the
+tail backwards. They share a suffix of `d`s, so the first index where they differ backwards from the
+end is where the backtrace chose differently — and the cell at that index names the condition, which
+is more informative than comparing the tie order in the abstract.
