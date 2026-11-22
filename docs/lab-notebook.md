@@ -1240,4 +1240,44 @@ a rule that trades the open case for four regressions.
 process requires, and it states plainly which limb is unresolved and why the code is not in the tree.
 
 **Next.** The quote-pair question, then all three limbs together. Or accept the single open intl case
-and spend the time on Phases 4-7, which are untouched.
+and spend the time on Phases 4-7, which are untouched.---
+
+## 2026-11-22 (continued) — Phase 4 contract committed; the NOTICE told the wrong story
+
+Took the previous session's own advice and moved to infrastructure work rather than a fifth coin
+flip on the intl rule.
+
+**A licensing defect, fixed.** The NOTICE still said "the tokenizer logic (13a, intl, zh, char) is a
+port of sacreBLEU's tokenizers, and the native TER work in progress is a port of sacreBLEU's TER
+implementation." Both are clean-room and `ter.rs` is deleted — the file understated the state of the
+tree in the one document a commercial licence depends on. The provenance test's NOTICE assertion was
+written to catch that phrasing and had been passing only because the sentence had been edited once
+already. The new NOTICE says where each implementation came from (spec documents, named), states
+plainly that no sacreBLEU code is copied into `crates/`, and lists the **five Python modules that
+still import sacreBLEU** as the part of the tree that is not yet standalone. That list is the honest
+Phase 5 scope: `__init__.py` (the patch adapter), `verify.py`, `metrics.py`, `significance.py`,
+`cli.py`.
+
+**Phase 4's first step, done.** `docs/spec/cli-contract.md` records the CLI surface the code is held
+to — the metrics, every flag and its default, the three output formats, the signature format, input
+handling including `-nr` and `--python-version`, and a statement that the CLI reproduces
+sacreBLEU's *command-line behaviour* as the contract users depend on while containing none of its
+source. Committed before any rewrite, as the process requires.
+
+**What Phase 4 actually needs, measured.** The CLI modules do not describe themselves as ports and
+the provenance guard passes, but I could not establish from history whether sacreBLEU's Python source
+was read when the CLI was first written (commit 45f2fcd, an agent-authored merge). The contract
+document makes the behavioural definition explicit, which is what the phase asks for; whether a
+source-level rewrite is additionally needed is a judgement for the owner, not one I should settle by
+assuming.
+
+**Phase 6 metadata.** Added the Apache-2.0 licence classifier and the Python 3.10-3.14 classifiers,
+which the package previously omitted.
+
+**Phase 5 scoped.** `metrics.py` inherits sacreBLEU's `BLEU`/`CHRF`/`TER` classes and calls
+`_aggregate_and_compute` and `_cache_references`. Those are small (the aggregate is 7 lines) but they
+construct sacreBLEU's `*Score` objects, so a standalone replacement needs its own score types with
+the same formatting. That is the next bounded job.
+
+**Suite unchanged at 515 of 520** — expected, since this session touched documents and metadata
+only. Rust 13 suites green throughout.
