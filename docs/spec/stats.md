@@ -64,10 +64,19 @@ For a hypothesis string and reference strings:
 1. **Character sequence.** By default each character is a unit; whitespace characters participate.
    With `whitespace=False`, whitespace is removed **before** n-gram extraction, so a removed space
    does not separate adjacent characters into different n-grams — the characters become adjacent.
-2. **Word sequence** (only when `word_order > 0`, i.e. chrF++). Punctuation is removed from the
-   word sequence; the removed set is defined in the specification as the character sequence with
-   every punctuation character deleted, where "punctuation" is the set the oracle uses (measured
-   separately, see the acceptance criteria).
+2. **Word sequence** (only when `word_order > 0`, i.e. chrF++). **Punctuation is NOT stripped.**
+   Words are the whitespace-delimited tokens with punctuation left intact. Measured with
+   `word_order=3, char_order=1`, so the word component dominates:
+
+   | hypothesis | reference | score | reading |
+   |---|---|---|---|
+   | `a-b c` | `ab c` | 48.08 | punctuation retained: `a-b` ≠ `ab` |
+   | `a-b c` | `a-b c` | 100.00 | |
+   | `a , b` | `a b` | 60.61 | a standalone `,` counts as a word |
+   | `a  b` | `a b` | 100.00 | whitespace runs collapse, as for words elsewhere |
+
+   Two earlier drafts of this document guessed the opposite (punctuation stripped), twice.
+   The measurement above is the specification.
 3. **Orders.** Char orders `1..char_order` and, for chrF++, word orders `1..word_order`. Each order
    produces a triple: matching n-grams, hyp total, ref total.
 4. **Matching count.** For chrF the per-order match count is again `min(count_H, max_i count_{r_i})`
@@ -97,7 +106,6 @@ An implementation is acceptable iff:
 2. **`whitespace=False` and `lowercase=True` are compatible in either order** for the case tested
    (`"A  B"` vs `"ab"` scores 100.0): whitespace removal happens on the raw text and lowercasing is
    independent, because deleting a space never changes a character's case.
-3. **chrF word-order punctuation removal is NOT a simple punctuation strip**: `"a b, c"` against
-   `"a b c"` scores 58.26, not 100, so punctuation is retained somewhere in the comparison. The
-   exact behaviour must be established by a dedicated probe series before implementing chrF++; until
-   then the implementation should follow the existing behaviour and the frozen oracle decides.
+3. **chrF word order: punctuation is retained, words are whitespace tokens.** Settled with
+   `word_order=3, char_order=1` so the word component dominates; the table in section 3.2 is the
+   evidence. Two earlier drafts of this document asserted the opposite.
