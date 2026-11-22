@@ -130,3 +130,45 @@ code is written.
 **Next.** `13a` is the hard one and needs the numeric-key rule pinned down against the frozen
 corpus. Get `intl` and `13a` done, then run `tests/test_frozen_oracle.py` and delete the port only
 after zero mismatches.
+
+---
+
+## 2026-11-22 — Phase 1: `intl` attempted, blocked on the regex semantics
+
+**Attempted.** Implement `intl` directly (not delegated) from the spec plus black-box measurement.
+
+**Measured, and now settled:**
+- The splitting class is exactly `\p{P} ∪ \p{S}`: of the 9,588 non-ASCII code points that split in
+  `a<c>b`, the set equals the `regex` module's `\p{P}|\p{S}` with **0 differences in either
+  direction**; the ASCII members are the 32 characters `!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~`. So the
+  original spec wording was right and my earlier "intl class is not P|S" note was wrong.
+- Trailing whitespace is dropped before tokenising: `"1986"` vs `"1986 "` give different output.
+
+**Blocked on.** The `.`/`,`/`:` and bracket grouping is context- and position-sensitive in a way I
+could not derive in one session:
+- `1986.` → `1986.` but `1986. ` → `1986 .`
+- `2. x` → `2 . x`, while `5,000.50` → `5,000.50`
+- `(4)` → `(4)` at line start, but `a (4) b` → `a ( 4 ) b`
+- `(4)(5)` → `(4 ) ( 5)`; `(1)(2)(3)` → `(1 ) ( 2 ) ( 3)`
+
+Three models were tried against the full WMT22 corpus (13,455 lines): a one-sided digit rule (277
+mismatches), a number-tail rule (371), a class-run scan (1,953). None came close to acceptance, and
+none was committed. The `13a` subagent hit the same wall and reported it. The common cause is that
+the oracle's tokenizers are a sequence of Python `re.sub` passes whose match boundaries interact
+(insertions next to an earlier match are refused), which is not reproducible by per-character rules
+derived from examples alone.
+
+**Decision.** Stop deriving this from examples. The right next move is to express the rules as an
+explicit left-to-right **regex-substitution emulator** that matches Python's `re.sub` boundary
+semantics, and validate it against the corpus — i.e. specify the *engine*, not each special case.
+That is a focused day of work and it unblocks both `intl` and `13a`.
+
+**State.** `tokenize_nonechar_clean.rs` (verified) is committed and wired. `intl` and `zh` are
+removed from the tree; their working files are at `/tmp/tokenize_intl_clean.rs.WIP` and
+`/tmp/tokenize_zh_clean.rs.rejected`. `lib.rs` committed without the intl module.
+
+**Correction to an earlier entry.** I wrote that the `zh` agent's "broken toolchain" claim was
+unfounded because `none`/`char` passed 8/8. The real `zh` failure was its own numeric rule, not
+the toolchain; but the `13a` and `zh` agents both independently reported non-deterministic oracle
+output over long runs, which I did not reproduce in short probes. Treat long sweeps as suspect and
+re-probe in fresh processes.
