@@ -385,41 +385,42 @@ fn trace_to_alignment(ops: &[u8], refs_len: usize) -> Trace {
 /// The trace is read back along the path of the last cell: the operations that rewrite the
 /// **hypothesis** as the **reference**, which is the direction the shift search reads it in.
 fn trace_align(refs: &[u32], hyp: &[u32], ops: &mut Vec<u8>) -> Trace {
-    // Rows are the reference, columns the hypothesis: that is the orientation whose walkback
-    // yields the operation order the shift search reads (established by comparing the recorded
-    // trace with the oracle's on the probe segments).
-    let m = refs.len();
+    // Rows are the hypothesis and columns the reference, which is the oracle's own orientation: its
+    // distance loop advances over the hypothesis. The distance is the same either way, but the
+    // backtrace path is not, and the shift search reads that path.
     let n = hyp.len();
-    let w = n + 1;
+    let m = refs.len();
+    let w = m + 1;
 
-    // Grid indexed [ref][hyp].
-    let mut cost = vec![INF; (m + 1) * w];
-    let mut op = vec![OP_UNDEF; (m + 1) * w];
-    for j in 0..=n {
+    let mut cost = vec![INF; (n + 1) * w];
+    let mut op = vec![OP_UNDEF; (n + 1) * w];
+    for j in 0..=m {
         cost[j] = j as i64;
-        op[j] = OP_INS;
+        op[j] = OP_DEL;
     }
-    for i in 0..=m {
+    for i in 0..=n {
         cost[i * w] = i as i64;
-        op[i * w] = OP_DEL;
+        op[i * w] = OP_INS;
     }
-    for i in 1..=m {
-        for j in 1..=n {
-            let same = refs[i - 1] == hyp[j - 1];
+    // Only the band the oracle computes: a cell outside it keeps the infinite distance, exactly as
+    // in `distance_row`.
+    for i in 1..=n {
+        let (lo, hi) = band(i, n, m);
+        for j in lo.max(1)..hi {
+            let same = hyp[i - 1] == refs[j - 1];
             let sub = cost[(i - 1) * w + j - 1] + if same { 0 } else { 1 };
-            let del = cost[(i - 1) * w + j] + 1;
-            let ins = cost[i * w + j - 1] + 1;
-            // Strict "<" in the order (substitution, deletion, insertion): the first option to
-            // reach the minimum keeps the cell, which is how ties resolve.
+            let del = cost[i * w + j - 1] + 1;
+            let ins = cost[(i - 1) * w + j] + 1;
+            // Strict "<" in the order the oracle tries (substitution, deletion, insertion).
             let mut best_cost = sub;
             let mut best_op = if same { OP_MATCH } else { OP_SUB };
-            if ins < best_cost {
-                best_cost = ins;
-                best_op = OP_INS;
-            }
             if del < best_cost {
                 best_cost = del;
                 best_op = OP_DEL;
+            }
+            if ins < best_cost {
+                best_cost = ins;
+                best_op = OP_INS;
             }
             cost[i * w + j] = best_cost;
             op[i * w + j] = best_op;
@@ -427,12 +428,12 @@ fn trace_align(refs: &[u32], hyp: &[u32], ops: &mut Vec<u8>) -> Trace {
     }
 
     ops.clear();
-    let (mut i, mut j) = (m, n);
+    let (mut i, mut j) = (n, m);
     while i > 0 || j > 0 {
         let o = if j == 0 {
-            OP_DEL
-        } else if i == 0 {
             OP_INS
+        } else if i == 0 {
+            OP_DEL
         } else {
             op[i * w + j]
         };
@@ -442,8 +443,8 @@ fn trace_align(refs: &[u32], hyp: &[u32], ops: &mut Vec<u8>) -> Trace {
                 i -= 1;
                 j -= 1;
             }
-            OP_INS => j -= 1,
-            OP_DEL => i -= 1,
+            OP_INS => i -= 1,
+            OP_DEL => j -= 1,
             _ => {
                 i = i.saturating_sub(1);
                 j = j.saturating_sub(1);
