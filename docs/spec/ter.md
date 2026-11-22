@@ -150,7 +150,10 @@ begins at position `target`. The block must be found in the reference at `target
 
 Constraints, all measured as the point where the oracle stops producing a better TER:
 
-* `1 <= len <= 10` (`MAX_SHIFT_SIZE`). A block of 11 words is never shifted.
+* `1 <= len <= 50`. **Corrected at measurement time:** I first wrote the literature's `len <= 10`,
+  and the probe refuted it — a block of 50 words shifts as a single edit, 51 does not. So the length
+  cap is 50, the same number as the distance cap. (Moving the same block by 50 positions also
+  shifts; by 51 it costs 2 instead of 1.)
 * The move distance `|target - start|` must be at most 50 and non-zero.
 * A shift costs **1**, regardless of block length.
 * A shift that does not reduce the edit distance is not taken: the search only accepts a shift whose
@@ -196,7 +199,9 @@ Measured consequence: `num_edits` is generally fractional, so a single segment c
 
 ## 7. Open questions recorded at spec time
 
-* The documented `MAX_SHIFT_CANDIDATES` and `BEAM_WIDTH` constants are taken from the published
+* The documented `BEAM_WIDTH` and `MAX_SHIFT_CANDIDATES` constants are taken from the published
   description of TERCOM; §6 tests them rather than assuming them.
+* **Resolved during fixture generation:** the shift length cap is 50, not the literature's 10
+  (§4.2). Measured by bisecting the block length at which a pure-shift case stops costing 1 edit.
 * Whether the shift search ever accepts a block that overlaps the previous one is not stated in the
   literature; the tests decide it empirically.
