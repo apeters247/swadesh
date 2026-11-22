@@ -1280,4 +1280,37 @@ construct sacreBLEU's `*Score` objects, so a standalone replacement needs its ow
 the same formatting. That is the next bounded job.
 
 **Suite unchanged at 515 of 520** — expected, since this session touched documents and metadata
-only. Rust 13 suites green throughout.
+only. Rust 13 suites green throughout.---
+
+## 2026-11-22 (continued) — TER: the oracle's distance is banded, not exact; 515 → 517
+
+This session closed two of the three TER corpus failures and the CLI case, and found the mistake at
+the root of them.
+
+**The mistake.** The clean-room TER computed a full Levenshtein matrix. The oracle computes it inside
+a **band** of half-width 25 around the anti-diagonal, widening only when the length ratio exceeds 50.
+On a 36-word hypothesis against an 87-word reference the full matrix gives 86 — confirmed correct by
+an independent reference implementation — and the oracle reports 87, because the true optimal path
+falls outside its band and is never computed.
+
+So the oracle's distance is **approximate**, and matching it means reproducing the band rather than
+improving on it. I had spent an earlier session trying to close this gap by widening the candidate
+budget and by reordering the search, both of which were aimed at the wrong mechanism: the distance
+itself was wrong, so every candidate was scored against a different number.
+
+**What I measured.** `length_ratio = n_ref / n_hyp`; `beam_width = ceil(ratio/2 + 25)` when
+`25 < ratio/2`, else 25. For step `i`, `pseudo_diag = floor(i * ratio)` and only columns
+`[max(0, pseudo_diag - w), min(n_ref + 1, pseudo_diag + w))` are computed; everything else keeps
+`10^16`. Written up in `docs/spec/ter.md` before the implementation.
+
+**Result.** `real-nxkd1-k-q5:TER` now matches exactly, and so does the CLI WMT16 case, which had been
+showing TER 50.6 against 50.7 on 30,000 segments. Suite: **517 passing, 3 failing**, from 515 of
+520. Rust 13 suites green.
+
+**What is left.** Three cases, and one of them is the same kind of thing in the opposite direction:
+`real-qwen2.5vl_7b:TER` differs on 3 of 600 segments where the hypothesis is 87 words and the
+reference 150. There the oracle reports **121** edits and I report **125** — my search finds *better*
+shifts than the oracle's, with 131 candidate pairs available. Reordering those candidates the way the
+oracle walks them is the remaining work, and it is now the only TER difference.
+
+Also still open: the `fuzz42` intl row layout, unchanged from the previous session.

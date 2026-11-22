@@ -16,7 +16,12 @@ use crate::stats::{TerConfig, TerError};
 use crate::unicode::py_rstrip;
 
 /// Shifts move at most this many positions, and blocks are at most this long (spec 4.2).
-const MAX_SHIFT_SPAN: i64 = 50;
+/// How far a block may move, in positions.
+const MAX_SHIFT_DIST: i64 = 50;
+/// How long a shifted block may be. Distinct from the distance limit: conflating the two makes the
+/// search enumerate far more candidates than the oracle does and exhausts the budget before
+/// reaching the shift that helps (measured: 1000 candidates against the oracle's 71).
+const MAX_SHIFT_SIZE: usize = 10;
 /// A segment evaluates at most this many candidate shifts in total (spec 4.2).
 const MAX_CANDIDATES: usize = 1_000;
 
@@ -273,27 +278,56 @@ pub fn tokenize(cfg: &TerConfig, text: &str) -> Vec<String> {
 
 // ------------------------------------------------------------------ edit distance
 
-/// Last row of the edit distance, used while scoring candidate shifts.
-///
-/// A full row, no band: measurement showed a band narrower than the sequence lengths understates
-/// the distance on segments whose words are heavily repeated, and an understated distance makes
-/// the search accept a shift that does not help.
+/// Band half-width around the anti-diagonal, in cells (spec `ter.md` section 4.1).
+const BEAM: i64 = 25;
+
+/// The oracle's band: only cells near the anti-diagonal are computed, so a very short hypothesis
+/// against a very long reference reports a distance above the true minimum. Reproducing it is the
+/// point — see `docs/spec/ter.md`, and the note there on why a full matrix disagrees.
+fn beam_width(n_hyp: usize, n_ref: usize) -> i64 {
+    let ratio = if n_hyp > 0 { n_ref as f64 / n_hyp as f64 } else { 1.0 };
+    if (BEAM as f64) < ratio / 2.0 {
+        (ratio / 2.0 + BEAM as f64).ceil() as i64
+    } else {
+        BEAM
+    }
+}
+
+/// Half-open `[min_j, max_j)` of reference columns computed for hypothesis step `i`.
+fn band(i: usize, n_hyp: usize, n_ref: usize) -> (usize, usize) {
+    let ratio = if n_hyp > 0 { n_ref as f64 / n_hyp as f64 } else { 1.0 };
+    let width = beam_width(n_hyp, n_ref);
+    let pseudo = (i as f64 * ratio).floor() as i64;
+    let lo = (pseudo - width).max(0) as usize;
+    let hi = ((pseudo + width).min(n_ref as i64 + 1)).max(0) as usize;
+    (lo.min(n_ref + 1), hi)
+}
+
+/// Last row of the banded distance, used while scoring candidate shifts.
 fn distance_row(refs: &[u32], hyp: &[u32], row: &mut Vec<i64>) {
     let m = refs.len();
-    row.clear();
-    row.extend(0..=m as i64);
-    for (j, &h) in hyp.iter().enumerate() {
-        let mut prev_diag = row[0];
-        row[0] = (j + 1) as i64;
-        for i in 1..=m {
-            let cost = if refs[i - 1] == h { 0 } else { 1 };
-            let sub = prev_diag + cost;
-            let del = row[i] + 1;
-            let ins = row[i - 1] + 1;
-            prev_diag = row[i];
-            row[i] = sub.min(del).min(ins);
+    let n = hyp.len();
+    let mut prev: Vec<i64> = (0..=m as i64).collect();
+    let mut cur = vec![INF; m + 1];
+    for j in 1..=n {
+        let (lo, hi) = band(j, n, m);
+        for v in cur.iter_mut() {
+            *v = INF;
         }
+        if lo == 0 {
+            cur[0] = prev[0] + 1;
+        }
+        for i in lo.max(1)..hi {
+            let cost = if refs[i - 1] == hyp[j - 1] { 0 } else { 1 };
+            let sub = prev[i - 1].saturating_add(cost);
+            let del = prev[i].saturating_add(1);
+            let ins = cur[i - 1].saturating_add(1);
+            cur[i] = sub.min(del).min(ins);
+        }
+        std::mem::swap(&mut prev, &mut cur);
     }
+    row.clear();
+    row.extend_from_slice(&prev);
 }
 
 /// Alignment of the hypothesis to the reference: one entry per reference position.
@@ -455,14 +489,14 @@ fn shifted_pairs(hyp: &[u32], refs: &[u32]) -> Vec<(usize, usize, usize)> {
     let mut out = Vec::new();
     for s_h in 0..n_h {
         for s_r in 0..n_r {
-            if (s_r as i64 - s_h as i64).abs() > MAX_SHIFT_SPAN {
+            if (s_r as i64 - s_h as i64).abs() > MAX_SHIFT_DIST {
                 continue;
             }
             let mut len = 0usize;
             while s_h + len < n_h && s_r + len < n_r && hyp[s_h + len] == refs[s_r + len] {
                 len += 1;
                 out.push((s_h, s_r, len));
-                if len as i64 == MAX_SHIFT_SPAN || n_h == s_h + len || n_r == s_r + len {
+                if len == MAX_SHIFT_SIZE || n_h == s_h + len || n_r == s_r + len {
                     break;
                 }
             }

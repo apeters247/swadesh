@@ -224,4 +224,48 @@ equivalence of the outcome rather than of the number of calls.
   behaviour of the published loop; §6 tests it rather than assuming it, and it only differs on
   segments that evaluate many candidates.
 * Whether the shift search ever accepts a block that overlaps the previous one is not stated in the
-  literature; the tests decide it empirically.
+  literature; the tests decide it empirically.# TER: the beam edit distance
+
+Appended to `docs/spec/ter.md` section 4.1 after measuring why the clean-room TER disagrees with the
+oracle on long-reference segments.
+
+## Why a full matrix is wrong
+
+The clean-room TER computed a full Levenshtein matrix. On `real-nxkd1-k-q5` segment 136 (36
+hypothesis words against an 87-word reference) the full matrix gives **86**, whose correctness is
+confirmed by an independent reference implementation, and the oracle reports **87**.
+
+The oracle's distance is not exact. It is computed inside a **band** around the anti-diagonal, and
+when the hypothesis and reference differ greatly in length the true optimal path falls outside the
+band, so the reported distance is larger than the true minimum. Matching the oracle therefore means
+reproducing the band, not improving on it.
+
+## The band, as measured
+
+    length_ratio = n_ref / n_hyp            (1 when the hypothesis is empty)
+    beam_width   = ceil(length_ratio / 2 + 25)  if 25 < length_ratio / 2
+                 = 25                        otherwise
+
+For each hypothesis step `i` from 1 to `n_hyp`:
+
+    pseudo_diag = floor(i * length_ratio)
+    min_j       = max(0, pseudo_diag - beam_width)
+    max_j       = min(n_ref + 1, pseudo_diag + beam_width)
+
+Only cells `j` in `[min_j, max_j)` are computed; every other cell keeps the "infinite" distance of
+`10^16`. Row 0 is `0..=n_ref` and column 0 is `0..=n_hyp`, as usual.
+
+For the 36-vs-87 case: ratio 2.42, so beam 25; at `i = 36`, `pseudo_diag = 87`, `min_j = 62`,
+`max_j = 88`. Cells with `j < 62` are uncomputed at that row, which is why the result is 87.
+
+## Consequence for the shift search
+
+The shift search evaluates candidates with the same banded distance, so a narrow band can also make
+a shift look better or worse than it is. Both the candidate scoring and the final distance must use
+the band, or the search picks different shifts.
+
+## Verification
+
+The three failing corpus scores (`real-granite4_small-h`, `real-nxkd1-k-q5`, `real-qwen2.5vl_7b`)
+and the CLI WMT16 case are all this. The frozen fuzz and WMT22 fixtures pass with the full matrix
+because their segments are short enough that the band covers the optimal path.
