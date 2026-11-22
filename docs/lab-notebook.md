@@ -614,3 +614,38 @@ in the data path, not the logic.** Check the inputs the rule actually sees befor
 
 **State.** Committed: none yet (committing below). `13a` 0/13,455 + 1 fuzz open; `zh` **exact**;
 `none`/`char` exact; `intl` 6/13,455.
+
+---
+
+## 2026-11-22 — Phase 1: 13a SOLVED (0/13455, 0/5000); zh and 13a both exact
+
+**Applied the lesson from the zh bug first**: traced the actual intermediate strings before touching
+the rule. That immediately showed the `.` of `&,.0` sitting next to a space by the time any
+attachment rule ran, so no in-loop condition could ever fire.
+
+**The measured rule.** `",.digit"` fuses: `&,.0` -> `& , .0`. A lone `".0"` splits. Verified across
+`,.0`, `,.5`, `a,.0`, `&,.0x`, `&,.`.
+
+**The fix** is the same shape as zh's: the pattern must be protected before the pass that destroys
+its context. A sentinel character marks the dot before padding, and is restored at the end. Two
+earlier attempts failed because they tested adjacency inside a pass that had already inserted spaces.
+
+**Errors made and caught this turn:**
+- Inserted a no-op pass (both branches returned `None`) — written, spotted immediately, replaced.
+- The build copy had lost the `t13check` example, so a "successful" build was testing a stale
+  binary. **A green build that proves nothing is the same trap as the zh `py_split` bug.**
+- The commit-step `sed` deleted a debug helper's opening line but left its body, breaking the zh
+  file. Caught by the full Rust suite (rc=101, brace error), fixed, and re-verified.
+
+**Final state of the tokenizer ports:**
+| tokenizer | corpus | fuzz |
+|---|---|---|
+| none, char | exact | exact |
+| zh | 0/13,455 | 0/5,000 |
+| 13a | 0/13,455 | 0/5,000 |
+| intl | 6/13,455 | — |
+
+Rust suite: 96 passed, 0 failed. Frozen-oracle suite: 14 passed.
+
+**Next.** `intl` is the only tokenizer left (6/13,455, all in en-ja CJK comma contexts). Then the
+port can be wired into the metric layer and `tokenize.rs` deleted.

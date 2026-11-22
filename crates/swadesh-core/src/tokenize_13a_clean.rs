@@ -101,6 +101,28 @@ fn normalise(line: &str) -> String {
 pub fn tok_13a(line: &str, out: &mut String) {
     let s = normalise(line);
 
+    // Stage 2-pre: a "." directly after a "," and before a digit belongs to the digit
+    // (measured: "&,.0" -> "& , .0", while ".0" alone -> ". 0"). Mark it with a sentinel so
+    // the padding pass and the attachment passes cannot separate it from its digit.
+    const DOT_SENTINEL: char = '\u{E000}';
+    let s: String = {
+        let c: Vec<char> = s.chars().collect();
+        let mut out = String::with_capacity(s.len());
+        for (i, &ch) in c.iter().enumerate() {
+            if ch == '.'
+                && i >= 1
+                && c[i - 1] == ','
+                && i + 1 < c.len()
+                && is_attach_digit(c[i + 1])
+            {
+                out.push(DOT_SENTINEL);
+            } else {
+                out.push(ch);
+            }
+        }
+        out
+    };
+
     // Stage 2: pad class members.
     let s = insert_pass(
         &s,
@@ -126,7 +148,8 @@ pub fn tok_13a(line: &str, out: &mut String) {
         },
         |chars, i, end| chars[i..end].iter().collect(),
     );
-    // Stage 3b: attach a "." or "," to a preceding non-digit.
+    // Stage 3b: attach a "." or "," to a preceding non-digit. The same ",.digit" exception
+    // applies here: the "." belongs to the digit, so this stage must skip it too.
     let s = insert_pass(
         &s,
         |chars, i| match chars[i] {
@@ -174,6 +197,9 @@ pub fn tok_13a(line: &str, out: &mut String) {
         },
         |chars, i, end| chars[i..end].iter().collect(),
     );
+
+    // Restore the protected dot before joining.
+    let s: String = s.chars().map(|c| if c == DOT_SENTINEL { '.' } else { c }).collect();
 
     // Stage 5: join on Python whitespace.
     out.clear();

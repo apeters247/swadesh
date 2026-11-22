@@ -142,9 +142,6 @@ pub fn tok_zh(line: &str, out: &mut String) {
     }
 }
 
-    dot_comma_splits(false, prev, next)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
