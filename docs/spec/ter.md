@@ -183,12 +183,15 @@ shift search at all; the corpus aggregation then divides by a ref length that ma
 For each segment, with hypothesis and the non-missing references:
 
 1. Tokenize the hypothesis and every reference with the configured tokenizer.
-2. With more than one reference, `num_edits` is the **mean** over references of the per-reference
-   edit count, all against the same hypothesis, and `avg_ref_len` the mean of the reference lengths.
-3. With one reference the mean is that single reference's numbers.
+2. `num_edits` is the **minimum** over references of the per-reference edit count, all against the
+   same hypothesis: the best reference wins.
+3. `avg_ref_len` is the **mean** of the reference lengths. The asymmetry is the oracle's and was
+   measured: `a b c` against `[a b c, a b c d e]` reports `[0, 4.0]`, not `[1, 4]` (a mean of the
+   edits) and not `[0, 3]` (the best reference's length).
 
-Measured consequence: `num_edits` is generally fractional, so a single segment can contribute
-`0.5` edits. Corpus TER is `sum(num_edits) / sum(avg_ref_len)` over segments.
+**Corrected at implementation time.** I first wrote "mean over references" for the edits, which
+the segment fixtures rejected on 138 of 700 rows. `num_edits` is therefore integral; corpus TER is
+`sum(num_edits) / sum(avg_ref_len)` over segments.
 
 **Not reproduced (justified by measurement).** The reference implementation happens to preprocess
 each reference twice: once when references are cached and once when they are extracted. That is
