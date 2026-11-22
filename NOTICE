@@ -1,10 +1,46 @@
 swadesh
 Licensed under the Apache License, Version 2.0 (see LICENSE).
 
-This product includes software from sacreBLEU (https://github.com/mjpost/sacreBLEU),
-copyright Matt Post and contributors, licensed under the Apache License, Version 2.0.
+## What swadesh is
 
-swadesh subclasses sacreBLEU's BLEU and CHRF classes, depends on sacreBLEU 2.6.0 at
-runtime, and computes corpus scores with sacreBLEU's own code. The tokenizer logic
-(13a, intl, zh, char) is a port of sacreBLEU's tokenizers, and the native TER work in
-progress is a port of sacreBLEU's TER implementation.
+swadesh is a Rust implementation of the BLEU, chrF and TER metrics with their tokenizers,
+verified bit-for-bit against sacreBLEU 2.6.0, plus a Python package and a command-line tool that
+produce the same scores.
+
+## Where the implementations came from
+
+Everything in `crates/` was written from published specifications and from black-box measurement
+of sacreBLEU's observable output:
+
+* the tokenizers, from `docs/spec/tokenizers.md`;
+* the BLEU and chrF statistics, from `docs/spec/stats.md`;
+* TER, from `docs/spec/ter.md`;
+* the number-absorption rule inside the international tokenizer, from
+  `docs/spec/intl-absorption.md`.
+
+sacreBLEU's Python source was not read for these, and no sacreBLEU code is copied into them. The
+differential tests compare against recorded sacreBLEU output, which is measurement, not derivation.
+
+The command-line interface in `crates/swadesh-cli` reproduces sacreBLEU's command-line behaviour —
+flags, output format, signatures — as the contract users depend on.
+
+## sacreBLEU, and why it is still a dependency
+
+sacreBLEU (https://github.com/mjpost/sacreBLEU), copyright Matt Post and contributors, is licensed
+under the Apache License, Version 2.0.
+
+The Python package still imports sacreBLEU in five modules, and this is the part of the tree that is
+not yet standalone:
+
+* `__init__.py` — the `patch()` adapter, which redirects `import sacrebleu` users to swadesh;
+* `verify.py` — the benchmark harness;
+* `metrics.py` — subclasses sacreBLEU's metric classes to reuse their score formatting;
+* `significance.py` — wraps sacreBLEU's paired-test machinery;
+* `cli.py` — delegates to sacreBLEU's CLI entry point.
+
+Replacing these with standalone implementations is planned. Until then, sacreBLEU is a runtime
+dependency of the Python package, and its Apache-2.0 notice applies to those five modules.
+
+## Apache-2.0
+
+The Apache License 2.0 in `LICENSE` covers this repository as it stands.
