@@ -678,3 +678,37 @@ that boundary. Fix: give the port the same word-level pass rather than another c
 condition — the same shape as the zh `py_split` bug, where the fault was in the data path.
 
 **State.** 13a, zh, none, char: exact. intl: exact in Python, 40 in Rust. Nothing deleted yet.
+
+---
+
+## 2026-11-22 — Phase 1 COMPLETE: all four tokenizers exact in Rust
+
+**`intl` in Rust: 0 / 13,455**, after 40 → 28 → 0. The final bug was mine, introduced earlier
+in the session: when I relaxed the digit cluster's letter-extension rule to "letters always
+continue the run", I broke `1名死亡、5名` — the cluster must stop at `1` because `名死亡` is not
+followed by another digit, leaving the CJK comma at a token start to split. Restoring that
+requirement took it to zero.
+
+**Verification, all in Rust, against sacreBLEU 2.6.0:**
+| tokenizer | WMT22 (7 pairs, 13,455 lines) | fuzz (5,000) |
+|---|---|---|
+| 13a | 0 | 0 |
+| intl | 0 | — |
+| zh | 0 | 0 |
+| none, char | exact | — |
+
+Rust suite: **99 passed, 0 failed**. Frozen-oracle suite: **14 passed**.
+
+**Two unit-test expectations of mine were wrong**, both written from memory of `13a` rather than
+measured: `"It costs 5,000.50!"` for intl keeps the final `!` attached, and `"100%"` stays whole
+(intl does not split `%`, 13a does). The code was right; the tests were lying. Corrected against
+the oracle, and the test header now says expectations are measured, not remembered.
+
+**Session total for Phase 1.** Four tokenizers, each derived from a committed spec plus black-box
+measurement, each verified at zero against 13,455 real lines and, where applicable, 5,000 fuzz
+cases. The reusable engine is the `re.sub` insertion emulator; the recurring lesson was that when a
+change produces no movement on the measure that matters, the fault is in the input or the buffer,
+not the rule — that lesson closed both the zh and intl stalemates.
+
+**Next.** Wire the four clean-room tokenizers into the metric layer, re-run the frozen-oracle and
+parity suites, then delete `tokenize.rs` in a separate commit.
