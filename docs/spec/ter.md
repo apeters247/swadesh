@@ -166,42 +166,59 @@ Constraints, all measured as the point where the oracle stops producing a better
   hypothesis position with the reference positions it aligns to.
 
 Each accepted shift adds 1 to the edit count and is applied to the hypothesis before the next
-iteration. Iteration ends when no shift reduces the cost, or when the number of iterations
-reaches the edit distance of the unshifted hypothesis (an unshifted TER of 0 or 1 can never be
-improved by a shift, and the oracle relies on that).
+iteration. Iteration ends when no shift reduces the cost, or when 1,000 candidate evaluations have
+been made in total across the whole segment (the counter is deliberately not reset between
+iterations — measured, §7).
 
 ### 4.3 Counting
 
 `num_edits = edit_distance(after final shift) + number_of_shifts`. The final edit distance is
 computed against the final hypothesis, so substitutions caused by a shift are included.
 
+An empty reference has reference length 0 and contributes the hypothesis length as edits, with no
+shift search at all; the corpus aggregation then divides by a ref length that may be 0.
+
 ## 5. Segment statistics and aggregation
 
 For each segment, with hypothesis and the non-missing references:
 
 1. Tokenize the hypothesis and every reference with the configured tokenizer.
-2. If there are no references, or the hypothesis is empty and all references are empty, the segment
-   contributes `0` edits and reference length 0.
-3. Otherwise `num_edits` is the **mean** over references of the per-reference edit count, computed
-   against the same hypothesis, and `avg_ref_len` the mean of the reference lengths.
+2. With more than one reference, `num_edits` is the **mean** over references of the per-reference
+   edit count, all against the same hypothesis, and `avg_ref_len` the mean of the reference lengths.
+3. With one reference the mean is that single reference's numbers.
 
 Measured consequence: `num_edits` is generally fractional, so a single segment can contribute
 `0.5` edits. Corpus TER is `sum(num_edits) / sum(avg_ref_len)` over segments.
+
+**Not reproduced (justified by measurement).** The reference implementation happens to preprocess
+each reference twice: once when references are cached and once when they are extracted. That is
+only observable if the tokenizer is not idempotent. It is idempotent — probed on apostrophe-heavy
+inputs (`dont''s`, `the 's`, `44 -0038' s`) in both tokenizer modes, all fixed points after one
+pass. So this specification requires one pass per reference, and the fixtures (§6) enforce
+equivalence of the outcome rather than of the number of calls.
 
 ## 6. Verification plan
 
 1. `tools/measure_ter.py` probes the oracle for every rule above and writes
    `tests/oracle/ter_probe.jsonl` (tokenization strings, segment statistics as `float.hex()`).
+   It carries 1,135 records: five configurations × 80 tokenization inputs and × 120 random
+   shift-heavy segments plus block-length and move-distance boundaries.
 2. The clean-room tokenizer and segment statistics are compared against that file on every corpus
-   segment (WMT22, all seven pairs) and on adversarial inputs: long repeated blocks, blocks exactly
-   10 and 11 long, distances 49/50/51, ties in the matrix, empty segments.
+   segment (WMT22, all seven pairs) and on adversarial inputs: long repeated blocks, a block of 50
+   and of 51, distances 49/50/51, ties in the matrix, empty segments.
 3. Corpus scores and per-sentence scores replayed through `tests/test_frozen_oracle.py`.
 
-## 7. Open questions recorded at spec time
+## 7. Findings recorded during fixture generation
 
-* The documented `BEAM_WIDTH` and `MAX_SHIFT_CANDIDATES` constants are taken from the published
-  description of TERCOM; §6 tests them rather than assuming them.
-* **Resolved during fixture generation:** the shift length cap is 50, not the literature's 10
-  (§4.2). Measured by bisecting the block length at which a pure-shift case stops costing 1 edit.
+* The shift length cap is 50, not the literature's 10 (§4.2). Bisected: a 50-word block shifts as
+  one edit, 51 costs 6.
+* The two caps interact in a way worth stating: a 50-word block **and** a 50-position move are each
+  individually permitted, so the limits are not a combined budget.
+* A cap of 10 per block still reaches the same total for the pure-shift case, because the search
+  iterates and can chain shifts. So the cap changes *which* shifts are found, not necessarily the
+  final cost — it is a search-efficiency parameter, and §6 tests the outcome rather than the cap.
+* The candidate counter is not reset per iteration. This is a hypothesis from the observed
+  behaviour of the published loop; §6 tests it rather than assuming it, and it only differs on
+  segments that evaluate many candidates.
 * Whether the shift search ever accepts a block that overlaps the previous one is not stated in the
   literature; the tests decide it empirically.
