@@ -1176,4 +1176,36 @@ tokenizer question. Closing it means either a wider budget (which changes the sh
 picks and so must also be measured) or reproducing the oracle's candidate *ordering* exactly. It is
 the last item between the current tree and "zero mismatches".
 
-**Next.** Reproduce the oracle's candidate ordering for the shift search, then Phases 4-7.
+**Next.** Reproduce the oracle's candidate ordering for the shift search, then Phases 4-7.---
+
+## 2026-11-22 (continued) — intl rule attempted five ways, reverted; baseline 515 of 520
+
+I tried to close the last intl case and could not. Recording the attempts because the reversion is
+a decision, not an accident.
+
+**The target.** `?𝟎符` and `a./1` keep the leading mark glued while `2./9` and `x?1` split it. I
+probed it carefully and each probe produced a rule:
+
+1. digit run absorbs one preceding mark → corrected `?1`, broke `x?1`.
+2. only at `i == 0` → corrected `?1`, broke `‘’/1`.
+3. only after whitespace → corrected `(52./9`, broke `‘’/1`.
+4. same predicate as `splits_after_digit` on both sides → corrected `=1`, broke `fuzz66`.
+5. keyed to the character before the mark being a digit → broke five cases at once.
+
+Each attempt was individually measured and each regressed something else. The behaviour depends on
+which token the mark belongs to *and* what preceded the whole run, and I do not yet have a rule that
+covers the shapes I have seen. After the fifth I reverted the file to its committed state rather
+than leave a half-right rule in the tree — a tokenizer that is right on 1,177 of 1,177 fuzz texts and
+wrong on one CLI corpus is better than one that trades one for five.
+
+**Confirmed good in the committed state.** The intl tokenizer diverges on **0 of 1,177** fuzz
+texts and 0 of 400 WMT22 lines. What remains is narrower than the tokenizer: the corpus *row*
+layout for multi-reference segments, where the oracle uses one reference directly while I apply the
+closest-length rule across two. That is the `nrefs` accounting in `metrics.py`, which is Phase 5
+work.
+
+**Baseline.** Oracle (11/15 files), parity (504/505), provenance: **515 passing, 5 failing** —
+`fuzz42 intl` row layout, three TER corpus scores (the candidate budget), and the CLI WMT16
+dataset test (0.1 TER point on 30k segments, same cause).
+
+**Next.** Phase 5 `nrefs` accounting, which is where the intl row problem lives; then Phases 6-7.
