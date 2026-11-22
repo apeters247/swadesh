@@ -1113,4 +1113,39 @@ pre-existing and unrelated to the clean-room work: `corpus_bleu_nested_none` (th
 above), `test_patch_hf_evaluate_style_calls`, and `test_cli_dataset_flow_with_cached_wmt16`.
 
 **Next.** The intl tokenizer (the one Phase 1 leftover, now with corpus evidence), then the `None`
-split, then Phases 4-7.
+split, then Phases 4-7.---
+
+## 2026-11-22 (continued) — a reference-buffer leak, and the intl digit class
+
+**The big one: a stale-buffer bug in the BLEU statistics.** The frozen oracle passed file by file
+and failed as a suite, with `fuzz` (which runs first) poisoning every later file. Identical inputs
+produced different corpus totals depending on what had been scored before:
+
+    alone  [7429, 7547, 6849, 5791, ...]
+    after  [7429, 7518, 6982, 5792, ...]
+
+Cause: `bleu_stats_segment` grows its per-segment id buffers to the largest reference count it has
+ever seen and never shrinks them back. A segment with one reference scored after one with two
+therefore carried an **extra, stale reference**: it changed the closest-reference length and the
+clipped counts. One `ids.truncate(refs.len() + 1)` fixed it. Oracle files went from **2 passing to
+11** of 15.
+
+**intl: the digit class is Unicode `N`, not ASCII.** `𝟎*` stayed one token for the oracle and split
+for me. The measured answer is broader than a digit range: `𝟎` (Nd), `²` (No), `Ⅰ` (Nl), `١` and
+`１` all behave as digits here, so the rule is category `N`. An earlier comment in the tokenizer
+asserted the opposite for astral digits, from a probe I read wrongly; it is corrected in place.
+This closed `fuzz37`.
+
+**What is left, measured precisely.**
+- `fuzz42:BLEU intl` — one missing rule: a digit run absorbs a preceding mark when the run
+  continues past it (`?𝟎符` is one token). Isolated to that sentence.
+- Three `TER: corpus score` cases on real-model output. 2 sentences of 250 differ in one of them,
+  and the cause is the candidate-budget limit already recorded in the Phase 3 entry — a long
+  repetitive segment exhausts 1,000 candidates before reaching the shift that helps.
+
+**Method note.** Each of these came from asking for the *other side's intermediate value* rather
+than re-reading my own code: the summed statistics row, then `tokenizer()` on the exact string.
+Both times the difference was one identifier or one predicate, and several earlier attempts to
+reason it out had moved the count around without converging.
+
+**Next.** The intl preceding-mark rule, then the TER budget, then Phases 4-7.

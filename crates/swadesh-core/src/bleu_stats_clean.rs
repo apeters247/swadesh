@@ -117,6 +117,10 @@ pub fn bleu_stats_segment(cfg: &BleuConfig, hyp: &str, refs: &[&str], out: &mut 
         }
         drop(interner);
 
+        // Drop buffers left over from a previous segment that had more references. Without this
+        // the extra buffers are treated as additional references, which silently changes the
+        // closest-reference length and the clipped counts.
+        ids.truncate(refs.len() + 1);
         let (hyp_idv, ref_ids): (&[u32], &[Vec<u32>]) = match ids.split_first() {
             Some((h, r)) => (h.as_slice(), r),
             None => {

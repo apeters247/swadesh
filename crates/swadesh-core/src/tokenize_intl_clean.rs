@@ -30,14 +30,14 @@ fn is_class(c: char) -> bool {
     }
 }
 
-/// The digit notion the numeric rules use: ASCII digits, full-width digits, and Unicode
-/// numbers generally (measured: `½`, `⅓`, `²`, `Ⅷ` all behave as digits here and in zh).
+/// The digit notion the numeric rules use: the whole Unicode number category, ASCII included.
+///
+/// Measured on the corpus: `𝟎*` (U+1D7CE, an astral Nd) keeps the `*` attached exactly like an
+/// ASCII digit, so astral numbers count. An earlier note here claimed the opposite and was wrong;
+/// `𝟎` is in `\p{Nd}`, and the oracle's rule is category `N` throughout.
 #[inline]
 fn is_digit(c: char) -> bool {
-    c.is_ascii_digit()
-        || ('\u{FF10}'..='\u{FF19}').contains(&c)
-        // BMP numbers only: astral digits such as \u{1D7CE} do NOT extend a run (measured).
-        || ((c as u32) <= 0xFFFF && crate::unicode::is_number(c))
+    crate::unicode::is_number(c)
 }
 
 /// Measured: after a trailing digit, these class characters split off instead of gluing.
