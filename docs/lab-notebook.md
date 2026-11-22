@@ -530,3 +530,32 @@ that made `13a` and `intl` hard. Character-level refers to the *splitting*, not 
 
 **State.** Not committed: 287 mismatches is not exact. 13a remains the one tokenizer that passes on
 corpus data (0/13,455, 1 fuzz case open).
+
+---
+
+## 2026-11-22 — Phase 1: zh dot/comma rule, four revisions, 193/13455 and 8/5000
+
+**Attempted.** Finish zh's `.`/`,` attachment, the same family as 13a's.
+
+**Progression within one session.** 287 → 287 → 8,127 → 203/73 → 193/8 mismatches, over four rule
+revisions:
+1. **The table was overriding the rule.** `.` and `,` are in the measured range table, so
+   `zh_splits()` returned true before my contextual predicate could run. Two attempts produced
+   byte-identical mismatch counts (287 twice) because the predicate was dead code. **Stale-looking
+   results after a real code change mean the change is not on the path — check that before
+   theorising.** The fix was making the attachment rule authoritative for those two characters.
+2. Between digits only (8,127 mismatches — wrong direction).
+3. At least one digit neighbour (203/73).
+4. Word edge next to a digit, or between digits (193/8).
+
+**State.** 193/13,455 corpus, 8/5,000 fuzz. Better than the 287/11 start but not exact, and the
+remaining shapes resist the fourth rule.
+
+**Honest read.** This is the fourth tokenizer to hit the same wall, and all four have been the
+number-attachment exceptions rather than the tokenization. That is now a pattern across a whole
+phase, not a run of bad luck: **tokenizer exactness in this project is dominated by contextual
+punctuation attachment, and my method (probe, guess a rule, test) converges slowly on it because each
+rule covers some contexts and breaks others.**
+
+**Decision.** Stop for this session. Ports committed: none of zh/intl (not exact);
+13a remains the one with 0 on corpus data.
