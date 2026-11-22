@@ -1208,4 +1208,36 @@ work.
 `fuzz42 intl` row layout, three TER corpus scores (the candidate budget), and the CLI WMT16
 dataset test (0.1 TER point on 30k segments, same cause).
 
-**Next.** Phase 5 `nrefs` accounting, which is where the intl row problem lives; then Phases 6-7.
+**Next.** Phase 5 `nrefs` accounting, which is where the intl row problem lives; then Phases 6-7.---
+
+## 2026-11-22 (continued) — intl rule: measured precisely, still not implemented; 515/520 held
+
+Ten attempts, a written spec, and the tokenizer back where it started. The value this session is
+the spec, not a diff.
+
+**What I measured, exhaustively this time.** I stopped probing by anecdote and enumerated:
+
+* **One mark at position 0**: every ASCII mark glues except `$ + < = > ^ ` | ~`, which are exactly
+  the Unicode `\p{S}` category. Every `\p{P}` mark glues, ASCII and non-ASCII alike.
+* **One mark after a word**: glues only when the word ends in a letter, and only for `.`
+  (`a./1`, `ab./1`). Every other mark splits after a letter (`a?1`, `a,1`, `a/1`, `a'1`, `a)1`,
+  `a-1`, `a’1`, `x!Ⅷ`), and all split after a digit.
+* **Two marks in a row**: all 13 combinations I tried split (`'?1`, `‘/1`, `./1`, `!/1`, `?/1`,
+  `//1`, `,/1`, `&/1`, `@/1`, `(/1`, `\/1`, `_/1`).
+* **Except two adjacent quote marks**: `‘’/1`, `’’/1`, `‘‘/1`, `''/1`, `'’/1`, `‘'/1` all glue.
+
+**Where every attempt died.** The letter limb only applies to `.`, not to marks generally — I
+implemented it as "after any letter" and `a?1` glued, which it must not. And the quote-pair limb is
+the only case I could not derive a predicate for: it is the single shape that behaves differently
+from every other two-mark chain, and I have no model of the oracle's internals that predicts it.
+
+**Final state.** Ten builds tried; the eleventh was a revert. The committed tokenizer is exact on
+**0 of 1,177** fuzz texts and 0 of 400 WMT22 lines, and the suite stands at **515 passing, 5
+failing** — unchanged from where the session started. I would rather report a flat session than ship
+a rule that trades the open case for four regressions.
+
+**The spec is committed** at `docs/spec/intl-absorption.md`, written before any implementation as the
+process requires, and it states plainly which limb is unresolved and why the code is not in the tree.
+
+**Next.** The quote-pair question, then all three limbs together. Or accept the single open intl case
+and spend the time on Phases 4-7, which are untouched.
