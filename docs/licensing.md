@@ -58,10 +58,33 @@ side permanently.
 
 ## Third-party components
 
-* NumPy — BSD.
-* Unicode Character Database — Unicode Terms of Use; the generated tables are in
-  `crates/swadesh-core/src/tables.rs`, produced by `tools/gen_tables.py`.
-* Neither is bundled in a way that changes this project's licence.
+Checked at the time of writing; all are permissive and all are compatible with AGPL-3.0-or-later.
+
+**Rust crates** (26 third-party, from `cargo metadata`):
+
+| licence | crates |
+|---|---|
+| `MIT OR Apache-2.0` | 20 |
+| `Apache-2.0 OR MIT` | 2 |
+| `(MIT OR Apache-2.0) AND Unicode-3.0` | 1 |
+| `Apache-2.0 WITH LLVM-exception` | 1 |
+| `Unlicense OR MIT` | 1 |
+
+No third-party crate is copyleft. The only copyleft entries in `cargo metadata` are swadesh's own
+four crates.
+
+**Python**:
+
+* NumPy 2.x — BSD (its distribution ships `LICENSE.txt`).
+* sacreBLEU 2.6.0 — Apache-2.0, the five adapter modules described above.
+* pytest and hypothesis are test-only and not runtime dependencies.
+
+**Data**:
+
+* The Unicode Character Database, under the Unicode Terms of Use, is the source for the generated
+  tables in `crates/swadesh-core/src/tables.rs` (produced by `tools/gen_tables.py`).
+
+None of these is bundled in a way that changes this project's licence.
 
 ## A note on the commercial licence text
 
