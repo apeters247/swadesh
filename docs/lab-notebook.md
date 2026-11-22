@@ -585,3 +585,32 @@ start would have shown `1.` and saved five revisions.
 
 **Decision.** Stop. Seven revisions on one character pair in a single session is well past the point
 where a fresh approach on a clean starting point is better than another patch.
+
+---
+
+## 2026-11-22 — Phase 1: zh SOLVED (0/13455 corpus, 0/5000 fuzz)
+
+**The bug was not the rule.** After six rule revisions that left the corpus pinned at exactly 193,
+the cause turned out to be the *input* to the rule: `tok_zh` split the line with `py_split` first,
+so by the time the `.`/`,` rule saw `"1."` the following space was gone and `next` was `None`. The
+rule said "attach at end of word", which was correct — the word had been cut before the rule could
+see why it should split.
+
+Fix: pass line context. A word-final `.`/`,` is judged against the ORIGINAL line, so `"1. x"` sees
+the space, and `"1."` at end of line sees the end. Corpus went 193 → **0** in one change, with the
+rule text unchanged.
+
+**Then one real rule gap remained** (fuzz 8): `.9` at the very start of the line attaches even
+though the digit after it is not followed by a digit. One line-start exception, fuzz → **0**.
+
+**Final:** 0 / 13,455 corpus lines, 0 / 5,000 fuzz cases. Unit tests pass; the frozen-oracle suite
+passes (14).
+
+**What this session teaches, and it is the most useful thing in weeks.** I spent six revisions
+editing a rule that was already correct. The signal was there the whole time — a corpus count that
+did not move by a single line across every change — and I read the oscillating fuzz count as
+progress instead. **When a fix produces exactly no change on the measure you care about, the bug is
+in the data path, not the logic.** Check the inputs the rule actually sees before touching the rule.
+
+**State.** Committed: none yet (committing below). `13a` 0/13,455 + 1 fuzz open; `zh` **exact**;
+`none`/`char` exact; `intl` 6/13,455.
