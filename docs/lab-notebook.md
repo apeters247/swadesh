@@ -308,3 +308,31 @@ the same shape. `zh` is character-level and needs no attachment engine.
 
 **Next.** Port `13a` and `intl` to Rust against the emulator, verify through the frozen oracle, then
 delete `tokenize.rs`.
+
+---
+
+## 2026-11-22 — Phase 1: intl, staged method, plateau at 67
+
+**Attempted.** Apply the method that solved `13a`: staged algorithm, measured class, clusters
+protected before padding.
+
+**Measured progression.** 477 → 452 → 72 → 83 → 67 → 87. Best 67 mismatches on 2,037 lines (96.7%
+of lines correct, so ~3.2% wrong). Each fix traded one shape for another:
+`COVID-19` vs `3-4`, `16x12` vs `6.152.524`, `99p` vs `12.39,`.
+
+**Why this differs from 13a.** `13a` had a clean decomposition: pad a fixed class, then three
+attachment passes. `intl`'s class *contains* `.` `,` `:` `-` `/`, so numeric protection and padding
+compete for the same characters, and every regex that protects one numeric shape breaks another.
+`13a` avoided this because `.` `,` were excluded from its class; `intl` cannot exclude them, because
+it pads them in every non-numeric context.
+
+**Decision.** Stop iterating. The remaining structure is: a digit-bounded cluster pass that must be
+applied *left to right consuming its matches* (like the `re.sub` emulation, which does work), rather
+than a single regex with alternatives. That is a different mechanism from regex matching, and it is
+how `13a`'s attachment passes became tractable. Do that next rather than more alternatives.
+
+**Cost.** Two sessions on `intl` without reaching zero. The `13a` result stands and is committed.
+
+**Next.** Write the cluster pass as an explicit left-to-right scanner in Rust (not a regex), where the
+"consume what you matched" behaviour is natural, and test it against the frozen oracle. If that fails,
+`intl` is the one tokenizer to document as a known limitation.
