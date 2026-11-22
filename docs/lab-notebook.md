@@ -799,3 +799,38 @@ actually occurs — has been at zero for several sessions. The honest framing fo
 **Next.** Phase 2 (BLEU/chrF segment statistics) is untouched and is the largest remaining risk in
 the whole rewrite; `stats.rs` is a port as well. That is a better use of the next session than the
 fuzz tail.
+
+---
+
+## 2026-11-22 — Phase 1: intl fuzz tail, exhaustive measurement, still 22
+
+**Owner instruction: close all 22.** Attempted with the measure-don't-guess method.
+
+**What was established, definitively:**
+- The splitting class is **exactly `\p{P} ∪ \p{S}`**: 9,620 code points, compared against the
+  `regex` module's `P|S` with zero differences in either direction.
+- **860 class characters split after a letter but not after a digit** — every one of them absorbed by
+  the number cluster. None behave the other way round. So the class is not context-dependent; the
+  digit branch simply gets there first.
+- One class character between two digits is absorbed (`1!2`), two are not (`1!,2`).
+- Astral digits (`𝟎` U+1D7CE) join runs (`𝟎0`, `/𝟎`, `9ｌ𝟎*`), where BMP numbers also join but are
+  not class members.
+
+**Three attempts, each traded one dataset for the other:**
+
+| change | corpus | fuzz |
+|---|---|---|
+| broad lead rule (every class char glues a digit except `$+<=>^\`\|~`) | **100** | 34→ | 
+| absorb one class char between digits | **14** | 22 |
+| both reverted — current | **0** | **22** |
+
+**What this means, and it is the conclusion rather than a shrug.** The corpus and the fuzz alphabet
+disagree, and the fuzz alphabet is not real data: it is a synthetic alphabet I wrote, containing
+sequences no MT corpus produces (`𝟎0⩮`, `/ⅎ`). Where they conflict, the corpus is the ground truth
+for a metric tool, and the parity suite agrees with it. Chasing the fuzz tail therefore means
+optimising for inputs that never occur at the cost of inputs that do.
+
+**Recommendation, stated plainly.** Accept `intl` as corpus-exact (0/13,455, parity green) with a
+documented 22-line fuzz divergence, and record the fuzz file as advisory rather than a gate. The
+alternative — matching all 22 — requires the oracle's exact internal ordering, which four sessions
+have not reproduced and which changes nothing anyone can measure on real data.
