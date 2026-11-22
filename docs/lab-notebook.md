@@ -54,3 +54,35 @@ pushing to the private repo needs a deploy key before Phase 1 can be committed u
 **Next.** Phase 1: write `docs/spec/tokenizers.md` from the published rules (Moses/SacreBLEU
 documentation, plus spertiniite as a cross-check only — never copied), commit it alone, then
 reimplement `tokenize.rs`/`unicode.rs` from that spec, and only then delete the port.
+---
+
+## 2026-11-22 (later session) — Phase 1, spec first
+
+**Attempted.** Write `docs/spec/tokenizers.md` from published sources only, and commit it alone
+before touching any tokenizer code. This commit is the provenance record for the clean-room claim:
+it must exist, and be dated before, the implementation.
+
+**Built.** 162-line spec covering `none`, `char`, `13a`, `intl`, `zh`, lowercasing, whitespace and
+the acceptance criteria. Sources: Koehn & Knowles 2017 (the 13a rule set), the Moses tokenizer
+manual, Unicode UAX #29 and the character database, the Python `str` semantics the oracle depends
+on, and the BLEU/chrF papers. `spertiniite` was checked only as an independent confirmation that
+the rule set matches; no code was taken from it.
+
+**What the spec had to record as a deliberate defect.** The `zh` range table end point is the
+two-character string `u'\u20000'`, which admits U+2001–U+2A6D (arrows, math, currency) as Chinese.
+The spec states this explicitly, because a consumer "fixing" it would change scores.
+
+**What failed / was corrected.** The first draft asserted that `intl` has no separate `%` rule and
+that its class is `\p{P}\p{S}\p{N}` wholesale. Probing the oracle showed both are wrong:
+`"100%"` stays `100%` under `intl` but becomes `100 %` under `13a`, and `→` is split by `intl` but
+not by `13a`. Three inferences were wrong in a document whose whole point is being right; the
+spec now records the observed behaviour, with the observations quoted.
+
+**Measured.** `docs/spec/tokenizers.md` 162 lines, committed as `0f77954` with no code change.
+Oracle probe (6 inputs × 3 tokenizers) saved in the session log.
+
+**Next.** Phase 1 implementation: reimplement `tokenize.rs` and `unicode.rs` from the spec, verify
+against the frozen corpus (zero mismatches), then delete the port in a separate commit.
+
+**Blockers carried forward.** No GitHub credentials on the VPS, so nothing is pushed; two Phase 0
+commits (`9f9e6e3`, `0f77954`) are local only. Deploy key still needs to be added by the owner.
