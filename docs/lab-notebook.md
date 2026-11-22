@@ -1148,4 +1148,32 @@ than re-reading my own code: the summed statistics row, then `tokenizer()` on th
 Both times the difference was one identifier or one predicate, and several earlier attempts to
 reason it out had moved the count around without converging.
 
-**Next.** The intl preceding-mark rule, then the TER budget, then Phases 4-7.
+**Next.** The intl preceding-mark rule, then the TER budget, then Phases 4-7.---
+
+## 2026-11-22 (continued) — parity 501 → 504 of 505; the remaining gap is one TER rounding
+
+Re-running parity after the reference-buffer fix closed two more cases than expected: the
+`nested_none` and `patch_hf` failures were **symptoms of the leak**, not separate bugs. A stale
+extra reference changes the closest-reference length, which is exactly what those two cases
+compared.
+
+**State now:**
+
+| suite | before this session | now |
+|---|---|---|
+| Rust (workspace) | 107 | 111 all green |
+| parity | 489 / 494 | **504 / 505** |
+| frozen oracle | 2 / 15 | 11 / 15 |
+
+**The one remaining parity failure, measured.** `test_cli_dataset_flow_with_cached_wmt16` scores a
+30,000-segment corpus three ways. BLEU and chrF match the oracle exactly; TER is **50.6 against
+50.7**. That 0.1 point is the shift-search candidate-budget limit from the Phase 3 entry — long
+repetitive segments exhaust the 1,000-candidate budget before reaching the shift that helps. On
+`real-nxkd1-k-q5` it is 2 sentences of 250; here it is a rounding on 30k segments.
+
+**Assessment.** This is a known, bounded limitation of TER, not a defect in BLEU or chrF, and not a
+tokenizer question. Closing it means either a wider budget (which changes the shift the search
+picks and so must also be measured) or reproducing the oracle's candidate *ordering* exactly. It is
+the last item between the current tree and "zero mismatches".
+
+**Next.** Reproduce the oracle's candidate ordering for the shift search, then Phases 4-7.
