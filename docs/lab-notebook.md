@@ -474,3 +474,29 @@ reproduced by hand. Every fix here came from a hand-reproduced minimal case, not
 **State.** The Rust `13a` is exact on all real corpus data, one fuzz case short of exact in the
 abstract. `tokenize.rs` cannot be deleted on the strength of this, so the port is committed as an
 additive module with the gap recorded, not as a replacement.
+
+---
+
+## 2026-11-22 — Phase 1: 13a fuzz gap not closed; stopping after three attempts
+
+**Attempted** to close the single remaining `13a` fuzz case (`&,.0` -> oracle gives `['&', ',', '.0']`,
+we give `['&', ',', '.', '0']`). Three variants, all still 1 mismatch:
+1. A special case on the padded text — the comma is no longer adjacent after 3a inserts spaces.
+2. Deciding the fusion on the original text — the index does not survive the padding pass.
+3. Deciding it on the post-3a text by matching `", ." + digit` — the guard compiles and runs but
+   the case still splits, which I did not finish diagnosing.
+
+**State.** Rust `13a`: **0 / 13,455 on the WMT22 corpus** (unchanged and stable across all attempts),
+**1 / 5,000 on the fuzz alphabet**. Committed as an additive module with the gap recorded; the port
+is not deleted, because the plan requires zero before deletion.
+
+**Honest read.** The corpus result did not move at any point, so nothing regressed. The gap is one
+adversarial input shape (`punctuation immediately followed by a trailing decimal`) that does not
+occur in real MT reference data. It is a genuine incompleteness, not a scoring risk for any corpus
+measured here — but "0 on real data" is not the same claim as "bit-exact", and the plan's bar is the
+latter, so this stays open rather than being waved through.
+
+**Decision.** Stop here. Four differential-harness iterations and three fix attempts on one
+character shape is the point of diminishing returns for this session. The productive next steps are
+`zh` (untouched, character-level, no attachment engine needed) and Phase 2 (BLEU/chrF statistics),
+which are independent of this gap.

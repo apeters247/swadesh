@@ -141,16 +141,30 @@ pub fn tok_13a(line: &str, out: &mut String) {
         },
         |chars, i, end| chars[i..end].iter().collect(),
     );
-    // Stage 3c: a "." or "," at end of line detaches ("9," -> "9 ,"), EXCEPT a "." that
-    // precedes a digit ("&,.0" -> "& , .0"), which the earlier passes already attached.
+    // Stage 3c: a "." or "," at end of line detaches ("9," -> "9 ,"), EXCEPT when the text
+    // ends in `", ." + digit` with the comma and dot separated by exactly one space - the state
+    // stage 3a leaves for an original "&,.0". Then the "." stays with the digit: "& , .0".
+    //   "&,.0" -> after 3a ">& , .0"   => "& , .0"   (fused)
+    //   "&, .0" -> after 3a ">& ,  .0" => "& , . 0"  (two spaces: not fused)
+    let ends_fused = {
+        let c: Vec<char> = s.chars().collect();
+        let n = c.len();
+        n >= 4
+            && is_attach_digit(c[n - 1])
+            && c[n - 2] == '.'
+            && c[n - 3] == ' '
+            && c[n - 4] == ','
+    };
     let s = insert_pass(
         &s,
         |chars, i| match chars[i] {
+            '.' if ends_fused && i + 1 == chars.len() => None,
             '.' | ',' if i + 1 == chars.len() => Some(i + 1),
             _ => None,
         },
         |chars, i, end| chars[i..end].iter().collect(),
     );
+
     // Stage 4: a "-" that follows a digit.
     let s = insert_pass(
         &s,
