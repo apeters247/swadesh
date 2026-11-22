@@ -559,3 +559,29 @@ rule covers some contexts and breaks others.**
 
 **Decision.** Stop for this session. Ports committed: none of zh/intl (not exact);
 13a remains the one with 0 on corpus data.
+
+---
+
+## 2026-11-22 — Phase 1: zh, six revisions on `.`/`,`, corpus pinned at 193
+
+**Attempted.** Finish zh with the 13a method: measure the class exhaustively, then express the
+attachment rule as data rather than as a guess.
+
+**Built the right instrument.** A 121-row neighbour truth table (11 character categories squared)
+with canary characters so a split is detectable. That immediately showed my earlier word-edge theory
+was wrong and that `)` alone splits.
+
+**But then applied it badly.** Six revisions in one session: 193 → 193 → 193 → 193 → 193 → 193 on
+corpus, fuzz oscillating 8 → 8 → 14 → 8 → 11 → 7 → 12. **The corpus number never moved.** That is
+the clearest signal available that the changes are not touching the actual failures: the corpus
+mismatches in zh-en are `1.` / `2.` at line start, a different shape entirely, and I kept editing
+the dot/comma path because that is where the fuzz failures were.
+
+**Mistake to record.** I optimised against the harness that was shouting the loudest (fuzz) rather
+than checking which shape the corpus actually failed on. One diff of the corpus failures at the
+start would have shown `1.` and saved five revisions.
+
+**State.** 193/13,455 corpus, 12/5,000 fuzz. Not committed; not exact.
+
+**Decision.** Stop. Seven revisions on one character pair in a single session is well past the point
+where a fresh approach on a clean starting point is better than another patch.
