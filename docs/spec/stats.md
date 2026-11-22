@@ -34,9 +34,13 @@ The segment is tokenised by the configured tokenizer (`none`, `13a`, `intl`, `zh
 
 For a hypothesis token sequence `h` of length `H` and reference sequences `r_1..r_k`:
 
-1. **Statistics vector.** `[H, R, c_1, t_1, c_2, t_2, ..., c_N, t_N]` where `R` is the closest
-   reference length (below), `c_n` is the count of clipped matching n-grams of order n and `t_n` the
-   total number of hypothesis n-grams of order n. `N` is `max_ngram_order`, default 4.
+1. **Statistics vector.** `[H, R, c_1..c_N, t_1..t_N]` where `R` is the closest reference length
+   (below), `c_n` the count of clipped matching n-grams of order n and `t_n` the total number of
+   hypothesis n-grams of order n, `N` = `max_ngram_order` (default 4).
+
+   **Not interleaved.** Counts come first as a block, then totals as a block; the scoring stage
+   indexes the two halves separately. My first draft said `c_1, t_1, c_2, t_2…`, and the differential
+   run showed every one of 13,455 rows differing because of it.
 2. **Clipped counts.** For each n-gram `g` of order n, `c_n = Σ_g min(count_H(g), max_i count_{r_i}(g))`.
    The maximum is taken over references *before* clipping against the hypothesis, so a hypothesis
    count of 3 against references of 1 and 2 clips to 2, not to 1.
