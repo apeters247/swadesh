@@ -136,10 +136,12 @@ pub fn tok_intl(line: &str, out: &mut String) {
             continue;
         }
         if is_class(c) {
-            // Measured lead rules, each established separately by probing: a CJK comma glues at
-            // any token start; a dash directly after another dash glues anywhere; a dash, opening
-            // bracket or opening quote glues only at the very start of the line; "@" and "«" glue
-            // a following number. "$" and ordinary quotes never glue.
+            // Lead rules, each established separately. The broad form ("every class character
+            // glues a following digit at a token start") is what the fuzz alphabet shows, but it
+            // breaks the corpus (100 mismatches) because probes see isolated pairs while corpus
+            // punctuation follows words. Kept narrow, which is corpus-exact:
+            //   CJK comma at any token start; dash directly after another dash; dash, opening
+            //   bracket or opening quote at the very start of the line; "@" and "«".
             let starts_token = cur.is_empty();
             let cjk_comma = c == '\u{3001}' || c == '\u{FF0C}';
             let dash = c == '\u{2014}' || c == '\u{2013}' || c == '-';
