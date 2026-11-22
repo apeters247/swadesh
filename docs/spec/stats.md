@@ -62,6 +62,15 @@ For a hypothesis token sequence `h` of length `H` and reference sequences `r_1..
    zero; the scoring stage handles it.
 5. **Effective order.** With `effective_order=True`, the scoring stage uses only orders below the
    hyp length. This is a scoring-stage decision, so the statistics stage always fills all `N` pairs.
+6. **Key representation.** A counting implementation may pack an n-gram into a fixed-width integer
+   key, but the packing must be exact for every order the API accepts. With 32-bit word ids a
+   `u128` holds four tokens, so order 5 and above cannot use the packed table; those orders must
+   use the general wide-key representation. Measured: an implementation that returned "no key"
+   above order 4 produced `c_5 = 0` and `c_6 = 0` on segments with matching 5-grams and 6-grams.
+   On the four-segment/two-reference corpus in `tests/test_coverage_gaps.py`, `max_ngram_order=5`
+   scored `BLEU = 23.94 62.1/56.0/33.3/17.6/3.8` where the oracle scores
+   `BLEU = 27.50 62.1/56.0/33.3/17.6/7.7`, and order 6 scored 16.72 against 21.07. A silent zero is
+   worse than a slow path: the corpus score stays plausible and nothing raises.
 
 ## 3. chrF statistics
 
