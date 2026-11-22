@@ -1886,3 +1886,51 @@ new outputs to the frozen oracle fixtures, so they are evidence for this session
 regression tests in the suite. Adding `real-qwen3.8-27b` and `real-llama3.3_70b` to `tests/oracle/`
 would lock them in; the translations are cached at
 `/home/kpeters/eval-compare/work/data/real-qwen3.8-27b.jsonl` and `real-llama3.3_70b.jsonl`.
+
+---
+
+## 2026-11-22 (continued) — metrics.py: BLEU and chrF fallback statistics are swadesh's own
+
+The last piece of Phase 5's metric file. `BLEU` and `CHRF` still inherited
+`_extract_reference_info` and `_compute_segment_statistics` from sacreBLEU; those two methods are now
+written here. The native corpus path never calls either one — they run only when a reference stream
+leaves a segment with no reference, or a parameter is outside what the kernel takes — so the value is
+the removed inheritance, not speed.
+
+**Baseline reproduced first, on troy-1.** The tree came over from the VPS at `d47c48d` with a clean
+status, and the four-file selection reproduced the recorded numbers exactly: **531 passed, 1 failed**
+on 3.11.14 (the `fuzz42:BLEU intl` case), **519 passed, 13 skipped** on 3.12.13 and 3.14.4. The
+brief's "506" for 3.12/3.14 is the same run without `test_provenance.py`; adding it gives 519, and
+both totals collect 532. No `.so` was stale: the installed extension's md5 matched
+`target/release/lib_swadesh.so` before any test ran.
+
+**What the port is.** 146 lines in `python/swadesh/metrics.py`. BLEU's reference info is per-reference
+n-gram counts merged by taking the largest count, plus every reference length; its row is
+`[sys_len, ref_len, correct_1..N, total_1..N]` with `ref_len` the closest length (tie to the shorter)
+and -1 for a segment with no reference. chrF's reference info is per-reference character and word
+counters; its row takes the single best-scoring reference, not a merge, and reports a hypothesis total
+only where that reference has n-grams of the order. Both reproduce the measured fallback arithmetic,
+including the error paths: a segment with no reference raises on the BLEU row exactly as the inherited
+method did, and a fractional `max_ngram_order` raises the same `TypeError`.
+
+**How it was verified.** A 3.8 MB black-box battery of outcomes — rows, scores, exception types and
+messages — recorded against the inherited methods and re-recorded after the port: **byte-identical**
+(`md5 42504bd8d12f3b0cb26bf518e67c1908`, before and after). 115 new tests in
+`tests/test_metrics_fallback.py` pin the constants and the error paths, and assert the method identity
+both ways: the two methods are in `BLEU.__dict__` / `CHRF.__dict__` and are not the parent's, while
+`_compute_score_from_stats` is still sacreBLEU's own object, because the bootstrap fast path recognises
+it by identity.
+
+**Result.** **646 passed, 1 failed** on 3.11.14 (531 + 115; the one failure is still `fuzz42`);
+**634 passed, 13 skipped, 0 failed** on 3.12.13 and 3.14.4. Rust untouched, 13 suites green.
+
+**What is still inherited.** The constructors, the tokenizer plumbing and the constants, plus
+`_compute_score_from_stats` — the degraded-score arithmetic the bootstrap path depends on. So
+`metrics.py` stays in the provenance `PENDING` set: it still imports sacreBLEU, by design, for the
+parts a subclass cannot avoid.
+
+**Test rot found while verifying.** Running the four-file selection's neighbours showed 57 failures
+that are not in the brief's numbers: `tests/test_coverage_gaps.py` (8) and `tests/test_ter.py` (49).
+Almost all are `type(ours) is type(theirs)` assertions written before the score objects became
+swadesh's own; they are stale, not regressions. Two of the coverage-gap failures are real and are
+recorded in the next entry. None of them is caused by this port.

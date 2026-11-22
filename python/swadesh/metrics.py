@@ -1,15 +1,17 @@
 """Drop-in, bit-exact accelerated replacements for sacreBLEU's metric classes.
 
-The classes below *subclass* sacreBLEU's own ``BLEU`` and ``CHRF``. Only the
-hot path -- tokenization, n-gram extraction and matching, i.e. the segment
-level sufficient statistics -- is replaced by Rust. Everything else (score
-objects, signatures, formatting, final score arithmetic) is sacreBLEU's own
-code, so corpus-level results are identical by construction.
+The classes below *subclass* sacreBLEU's own ``BLEU`` and ``CHRF``. The hot path -- tokenization,
+n-gram extraction and matching, i.e. the segment level sufficient statistics -- is replaced by
+Rust, and the score objects, the aggregation and the fallback statistics are swadesh's own code.
+The remaining inheritance supplies the constructors, the tokenizers, the degraded score arithmetic
+behind ``_compute_score_from_stats`` and the signature printing, so corpus-level results are
+identical by construction.
 
-Inputs the native kernels do not cover (invalid parameter values, non-string
-items, segments with no reference) are not guessed at: they go through
-sacreBLEU's own Python statistics loop (``_FastMixin._py_statistics``), so
-the result or the exception is sacreBLEU's, not an artefact of the Rust layer.
+Inputs the native kernels do not cover (invalid parameter values, non-string items, segments with
+no reference) are not guessed at: they go through the Python statistics loop
+(``_FastMixin._py_statistics``), whose per-metric ``_extract_reference_info`` and
+``_compute_segment_statistics`` reproduce sacreBLEU's measured arithmetic, so the result or the
+exception is sacreBLEU's, not an artefact of the Rust layer.
 """
 
 import json as _json
@@ -385,6 +387,61 @@ class BLEU(_FastMixin, _SacreBLEU):
         streams = [[None if x is None else pp(x) for x in s] for s in streams]
         return hyps, streams, "none", False, tok_count
 
+    def _extract_reference_info(self, refs):
+        """Reference n-gram counts and token lengths, one entry per reference.
+
+        `refs` arrives already preprocessed -- lowercased and tokenised by the time this runs --
+        so a reference is its whitespace split. The counts keep, for each n-gram, the largest
+        count any single reference has of it: clipping is against the best reference, not against
+        the sum of them. `ref_lens` keeps every length, because the row picks the closest one.
+        """
+        ref_ngrams = None
+        ref_lens = []
+        for ref in refs:
+            tokens = ref.split()
+            ref_lens.append(len(tokens))
+            counts = {}
+            for n in range(1, self.max_ngram_order + 1):
+                for i in range(len(tokens) - n + 1):
+                    ngram = tuple(tokens[i:i + n])
+                    counts[ngram] = counts.get(ngram, 0) + 1
+            if ref_ngrams is None:
+                ref_ngrams = counts
+            else:
+                for ngram, count in counts.items():
+                    if count > ref_ngrams.get(ngram, 0):
+                        ref_ngrams[ngram] = count
+        return {"ref_ngrams": ref_ngrams, "ref_lens": ref_lens}
+
+    def _compute_segment_statistics(self, hypothesis, ref_kwargs):
+        """`[sys_len, ref_len, correct_1..N, total_1..N]` for one preprocessed segment.
+
+        `ref_len` is the reference length closest to the hypothesis, a tie going to the shorter
+        reference, and -1 when the segment has no reference at all. An order's matches are the
+        hypothesis n-grams clipped by the merged counts. A segment with no references has no
+        merged counter, and testing its n-grams against it raises the same error the oracle's own
+        loop raises for that case.
+        """
+        tokens = hypothesis.split()
+        sys_len = len(tokens)
+        ref_lens = ref_kwargs["ref_lens"]
+        ref_len = min(ref_lens, key=lambda r: (abs(r - sys_len), r)) if ref_lens else -1
+        ref_ngrams = ref_kwargs["ref_ngrams"]
+        correct = []
+        total = []
+        for n in range(1, self.max_ngram_order + 1):
+            counts = {}
+            for i in range(sys_len - n + 1):
+                ngram = tuple(tokens[i:i + n])
+                counts[ngram] = counts.get(ngram, 0) + 1
+            matched = 0
+            for ngram, count in counts.items():
+                if ngram in ref_ngrams:
+                    matched += min(count, ref_ngrams[ngram])
+            correct.append(matched)
+            total.append(max(0, sys_len - n + 1))
+        return [sys_len, ref_len] + correct + total
+
     def _extract_corpus_statistics(self, hypotheses: Sequence[str], references) -> Any:
         cache = self._resolve_refs(references)
         if cache.has_empty or not self._native_ok():
@@ -509,6 +566,85 @@ class CHRF(_FastMixin, _SacreCHRF):
     def _args(self):
         return (self.char_order, self.word_order, self.beta, bool(self.lowercase),
                 bool(self.whitespace), bool(self.eps_smoothing))
+
+    def _extract_reference_info(self, refs):
+        """Per-reference counts: `char_order` character orders, then `word_order` word orders.
+
+        `refs` arrives already lowercased when that option is on. Unless `whitespace` keeps it,
+        whitespace is dropped from the character sequence -- all of it, as Python's `str.isspace`
+        defines it -- and word n-grams are the chrF punctuation split. The counters stay per
+        reference because the segment row is later taken from the single best reference.
+        """
+        ref_ngrams = []
+        for ref in refs:
+            chars = ref if self.whitespace else "".join(ref.split())
+            orders = []
+            for n in range(1, self.char_order + 1):
+                counts = {}
+                for i in range(len(chars) - n + 1):
+                    ngram = chars[i:i + n]
+                    counts[ngram] = counts.get(ngram, 0) + 1
+                orders.append(counts)
+            if self.word_order > 0:
+                words = self._remove_punctuation(ref)
+                for n in range(1, self.word_order + 1):
+                    counts = {}
+                    for i in range(len(words) - n + 1):
+                        ngram = " ".join(words[i:i + n])
+                        counts[ngram] = counts.get(ngram, 0) + 1
+                    orders.append(counts)
+            ref_ngrams.append(orders)
+        return {"ref_ngrams": ref_ngrams}
+
+    def _compute_segment_statistics(self, hypothesis, ref_kwargs):
+        """`[hyp, ref, match]` per order, as the single best-scoring reference reports them.
+
+        Statistics are not merged across references: the row is the row of the reference with the
+        highest f-score, and a tie keeps the first such reference -- the f-score the metric itself
+        computes, so the choice is the one the score would make. An order's hypothesis total is
+        reported only when that reference has n-grams of the order at all.
+        """
+        chars = hypothesis if self.whitespace else "".join(hypothesis.split())
+        hyp_char = []
+        for n in range(1, self.char_order + 1):
+            counts = {}
+            for i in range(len(chars) - n + 1):
+                ngram = chars[i:i + n]
+                counts[ngram] = counts.get(ngram, 0) + 1
+            hyp_char.append(counts)
+        hyp_word = None
+        if self.word_order > 0:
+            words = self._remove_punctuation(hypothesis)
+            hyp_word = []
+            for n in range(1, self.word_order + 1):
+                counts = {}
+                for i in range(len(words) - n + 1):
+                    ngram = " ".join(words[i:i + n])
+                    counts[ngram] = counts.get(ngram, 0) + 1
+                hyp_word.append(counts)
+        best, best_f = [], -1.0
+        for ref_orders in ref_kwargs["ref_ngrams"]:
+            counters = iter(ref_orders)
+            stats = []
+            for hyp_counts in hyp_char:
+                ref_counts = next(counters)
+                ref_total = sum(ref_counts.values())
+                stats.append(sum(hyp_counts.values()) if ref_total > 0 else 0)
+                stats.append(ref_total)
+                stats.append(sum(min(count, ref_counts.get(ngram, 0))
+                                 for ngram, count in hyp_counts.items()))
+            for n in range(1, self.word_order + 1):
+                hyp_counts = hyp_word[n - 1]
+                ref_counts = next(counters)
+                ref_total = sum(ref_counts.values())
+                stats.append(sum(hyp_counts.values()) if ref_total > 0 else 0)
+                stats.append(ref_total)
+                stats.append(sum(min(count, ref_counts.get(ngram, 0))
+                                 for ngram, count in hyp_counts.items()))
+            f = self._compute_f_score(stats)
+            if f > best_f:
+                best, best_f = stats, f
+        return best
 
     def _extract_corpus_statistics(self, hypotheses: Sequence[str], references) -> Any:
         cache = self._resolve_refs(references)
