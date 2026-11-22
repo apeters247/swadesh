@@ -394,3 +394,30 @@ times today and am stopping rather than adding a sixth rule on a guess.
 **Next.** One targeted probe on the previous-token content condition (`）` vs `また` vs `x` before
 `, digit`), then port 13a and intl to Rust together. Or, if it does not resolve in one probe, port
 13a and zh now and leave intl as the single documented gap.
+
+---
+
+## 2026-11-22 — Phase 1: intl at 6/13455
+
+**Probe series (second round).** Asked what property of the token before `、` decides glue:
+- Nothing before the comma matters **except its own context inside the token**. `）、２つ` splits,
+  but `HD)、２つ` glues — in the second, the `)` followed a letter, so the punctuation run did not
+  start its own token. Also `端子、２つ` splits: the CJK char is a letter, so again no.
+- Two more measured continuations: a punctuation-led run extends into trailing letters
+  (`-22種類`, `“2G`), and a bracket between digits continues the run (`24（1営業日`).
+
+**Progression this session.** 34 → 9 → (en-ja 29 → 4) → **6**. Per pair currently: cs-en 0,
+en-de 0, en-ru 0, de-en 1, zh-en 1, en-zh 3, en-ja 1.
+
+**One reverted attempt.** Gluing any dash/quote before a digit run (to catch `—2300`) gave 72
+mismatches by breaking `Covid - 19`; reverted. The dash case needs position context like every other.
+
+**State.** Scanner `/var/www/llmeval-wt/scan_intl.py`, 6/13,455 = 99.96%. Not committed (not exact).
+13a stays the completed tokenizer.
+
+**Honest note on method.** The probe series works — each round resolves a real condition and the
+counter drops — but each round is one more context distinction, and there have now been four rounds
+in one day. Two plausible endings: one or two more rounds reach zero, or the remaining six shapes
+each need their own positional rule, which is a sign the whole model should be restated as "a
+punctuation run is a token unless it is a `.`/`,`/`:`/bracket attached to digits" rather than patched
+case by case.
