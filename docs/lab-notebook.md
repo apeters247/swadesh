@@ -172,3 +172,37 @@ unfounded because `none`/`char` passed 8/8. The real `zh` failure was its own nu
 the toolchain; but the `13a` and `zh` agents both independently reported non-deterministic oracle
 output over long runs, which I did not reproduce in short probes. Treat long sweeps as suspect and
 re-probe in fresh processes.
+
+---
+
+## 2026-11-22 — Phase 1: the substitution emulator is solved; `intl` nearly solved
+
+**The breakthreough.** The `intl`/`13a` behaviour that defeated three earlier rule models is CPython's
+`re.sub` insertion rule, and it is now reproduced exactly. Measured: for `re.sub(r"(atoms)", r" \1 ", s)`,
+CPython drops a replacement's **leading** space when the previous match's own trailing space sits at
+exactly that output offset, which happens only when two matches are adjacent with nothing between
+them. A space that came from the input never blocks. Implemented and differentially tested:
+**0 mismatches on 18 hand-built cases and 20,000 random ones.**
+
+This is the thing that turns "derive rules from examples" into "derive rules from the engine", and
+it explains `5.,6` → `5 .  , 6` (two spaces, which the later `split()` collapses), `(4)(5)` →
+`(4)(5)`, and why `a.b.c` keeps both splits.
+
+**`intl` model, built on the emulator and validated on all 13,455 WMT22 lines:**
+- protect numbers (`\d+(?:[.,:\-/]\d+)*`), a trailing class char after a digit at end of line,
+  a leading `(N`/`[N` atom at offset 0
+- pad every class member `[^\w\s_⽣]` plus `_`
+- join on whitespace, single spaces
+
+Progression of mismatches: 209 → 186 → 307 → 247 → 296 → 86 → 77 → **70 → 52**. Not yet zero.
+Remaining known shapes: `“2G` (a digit glued to a preceding opening quote) and full-width
+punctuation in Japanese not splitting. The model is at `/var/www/llmeval-wt/pir.py`; it is a Python
+prototype, not yet Rust, and **not committed** because it is not exact.
+
+**Decision.** The emulator is the durable result. `intl` should be written in Rust directly on the
+emulator plus the numeric-protection rules once the last mismatches are closed; the Python prototype
+is the specification for it. Do not translate it to Rust until the prototype reaches zero on the
+corpus, because a Rust rewrite of a 52-mismatch model is 52 mismatches shipped.
+
+**Cost note.** This turn was a long derivation cycle and I did not record a lab entry mid-way, which
+I should have. Recorded here.
