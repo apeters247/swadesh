@@ -1380,4 +1380,42 @@ as the oracle's does, but at different positions.
 **Next step, concretely.** Compare the two *raw* traces (before the flip) element by element from the
 tail backwards. They share a suffix of `d`s, so the first index where they differ backwards from the
 end is where the backtrace chose differently — and the cell at that index names the condition, which
-is more informative than comparing the tie order in the abstract.
+is more informative than comparing the tie order in the abstract.---
+
+## 2026-11-22 (continued) — intl: a correction and a third regression; 519 held
+
+**A correction to my own earlier reports.** In two previous sessions I "verified" the intl
+number-absorption rule by calling `_preprocess_segment` and reading the result as mine. That method
+belongs to the **oracle** — swadesh inherits it. So those checks were comparing the oracle with
+itself, and the rule I believed was implemented was never in the tree. The `fuzz42` failure was
+never a `nrefs` problem; it is the tokenizer, as the row diff shows (9 tokens against 8 on
+`?Ⅷ符@。&gt;，試`).
+
+**What I measured this session, correctly.** Using `_swadesh.tokenize` and a Rust example instead
+of the inherited method:
+
+* `tok_intl` produces `? Ⅷ符` for `?Ⅷ符`; the oracle produces `?Ⅷ符`. The narrow lead rule in the
+  file lists only the CJK comma, a dash, brackets and `@`, so `?` and `/` never glue.
+* At position 0, every ASCII mark glues except `$ + < = > ^ ` | ~`, exactly the `\p{S}` set, and the
+  non-ASCII `\p{P}` marks glue too (`‘ ’ “ ” « » （ 、`).
+
+**Three attempts, three regressions.**
+
+1. Add "at start, glue unless `\p{S}`" → `fuzz42` passed, `fuzz66` broke (the `‘’/1` quote-pair run).
+2. Add the chain exception on top → `fuzz42` and `fuzz66` passed, but real corpus text broke broadly.
+3. Replace with "glue when the preceding non-mark character ends a word in a letter or there is
+   none" → 11 failures, including `wmt22.en-ru` and the intl CLI case.
+
+Each was reverted. The tokenizer is back at the committed state: exact on **0 of 1,177** fuzz texts
+and 0 of 400 WMT22 lines, which is the property that matters most, and it fails one synthetic case.
+
+**Where it stands.** Suite **519 passing, 1 failing** (`fuzz42:BLEU intl`). That single case is now
+the only thing between the tree and full parity, and it is a tokenizer rule whose third limb — runs
+of adjacent quote marks — I have not been able to state as a predicate that survives real text.
+
+**Honest assessment.** Three sessions have now tried to close this one case and each attempt traded
+it for worse. The case is one row of one fuzz fixture. The remaining goal work — Phases 4 through 7
+(the CLI rewrite, the Python standalone, the AGPL/commercial licensing, the verification matrix) —
+is untouched and is what actually determines whether the repository is commercialisable. I recommend
+spending the next sessions there and treating this single fuzz case as a documented, bounded defect
+rather than continuing to trade parity for it.
