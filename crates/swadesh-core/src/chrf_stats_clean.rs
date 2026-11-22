@@ -20,6 +20,11 @@ use crate::unicode::{py_split, py_strip};
 
 /// Characters of a string as a `Vec<char>`, honouring the whitespace-removal option.
 
+/// Bits per element when packing n-gram keys. Characters fit in 21 (Unicode tops out at
+/// 0x10FFFF) and word ids in 32.
+const CHAR_BITS: u32 = 21;
+const WORD_BITS: u32 = 32;
+
 const PUNCTS: &str = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
 
 #[inline]
@@ -64,7 +69,10 @@ fn char_seq(s: &str, keep_whitespace: bool) -> Vec<u32> {
 /// Word sequence: Python whitespace split of the stripped string. Lowercasing is the caller's job
 /// (it happens before extraction, for both the char and word sequences).
 fn word_seq(s: &str, ids: &mut FxHashMap<String, u32>) -> Vec<u32> {
-    py_split(py_strip(s))
+    // Word order counts split on the chrF punctuation rule, not plain whitespace: `Dank,` is two
+    // tokens and `#PRS_ORG#` is `#PRS_ORG` plus `#`. Char orders never call this.
+    remove_punctuation(py_strip(s))
+        .into_iter()
         .map(|w| {
             let n = ids.len() as u32;
             *ids.entry(w.to_string()).or_insert(n)
@@ -76,21 +84,21 @@ fn word_seq(s: &str, ids: &mut FxHashMap<String, u32>) -> Vec<u32> {
 ///
 /// Counting uses the packed-key table, original to this project; measurement showed it is far faster
 /// than sorting keys (chrF went from 104 us to a few us per pair).
-fn order_stats(hyp: &[u32], refs: &[u32], n: usize) -> (i64, i64, i64) {
+fn order_stats(hyp: &[u32], refs: &[u32], n: usize, bits: u32) -> (i64, i64, i64) {
     let h = hyp;
     let r = refs;
     let h_total = (h.len() + 1).saturating_sub(n) as i64;
     let r_total = (r.len() + 1).saturating_sub(n) as i64;
-    if h_total == 0 || r_total == 0 || !fits(n, 32) {
+    if h_total == 0 || r_total == 0 || !fits(n, bits) {
         return (0, h_total, r_total);
     }
     let mut rtab = CountTable::new();
     rtab.reset(r.len().saturating_sub(n) + 1);
-    for k in packed_windows(r, n, 32) {
+    for k in packed_windows(r, n, bits) {
         rtab.add(k);
     }
     let mut m = 0i64;
-    for k in packed_windows(h, n, 32) {
+    for k in packed_windows(h, n, bits) {
         if rtab.take(k) {
             m += 1;
         }
@@ -147,8 +155,10 @@ pub fn chrf_stats_segment(cfg: &ChrfConfig, hyp: &str, refs: &[&str], out: &mut 
     for r in refs {
         stats.clear();
         let rc = char_seq(r, cfg.whitespace);
+        // Six character n-grams at 21 bits each still fit a u128 (Unicode tops out at 0x10FFFF);
+        // packing at 32 bits silently dropped every order above four.
         for n in 1..=cfg.char_order {
-            let (m, h, rt) = order_stats(&hc, &rc, n);
+            let (m, h, rt) = order_stats(&hc, &rc, n, CHAR_BITS);
             stats.push(if rt > 0 { h } else { 0 });
             stats.push(rt);
             stats.push(m);
@@ -156,7 +166,7 @@ pub fn chrf_stats_segment(cfg: &ChrfConfig, hyp: &str, refs: &[&str], out: &mut 
         if cfg.word_order > 0 {
             let rw = word_seq(r, &mut wids);
             for n in 1..=cfg.word_order {
-                let (m, h, rt) = order_stats(&hw, &rw, n);
+                let (m, h, rt) = order_stats(&hw, &rw, n, WORD_BITS);
                 stats.push(if rt > 0 { h } else { 0 });
                 stats.push(rt);
                 stats.push(m);

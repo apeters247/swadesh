@@ -28,7 +28,8 @@ pub use stats::{BleuConfig, ChrfConfig};
 pub use bleu_stats_clean::bleu_stats_segment;
 pub use chrf_stats_clean::chrf_stats_segment;
 pub use tokenize_dispatch::{join_split_str, preprocess_bleu, tokens, Tokenizer};
-pub use ter::{ter_segment, TerConfig, TerError};
+pub use stats::{TerConfig, TerError};
+pub use ter_clean::ter_segment;
 
 /// Segments below this size are processed serially (thread overhead dominates).
 const PAR_THRESHOLD: usize = 2048;

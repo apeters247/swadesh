@@ -1051,4 +1051,38 @@ the other side's intermediate value turned it into an arithmetic comparison.
 dead code — Phase 4 deletes it along with the CLI port.
 
 **Next.** Phase 4: the CLI pipeline (`run.rs`, `args.rs`, `report.rs`, `pyfmt.rs`) from a written CLI
-contract, then Phase 5 (Python standalone), Phase 6 (licensing), Phase 7 (verification).
+contract, then Phase 5 (Python standalone), Phase 6 (licensing), Phase 7 (verification).---
+
+## 2026-11-22 (continued) — TER wired in; three chrF defects found by serving it for real
+
+**TER now serves the Python and CLI paths** rather than sitting beside a port. `TerConfig` and
+`TerError` moved to `stats.rs` with the other parameter types, `lib.rs` re-exports the clean
+`ter_segment`, and `ter.rs` has no remaining callers. 68 Rust tests green.
+
+**Then the oracle replay caught what the fixture tests had not.** Replaying the frozen corpus with
+the clean-room code actually serving dropped 13 of 15 files, and the failures were *not* TER — they
+were chrF and BLEU defects that the 700-row fixture set could not see, because the fixtures are
+short strings and the corpus is long words.
+
+1. **chrF character orders above four were silently zero.** `order_stats` packed n-gram keys at
+   32 bits per element; six characters at 32 bits is 192 > 128, so `fits` returned false and every
+   order above four reported zero matches. Character codes need only 21 bits (Unicode tops out at
+   0x10FFFF), so six-character n-grams fit a u128 at 210 bits. The width is now a parameter: 21 for
+   characters, 32 for word ids. Symptom before the fix: identical text scored 66.7 instead of 100.
+2. **chrF word orders used plain whitespace splitting** instead of the chrF punctuation rule, so
+   `Dank,` counted as one word and `#PRS_ORG#` as one where the oracle sees `#PRS_ORG` plus `#`.
+   An entire corpus case had every word-order count low by one or two.
+3. Those two together accounted for all of chrF and chrF++.
+
+**What still fails, and it is one thing.** Everything except the **intl tokenizer**. The corpus
+replay now fails only on `fuzz37:BLEU intl` and on the corpus files because they include the intl
+variant: `ref_len = 26` where the oracle says `25`. That is the same 22-line divergences from Phase
+1, now with corpus evidence behind them rather than only the adversarial alphabet. It is the one
+open piece of Phase 1 and it blocks Phase 7's "zero mismatches".
+
+**Also worth recording.** A stale `_swadesh.cpython-314t-x86_64-linux-gnu.so` sat beside the abi3
+extension in the package directory and Python loaded it in preference; it masked two rebuilds. It is
+moved aside. Any future "the fix did not take" should check which `.so` is actually imported before
+suspecting the code.
+
+**Next.** Close the intl divergence against the corpus evidence, then re-run the full oracle.

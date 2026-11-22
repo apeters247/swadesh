@@ -231,7 +231,8 @@ fn ter_stats<'py>(
     let stats = py
         .detach(|| ter_corpus_stats(&cfg, &hs, &rs))
         .map_err(|e| match e {
-            TerError::NoReferences => PyZeroDivisionError::new_err("division by zero"),
+            // One error condition: a segment with no references.
+            TerError => PyZeroDivisionError::new_err("division by zero"),
         })?;
     Ok((f64_bytes(py, &stats), hs.len(), 2))
 }

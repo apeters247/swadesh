@@ -22,3 +22,20 @@ pub struct ChrfConfig {
     pub whitespace: bool,
     pub eps_smoothing: bool,
 }
+
+/// TER parameters, mirroring the oracle's option names.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct TerConfig {
+    /// Split punctuation off words and protect numbers (TER spec 3.2).
+    pub normalized: bool,
+    /// Delete punctuation instead of keeping it (TER spec 3.1).
+    pub no_punct: bool,
+    /// Split CJK and fullwidth characters individually (TER spec 3.3).
+    pub asian_support: bool,
+    /// Keep case.
+    pub case_sensitive: bool,
+}
+
+/// Reported when a segment has no references, where the oracle raises.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TerError;

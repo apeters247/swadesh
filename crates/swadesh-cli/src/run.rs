@@ -5,10 +5,11 @@ use std::io::Write;
 
 use swadesh_core::stats::{BleuConfig, ChrfConfig};
 use swadesh_core::stats_dispatch::{bleu_stats as bleu_segment, chrf_stats as chrf_segment};
+use swadesh_core::ter_clean::ter_segment as ter_segment_clean;
 use swadesh_core::Tokenizer;
 use swadesh_core::{
     bleu_corpus_stats, chrf_corpus_stats, chrf_f_score, compute_bleu, ter_corpus_stats,
-    ter_segment, BleuScoreConfig, Smooth, SumMode, TerConfig, TerError,
+    BleuScoreConfig, Smooth, SumMode, TerConfig, TerError,
 };
 
 use crate::args::{Cli, TOKENIZE_CHOICES};
@@ -450,13 +451,9 @@ fn ter_score_value(edits: f64, ref_len: f64) -> f64 {
     100.0 * ratio
 }
 
-fn ter_err(e: TerError) -> Fail {
-    match e {
-        TerError::NoReferences => Fail {
-            code: 1,
-            msg: "ZeroDivisionError: division by zero (TER segment without references)".into(),
-        },
-    }
+fn ter_err(_e: TerError) -> Fail {
+    // The clean-room TER reports one condition: a segment with no references.
+    Fail { code: 1, msg: "ZeroDivisionError: division by zero (TER segment without references)".into() }
 }
 
 fn ter_corpus(cli: &Cli, system: &[String], refs: &[Vec<String>], nrefs: usize) -> Result<(Score, Signature), Fail> {
@@ -485,7 +482,7 @@ fn ter_sentence(cli: &Cli, hyp: &str, refs: &[&str], nrefs: usize) -> Result<(Sc
     let hyp = maybe_lower(hyp, lower);
     let refs_lower: Vec<Cow<str>> = refs.iter().map(|r| maybe_lower(r, lower)).collect();
     let refs_view: Vec<&str> = refs_lower.iter().map(|c| c.as_ref()).collect();
-    let [edits, ref_len] = ter_segment(&cfg, &hyp, &refs_view).map_err(ter_err)?;
+    let [edits, ref_len] = ter_segment_clean(&cfg, &hyp, &refs_view).map_err(ter_err)?;
     let score = ter_score_value(edits, ref_len);
     Ok((Score { name: "TER".into(), score, verbose: None }, ter_signature(cli, nrefs)))
 }

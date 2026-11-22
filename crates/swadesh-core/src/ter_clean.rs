@@ -12,6 +12,7 @@
 //!    (spec section 4),
 //! 3. `edits = distance + shifts`, averaged over references (spec section 5).
 
+use crate::stats::{TerConfig, TerError};
 use crate::unicode::py_rstrip;
 
 /// Shifts move at most this many positions, and blocks are at most this long (spec 4.2).
@@ -26,23 +27,6 @@ const OP_MATCH: u8 = b' ';
 const OP_SUB: u8 = b's';
 const OP_INS: u8 = b'i';
 const OP_DEL: u8 = b'd';
-
-/// TER parameters mirroring the oracle's option names.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct TerConfig {
-    /// Split punctuation off words and protect numbers (spec 3.2).
-    pub normalized: bool,
-    /// Delete punctuation instead of keeping it (spec 3.1).
-    pub no_punct: bool,
-    /// Split CJK / fullwidth characters individually (spec 3.3).
-    pub asian_support: bool,
-    /// Keep case.
-    pub case_sensitive: bool,
-}
-
-/// Reported when a segment has no references, where the oracle raises.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct TerError;
 
 // ------------------------------------------------------------------ character classes
 
