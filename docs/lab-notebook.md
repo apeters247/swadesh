@@ -649,3 +649,32 @@ Rust suite: 96 passed, 0 failed. Frozen-oracle suite: 14 passed.
 
 **Next.** `intl` is the only tokenizer left (6/13,455, all in en-ja CJK comma contexts). Then the
 port can be wired into the metric layer and `tokenize.rs` deleted.
+
+---
+
+## 2026-11-22 — Phase 1: intl SOLVED in Python (0/13455); Rust port at 40/13455
+
+**Python reference reaches 0 / 13,455.** The final rules, all measured:
+- `.` `,` `:` attach only after an ASCII digit, when followed by a digit or end of line
+- a CJK comma glues a following digit run when it starts a token, and the run continues into
+  letters (`、２つのHDMI端子`)
+- a dash that directly follows another dash glues digits anywhere (`心碎——2300`)
+- brackets and opening quotes glue only at the very start of the line (`-22種類`)
+- one trailing punctuation stays glued at end of line only when the run ends in a digit
+  (`F1.`, `1699?`, but `15th.` splits), and never an emoji (`19:06😅`)
+
+Saved as `tools/intl_reference.py` (depends on the measured class JSON, so not self-contained).
+
+**Rust port: 40 / 13,455.** Progress within the session: 648 → 295 → 106 → 50 → 40. Three real
+findings on the way (letter-digit runs `G7`/`A1` stay whole; letters after a digit stay in the run
+`4th`; the end-of-line glue needed the same rule in the ordinary-run branch), plus one change that
+made things worse (widening token-start detection to any letter: 40 → 111, reverted).
+
+**Where the port and the reference disagree.** CJK text followed by a CJK comma with digits:
+`釈放した後、1993年` splits in the oracle and in the Python reference, but the port keeps `後、1993`
+together. The Python reference distinguishes this by consuming CJK as ordinary characters and
+applying the comma rule at the *word* level; the Rust port runs character by character and loses
+that boundary. Fix: give the port the same word-level pass rather than another character-level
+condition — the same shape as the zh `py_split` bug, where the fault was in the data path.
+
+**State.** 13a, zh, none, char: exact. intl: exact in Python, 40 in Rust. Nothing deleted yet.
