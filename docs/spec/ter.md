@@ -90,6 +90,41 @@ character is **deleted** (not separated), so `"a.b"` becomes `"ab"` and `"Hello,
 
 ### 3.3 East Asian support (`asian_support = true`)
 
+The flag does two things, and they are gated differently. The per-character split only happens in
+**normalized** mode; the extra punctuation set for `no_punct` applies in both modes. The original
+measurement missed the first gate, and the implementation split per character in both modes.
+
+#### 3.3.1 The per-character split requires `normalized = true`
+
+With `normalized = false`, `asian_support = true` is a no-op for the split: the segment is tokenized
+exactly as with the flag off. Measured on 400 random segments mixing CJK and ASCII
+(`你 好 日 本 語 。 ！ ？ 、 a b c 1 2`), with `no_punct = false`: zero score differences between
+`TER(asian_support=True)` and `TER(asian_support=False)` in sacreBLEU 2.6.0. With `normalized = true`
+the flag changes 207 of 300 random segments. The minimal pair is `你好` against `你好吗`:
+
+| flags | sacreBLEU | split per character |
+|---|---|---|
+| `asian_support=True` | 100.0 | no |
+| `asian_support=True, normalized=True` | 33.3 | yes |
+
+So the condition is `normalized && asian_support && any(is_asian)`, not `asian_support && any(is_asian)`.
+
+#### 3.3.2 `no_punct` uses the fullwidth set in both modes
+
+`no_punct = true` with `asian_support = true` deletes the fullwidth forms even when `normalized =
+false`. Measured on `_preprocess_segment`:
+
+| input | `no_punct` | `no_punct, asian_support` | `no_punct, asian_support, normalized` |
+|---|---|---|---|
+| `a。b` | `a。b` | `ab` | `a b` |
+| `a（b）c` | `a（b）c` | `abc` | `a b c` |
+| `你好。世界` | `你好。世界` | `你好世界` | `你 好 世 界` |
+
+So the `asian` flag passed to the punctuation stripper is `asian_support && any(is_asian)`, without
+the `normalized` gate; only the per-character split and its whitespace exemption carry that gate.
+
+#### 3.3.3 The ranges
+
 Applied when any character of the segment falls in one of these ranges; then **every character of
 the Asian ranges becomes its own token**, and runs of spaces are dropped so that `中文。` becomes
 `中 文 。`.
