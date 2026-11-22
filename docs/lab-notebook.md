@@ -771,3 +771,31 @@ but glues. My number/letter extension rules interact in ways the corpus never ex
 with 13a's `&,.0`, now closed there but open here in a different form. Phase 1's acceptance in the
 plan is zero mismatches against the frozen corpus, which is met for the corpus data; the fuzz file
 of the frozen oracle is not yet at zero.
+
+---
+
+## 2026-11-22 — Phase 1: intl fuzz 27 → 22, then stopped
+
+**Gains this session, all measured:**
+- Trailing glue after a digit: everything glues at end of line except `$ + < = > ^ ` | ~`.
+  Measured by sweeping all ASCII punctuation. Fixed `1~` and `1*` (27 → 23).
+- `«` glues a following number like `@` and `(` (23 → 22).
+
+**Two attempts that made things worse, both reverted:**
+- Treating *every* token-start class character as a digit lead: 22 → 34 differences and the
+  **corpus regressed to 10 failing files**. Reverted.
+- An earlier patch also failed to apply silently (anchor text not found), so a "passing build"
+  tested unchanged code — the third time this session a build result did not reflect the source.
+
+**State: 22 fuzz differences, corpus 0/13,455, parity 494 passed, Rust 100 passed.**
+The 22 are one shape with several faces: a BMP/astral number adjacent to a class character in a
+context the corpus never produces (`;9`, `-²`, `𝟎0⩮`, `?Ⅷ符`).
+
+**Decision.** Stop rule-fitting on intl's fuzz tail. Ten sessions of evidence say the same thing:
+each generalisation fixes some of these and breaks others, and the corpus — the only data that
+actually occurs — has been at zero for several sessions. The honest framing for the record:
+**intl is exact on all real corpus data and 22 lines short on a synthetic adversarial alphabet.**
+
+**Next.** Phase 2 (BLEU/chrF segment statistics) is untouched and is the largest remaining risk in
+the whole rewrite; `stats.rs` is a port as well. That is a better use of the next session than the
+fuzz tail.

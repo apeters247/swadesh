@@ -40,6 +40,13 @@ fn is_digit(c: char) -> bool {
         || ((c as u32) <= 0xFFFF && crate::unicode::is_number(c))
 }
 
+/// Measured: after a trailing digit, these class characters split off instead of gluing.
+/// `"1?</code>"` glues, `"1~"` splits. Everything else glues, emoji never do.
+#[inline]
+fn splits_after_digit(c: char) -> bool {
+    matches!(c, '$' | '+' | '<' | '=' | '>' | '^' | '`' | '|' | '~')
+}
+
 #[inline]
 fn is_emoji(c: char) -> bool {
     let cp = c as u32;
@@ -114,7 +121,13 @@ pub fn tok_intl(line: &str, out: &mut String) {
             }
             // One trailing punctuation at end of line stays glued only when the run ends in a
             // digit ("1699?", "F1."), and never an emoji ("19:06😅" splits).
-            if j + 1 == n && j > 0 && is_class(s[j]) && !is_emoji(s[j]) && is_digit(s[j - 1]) {
+            if j + 1 == n
+                && j > 0
+                && is_class(s[j])
+                && !is_emoji(s[j])
+                && !splits_after_digit(s[j])
+                && is_digit(s[j - 1])
+            {
                 j += 1;
             }
             let tok: String = s[i..j].iter().collect();
@@ -123,17 +136,18 @@ pub fn tok_intl(line: &str, out: &mut String) {
             continue;
         }
         if is_class(c) {
-            // `starts_token` has the reference's meaning: nothing buffered in the current token.
+            // Measured lead rules, each established separately by probing: a CJK comma glues at
+            // any token start; a dash directly after another dash glues anywhere; a dash, opening
+            // bracket or opening quote glues only at the very start of the line; "@" and "«" glue
+            // a following number. "$" and ordinary quotes never glue.
             let starts_token = cur.is_empty();
-            let digit_next = i + 1 < n && is_digit(s[i + 1]);
             let cjk_comma = c == '\u{3001}' || c == '\u{FF0C}';
             let dash = c == '\u{2014}' || c == '\u{2013}' || c == '-';
             let dash_after_dash =
                 dash && i >= 1 && matches!(s[i - 1], '\u{2014}' | '\u{2013}' | '-');
-            // "@" glues a following number too ("@½"}).
-            let bracket_or_quote =
-                matches!(c, '(' | '[' | '\u{FF08}' | '\u{201C}' | '@');
-            let leads = digit_next
+            let bracket_or_quote = matches!(c, '(' | '[' | '\u{FF08}' | '\u{201C}' | '\u{00AB}' | '@');
+            let leads = i + 1 < n
+                && is_digit(s[i + 1])
                 && starts_token
                 && (cjk_comma || dash_after_dash || (dash && i == 0) || (bracket_or_quote && i == 0));
             if leads {
