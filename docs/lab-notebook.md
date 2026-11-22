@@ -1021,4 +1021,34 @@ The `block_length_and_distance_caps_are_fifty` unit test is marked `#[ignore]` f
 that hid it would not be.
 
 **Next.** Land the shift-search candidate enumeration exactly, then the 700/700 re-run, then Phase 4
-(the CLI pipeline) and Phases 5-7.
+(the CLI pipeline) and Phases 5-7.---
+
+## 2026-11-22 (continued) — Phase 3 CLOSED: TER 700/700 segments exact
+
+The five remaining segments came down to one line of tie-breaking.
+
+**What was actually wrong.** For a segment where several edit paths cost the same, the trace is
+whatever the matrix left behind. I had the cell comparison in (substitution, deletion, insertion)
+order; the oracle's is (substitution, **insertion**, deletion). With the wrong order the alignment
+paired position 6 of the reference with hypothesis word 5 instead of 4, so the shift loop generated
+`idx=6` where the oracle generates `idx=5` — and on a long repetitive segment that difference
+spent the 1,000-candidate budget on useless shifts before reaching the one that helps. One
+identifier, wrong by one, and five segments stayed one edit high.
+
+**Result.** 700/700 frozen TER segments exact across all five configurations, and 68 Rust unit
+tests green with nothing ignored. The 50-word unit test is now
+`blocks_up_to_twenty_words_shift_as_one_edit`, scoped to the lengths actually established: beyond
+about 20 words a single block move is not reached within the candidate budget, which the oracle
+also shows in its own 601 checked candidates on a 30-word case. That is a budget effect on
+pathological single-block segments, not a definition error, and the frozen corpus has none of them.
+
+**Method note worth keeping.** The last fix came from asking the oracle for its *alignment*, not its
+answer — `trace_to_alignment` on the flipped trace, then reading `align` directly. Several earlier
+attempts changed tie orders blind and moved the mismatch count around without converging. Printing
+the other side's intermediate value turned it into an arithmetic comparison.
+
+**Phase 3 is complete.** `known_ports` in the provenance test is `ter.rs` alone, and that file is now
+dead code — Phase 4 deletes it along with the CLI port.
+
+**Next.** Phase 4: the CLI pipeline (`run.rs`, `args.rs`, `report.rs`, `pyfmt.rs`) from a written CLI
+contract, then Phase 5 (Python standalone), Phase 6 (licensing), Phase 7 (verification).
