@@ -1774,4 +1774,45 @@ skipped, 0 failed** on both 3.12 and 3.14.
 `class BLEU(_FastMixin, _SacreBLEU)` and its two siblings. They supply `_extract_reference_info` (three
 methods, 62 lines), the constructor constants (`MAX_NGRAM_ORDER`, `CHAR_ORDER`, `WORD_ORDER`,
 `BETA`), and the parent `__init__` calls that set up the option attributes. Once those are owned,
-`sacrebleu.metrics` stops being imported here at all.
+`sacrebleu.metrics` stops being imported here at all.---
+
+## 2026-11-22 (continued) — significance.py finished; a guard that was actively wrong
+
+**`significance.py` now imports sacreBLEU only for the `patch()` adapter.** The native scoring
+helpers were importing `sacrebleu.metrics.BLEU` and `CHRF` to run two checks: an `isinstance`, and a
+confirmation that the metric had not overridden `_compute_score_from_stats`.
+
+That second check was **actively wrong**. Its premise is that only sacreBLEU's own scorer is safe for
+the kernel — but swadesh's classes override the scorer, which is the entire point of Phase 5. So the
+guard excluded the implementation the project is moving to. It is the same identity check that broke
+last session's `metrics.py` attempt; here it was merely narrowing the fast path rather than failing a
+test.
+
+Replaced with `_metric_kind`, which duck-types on the attributes the kernels actually read:
+`max_ngram_order`/`smooth_method` for BLEU, `char_order`/`word_order`/`beta` for chrF. Either
+implementation now qualifies, and a metric that is neither still falls back.
+
+**Verified:** 32 significance, bootstrap and paired tests; full suite **518 passed, 1 failed** on
+3.11 (the known `fuzz42 intl`); **506 passed, 13 skipped, 0 failed** on both 3.12 and 3.14.
+
+## Where Phase 5 stands
+
+| module | state |
+|---|---|
+| `significance.py` | done — sacreBLEU only in the `patch()` adapter |
+| `metrics.py` | score objects, aggregation, reference caching and sentence scoring are swadesh's; the class definitions still inherit |
+| `cli.py` | adapter; blocked on the Rust CLI reaching parity |
+| `__init__.py`, `verify.py` | permanent adapters by nature |
+
+**What is left in `metrics.py`** is the inheritance itself, and this session established the price
+honestly: `_extract_reference_info` is three methods (62 lines) of Counter arithmetic that only the
+*fallback* path uses — the native path bypasses it entirely — plus the constructor constants and the
+parent `__init__` calls. Porting ~100 lines of rarely-exercised fallback arithmetic that is defined
+by sacreBLEU's behaviour is a poor trade for removing one `import`, and the honest way to frame it is
+that `metrics.py` is deliberately still `PENDING` for that reason rather than waiting on work not yet
+started.
+
+**A judgement I am making rather than deferring:** the fallback path exists for `has_empty`
+references, non-integral orders and kernel exceptions. It is real but narrow. If the owner wants the
+last inheritance gone, that is the work to authorise; if not, `metrics.py` at its current state
+already constructs nothing from sacreBLEU on the corpus path.
