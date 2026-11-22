@@ -445,3 +445,32 @@ line-start lead, which is what the current model encodes.
 day is the point where the returns are negative. The next step that makes sense is to port **13a**
 to Rust now (it is exact and ready), leave intl at 99.96% documented as an open gap, and continue the
 phase with zh.
+
+---
+
+## 2026-11-22 — Phase 1: 13a ported to Rust; one fuzz case found a real algorithm gap
+
+**Ported.** `crates/swadesh-core/src/tokenize_13a_clean.rs`, written from
+`docs/spec/13a-algorithm.md`: five stages, and an `insert_pass` helper that implements CPython's
+`re.sub` insertion-offset rule once for all four substitution passes. Unit tests pass.
+
+**Measured.** Rust vs sacreBLEU on the full WMT22 corpus: **0 mismatches / 13,455 lines**. On 5,000
+adversarial fuzz cases: **1 mismatch**, down from 6 and 3 after two genuine fixes found by the fuzz
+run:
+- a trailing `,` at end of line detaches like `.` ("9," -> "9 ,")  — was missing
+- `&,.0`: a `.` before a digit at end of line fuses (".0" one token) when the preceding pass
+  attached a comma there. **This one is still wrong**, in both the Rust port and the earlier
+  Python prototype, and the corpus does not contain the shape.
+
+**Why the corpus result was clean and fuzz was not.** The WMT22 files never put a comma directly
+before a trailing decimal. My earlier Python fuzz run also missed it because it stripped newlines
+from the input before comparing, which altered two of the failing cases; the corrected harness feeds
+newline-free cases only and found this one immediately.
+
+**Lesson, worth the space.** Two independent differential harnesses disagreed about the same code
+because one of them mangled its input. A harness bug looks exactly like a code result until it is
+reproduced by hand. Every fix here came from a hand-reproduced minimal case, not from a count.
+
+**State.** The Rust `13a` is exact on all real corpus data, one fuzz case short of exact in the
+abstract. `tokenize.rs` cannot be deleted on the strength of this, so the port is committed as an
+additive module with the gap recorded, not as a replacement.
