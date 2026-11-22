@@ -118,6 +118,10 @@ def test_frozen_oracle(path):
     entries = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     failures = []
     for entry in entries:
+        # The TER probe fixture records tokenizer strings and segment rows, not corpus scores; it
+        # is exercised by tests/test_ter_probe.py.
+        if "case" not in entry:
+            continue
         if entry["case"].split(":", 1)[1] not in METRICS:
             continue
         try:
