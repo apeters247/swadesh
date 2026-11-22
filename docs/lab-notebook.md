@@ -1815,4 +1815,30 @@ started.
 **A judgement I am making rather than deferring:** the fallback path exists for `has_empty`
 references, non-integral orders and kernel exceptions. It is real but narrow. If the owner wants the
 last inheritance gone, that is the work to authorise; if not, `metrics.py` at its current state
-already constructs nothing from sacreBLEU on the corpus path.
+already constructs nothing from sacreBLEU on the corpus path.---
+
+## 2026-11-22 (continued) — metrics.py: TER's fallback methods are swadesh's own
+
+Third slice of `metrics.py`. `TER` now defines `_extract_reference_info` and
+`_compute_segment_statistics` itself, so its fallback path no longer reaches sacreBLEU's methods.
+
+**A design choice worth recording.** The segment statistics could have been a second Python
+implementation of "minimum edits over references, average reference length". Instead they call the
+native `ter_stats` kernel for the single segment. That keeps one definition of the rule — the one
+already verified against the frozen corpus and the real-model fixtures — rather than a Python copy
+that could drift from it.
+
+**What the tests caught that I had wrong.** I returned `[len(hypothesis), 0.0]` for a segment with no
+references, which seemed the reasonable reading of "nothing to edit against". Seven parity cases
+disagreed: sacreBLEU raises `ZeroDivisionError` there, because it divides by the reference count. The
+row is now an exception, matching the oracle.
+
+**Result.** **508 passed, 1 failed** on 3.11 (the known `fuzz42 intl`); **506 passed, 13 skipped, 0
+failed** on both 3.12 and 3.14.
+
+**What remains in `metrics.py`.** BLEU and chrF still inherit `_extract_reference_info` and
+`_compute_segment_statistics`, and all three still inherit their constructors and constants. The
+remaining work is ~100 lines of fallback-only arithmetic: counter-based n-gram extraction and the
+clipped-match computation, neither of which the native path touches. It is the last piece of Phase 5
+apart from `cli.py`, and it is the piece with the worst effort-to-value ratio in the whole plan —
+removing one `import` from a file that already constructs nothing from sacreBLEU on the corpus path.
