@@ -1589,4 +1589,45 @@ rather than rediscovering them.
 
 **Result.** Suite **521 passing, 1 failing** — the extra pass is the new provenance assertion. Rust
 untouched and green. `PENDING` is down to `metrics.py` and `cli.py` in substance: `significance.py`
-is clean-room apart from its adapter seam, which leaves with `metrics.py`.
+is clean-room apart from its adapter seam, which leaves with `metrics.py`.---
+
+## 2026-11-22 (continued) — cli.py's blocker is measured: the Rust CLI is not yet at parity
+
+I tried to close the `cli.py` obstacle from the previous session. It is closable, but not this way,
+and now I can say exactly how far apart the two CLIs are.
+
+**Why a binary in the wheel does not work.** Maturin 1.16 bundles the extension module and nothing
+else: it has `bindings = "bin"` for a binary-only wheel (not one with an extension), `--sbom-include`
+and `--include-debuginfo`, but no way to carry an extra executable. I put an `[[bin]]` in
+`crates/swadesh-py`, built it successfully, and the wheel still contained only
+`swadesh/_swadesh.abi3.so`.
+
+**The route that does work** is a pyfunction. `run_cli(argv)` calls `swadesh_cli::run_argv`
+in-process, captures stdout into a buffer, and returns `(exit_code, stdout, stderr)`. No subprocess,
+no second binary. Verified directly: `-V` gives `swadesh 0.1.0 (sacreBLEU 2.6.0)`, a bad flag gives
+exit code 2. That binding is now committed as the foundation Phase 4 needs.
+
+**Why I did not switch `cli.py` over.** I tried it two ways and measured both:
+
+| attempt | CLI parity result |
+|---|---|
+| Rust CLI for everything | 38 of 77 pass |
+| Rust CLI, fall back for unsupported flags | 61 of 77 pass |
+
+The 39 failures split into three causes, none of them packaging:
+
+1. **27 flags are explicitly unsupported** by the Rust CLI: test-set download (`-t`, `--list`,
+   `--echo`, `--origlang`, `--subset`, `--download`), `--detail`, `--citation`, and the bootstrap
+   and paired-test flags (`-ci`, `-par`, `-pbs`, `-parn`, `-pbsn`). It reports them as unsupported
+   rather than producing sacreBLEU's output.
+2. **The help and version screens differ** in program name, so `--help` and `-V` are not byte-equal
+   by design.
+3. **Argument-error messages and exit codes differ** for bad values (`-s bogus`, `-m nope`, `-w x`).
+
+So `cli.py` is blocked on the Rust CLI reaching behavioural parity, which is Phase 4 — the phase whose
+scope I flagged two sessions ago as needing the owner's decision on whether a source-level rewrite is
+wanted at all. Both routes to closing `cli.py` therefore end at the same question.
+
+**State.** `cli.py` is unchanged. Suite **523 passed, 1 failed** (the known intl case); the 2 skips
+seen in one run were my `PATH` missing cargo, and with cargo present the dependency-licence guards
+all pass. Rust 13 suites green.
