@@ -30,9 +30,14 @@ fn is_class(c: char) -> bool {
     }
 }
 
+/// The digit notion the numeric rules use: ASCII digits, full-width digits, and Unicode
+/// numbers generally (measured: `½`, `⅓`, `²`, `Ⅷ` all behave as digits here and in zh).
 #[inline]
 fn is_digit(c: char) -> bool {
-    c.is_ascii_digit() || ('\u{FF10}'..='\u{FF19}').contains(&c)
+    c.is_ascii_digit()
+        || ('\u{FF10}'..='\u{FF19}').contains(&c)
+        // BMP numbers only: astral digits such as \u{1D7CE} do NOT extend a run (measured).
+        || ((c as u32) <= 0xFFFF && crate::unicode::is_number(c))
 }
 
 #[inline]
@@ -125,7 +130,9 @@ pub fn tok_intl(line: &str, out: &mut String) {
             let dash = c == '\u{2014}' || c == '\u{2013}' || c == '-';
             let dash_after_dash =
                 dash && i >= 1 && matches!(s[i - 1], '\u{2014}' | '\u{2013}' | '-');
-            let bracket_or_quote = matches!(c, '(' | '[' | '\u{FF08}' | '\u{201C}');
+            // "@" glues a following number too ("@½"}).
+            let bracket_or_quote =
+                matches!(c, '(' | '[' | '\u{FF08}' | '\u{201C}' | '@');
             let leads = digit_next
                 && starts_token
                 && (cjk_comma || dash_after_dash || (dash && i == 0) || (bracket_or_quote && i == 0));

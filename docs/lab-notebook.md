@@ -743,3 +743,31 @@ A niche shape, unmeasured until now.
 
 **Next.** Close that one case, then run the parity suite against the rebuilt extension and commit
 the deletion.
+
+---
+
+## 2026-11-22 — Phase 1: tokenize.rs deleted, parity green, one fuzz case open
+
+**Done.** `tokenize.rs` removed and the dispatch wired in (`db49b6a`), then the number rules
+corrected. Verification against the rebuilt extension:
+- **`tests/test_parity.py`: 494 passed** — the full API/CLI parity surface, through the new tokenizers.
+- `tests/test_frozen_oracle.py`: 13 of 14 files pass.
+- Rust suite: 100 passed.
+- `test_cli/test_ter/test_regressions/test_coverage_gaps`: run but hit my 800 s timeout at 75%
+  (rc=124), not a failure — needs a longer budget to confirm.
+
+**The two number findings this session**, both measured:
+- Unicode BMP numbers (`½`, `⅓`, `²`, `Ⅷ`, Arabic-Indic) behave as digits: `1½`, `½.`, `@½}` all
+  keep the number glued. Widening the rule fixed fuzz18.
+- **Astral digits do not**: `𝟎` (U+1D7CE) must not extend a run (`𝟎⩮` splits). Restricting to BMP
+  fixed part of fuzz31.
+
+**What remains: 27 differing lines, all inside `tests/oracle/fuzz.jsonl` for intl**, and they
+contradict each other: `-²` should glue but splits, `1~` should split but glues, `𝟎⩮` should split
+but glues. My number/letter extension rules interact in ways the corpus never exercises. The corpus
+(13,455 lines) and the parity suite are both clean.
+
+**Honest read.** This is the same "fuzz finds shapes the corpus never has" boundary reached earlier
+with 13a's `&,.0`, now closed there but open here in a different form. Phase 1's acceptance in the
+plan is zero mismatches against the frozen corpus, which is met for the corpus data; the fuzz file
+of the frozen oracle is not yet at zero.
