@@ -617,6 +617,32 @@ class TER(_FastMixin, _SacreTER):
             return self._py_statistics(hypotheses, references)
         return np.frombuffer(buf, dtype=np.float64).reshape(n, width).copy()
 
+    def _extract_reference_info(self, refs):
+        """TER reference words: each reference is preprocessed then split."""
+        return {"ref_words": [self._preprocess_segment(r).split() for r in refs]}
+
+    def _compute_segment_statistics(self, hypothesis, ref_kwargs):
+        """`[best_num_edits, average reference length]` for one segment.
+
+        The edits are the **minimum** over references while the length is their average: the best
+        reference wins, but the length counts every reference. The native kernel computes exactly
+        that, so the fallback path uses it rather than a second Python implementation.
+        """
+        ref_words = ref_kwargs["ref_words"]
+        if not ref_words:
+            # A segment with no references is TER's error path: it divides by the reference count.
+            raise ZeroDivisionError("division by zero")
+        # The kernel takes parallel lists: one hypothesis, and that segment's references.
+        refs = [" ".join(r) if not isinstance(r, str) else r for r in ref_words]
+        buf, n, width = _swadesh.ter_stats(
+            [hypothesis], [refs],
+            bool(self.normalized), bool(self.no_punct),
+            bool(self.asian_support), bool(self.case_sensitive),
+        )
+        return np.frombuffer(buf, dtype=np.float64).reshape(n, width)[0].tolist()
+
+
+
     def _score_from_row(self, row):
         """TER score object from `[edits, summed reference lengths]`.
 
