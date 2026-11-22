@@ -1418,4 +1418,48 @@ it for worse. The case is one row of one fuzz fixture. The remaining goal work �
 (the CLI rewrite, the Python standalone, the AGPL/commercial licensing, the verification matrix) —
 is untouched and is what actually determines whether the repository is commercialisable. I recommend
 spending the next sessions there and treating this single fuzz case as a documented, bounded defect
-rather than continuing to trade parity for it.
+rather than continuing to trade parity for it.---
+
+## 2026-11-22 (continued) — Phase 6: the repository is dual-licensed
+
+Took the previous session's recommendation and moved to the licensing, which is the goal's stated
+end state and had not been started.
+
+**What the repository said about itself, and what it actually was.** `LICENSE` was Apache-2.0 for the
+whole package. `README` said "Its tokenizers are ports of sacreBLEU's" and "License: Apache-2.0".
+`CONTRIBUTING` said the same. All three statements had been true before Phase 1 and none of them was
+true now: the tokenizers are clean-room and the plan requires AGPL for the community plus a paid
+commercial option.
+
+**What is now in place.**
+
+| file | what it is |
+|---|---|
+| `LICENSE` | the canonical GNU AGPL-3.0 text, fetched from the FSF and diffed against the local copy |
+| `LICENSE.commercial` | terms in outline, contact named; explicitly not a contract template |
+| `LICENSE-Apache-2.0` | retained for the five Python modules that still import sacreBLEU |
+| `CLA.md` | required before a first pull request is merged |
+| `docs/licensing.md` | which uses are free and which need the commercial licence |
+| `NOTICE` | split into original-to-swadesh and Apache-2.0, with third-party data named |
+
+`pyproject.toml` and the Cargo workspace now declare `AGPL-3.0-or-later` with the matching classifier
+and description. The description reads: "Bit-exact sacreBLEU-compatible BLEU/chrF/TER in Rust,
+AGPL-3.0; commercial licence available."
+
+**A guard, tested by breaking it.** `tests/test_provenance.py` gained
+`test_dual_licence_files_are_present`, which fails if `LICENSE` stops being the AGPL text, if
+`LICENSE.commercial` disappears, if the CLA vanishes, or if `pyproject.toml` reverts to declaring the
+package Apache-2.0. I set `pyproject.toml` back to `Apache-2.0` deliberately, confirmed the test
+fails, and restored it — a guard that cannot fail is not a guard.
+
+**The AGPL text itself.** Two local copies existed with different md5s; the differences were `http`
+versus `https` in the FSF address and line wrapping in the "how to apply" appendix. I used the
+canonical text fetched from gnu.org rather than either local copy, because the licence text in a
+dual-licensing repository should be the authoritative one.
+
+**Result.** Suite **520 passing, 1 failing** — the extra pass is the new guard. Rust 13 suites green.
+The one failure remains `fuzz42:BLEU intl`, unchanged and documented.
+
+**A caveat I should state rather than bury.** `LICENSE.commercial` is written by me, not by a lawyer.
+It states the intent clearly and defers the binding terms to a written agreement, which is the
+defensible shape, but the wording should be reviewed before anyone is asked to sign it.
