@@ -91,3 +91,28 @@ def test_tokenizers_are_clean_room():
     assert not (RS / "swadesh-core" / "src" / "tokenize.rs").exists(), (
         "the old ported tokenize.rs is back"
     )
+
+
+def test_dual_licence_files_are_present():
+    """The dual licence is the point of the clean-room work; its files must exist and agree."""
+    root = ROOT
+    agpl = (root / "LICENSE").read_text(encoding="utf-8")
+    assert "GNU AFFERO GENERAL PUBLIC LICENSE" in agpl, "LICENSE is not the AGPL text"
+    assert "Version 3" in agpl
+
+    commercial = (root / "LICENSE.commercial").read_text(encoding="utf-8")
+    assert "commercial licence" in commercial.lower()
+    assert "agpl" in commercial.lower(), "the commercial file must say what it is an alternative to"
+
+    assert (root / "LICENSE-Apache-2.0").exists(), "the retained Apache-2.0 text is missing"
+    assert (root / "CLA.md").exists(), "contributors must agree a CLA for dual licensing"
+
+    pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
+    assert "AGPL-3.0-or-later" in pyproject, "pyproject does not declare the AGPL"
+    assert "GNU Affero General Public License" in pyproject, "pyproject lacks the AGPL classifier"
+    assert 'license = { text = "Apache-2.0" }' not in pyproject, (
+        "pyproject still declares the whole package Apache-2.0"
+    )
+
+    contributing = (root / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    assert "CLA.md" in contributing, "CONTRIBUTING does not require the CLA"

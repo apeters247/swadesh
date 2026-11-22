@@ -94,6 +94,16 @@ checked-in tables reproduce byte for byte on CPython 3.11.14 with `regex`
 
 ## Licensing
 
-swadesh is licensed under Apache-2.0 (see `LICENSE`). sacreBLEU credit is in
-`NOTICE`. Unless you say otherwise, a contribution you submit is under the same
-license.
+swadesh is dual-licensed: AGPL-3.0-or-later for the community (see `LICENSE`) and a paid commercial
+licence for uses the AGPL does not cover (see `LICENSE.commercial`). `docs/licensing.md` says what
+that means in practice.
+
+**Before your first pull request is merged you must agree to the Contributor Licence Agreement**
+(`CLA.md`). It lets the copyright holder license your contribution under both licences; without it a
+single outside contribution would block the commercial side permanently. Add this line to your first
+pull request:
+
+    I agree to the swadesh Contributor Licence Agreement.
+
+Five Python modules still import sacreBLEU and remain under its Apache-2.0 notice as well:
+`__init__.py`, `verify.py`, `metrics.py`, `significance.py`, `cli.py`. `NOTICE` names them.

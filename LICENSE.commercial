@@ -1,0 +1,53 @@
+swadesh — commercial licence
+
+swadesh is dual-licensed.
+
+1. The GNU Affero General Public License, version 3 or later (AGPL-3.0-or-later), in `LICENSE`.
+   This is free of charge. It covers use in an internal pipeline, in open-source projects that
+   accept the AGPL, and in research. It requires that if you make a modified version available to
+   others over a network, or distribute the software (including as part of a larger work), you do
+   so under the AGPL as well.
+
+2. A commercial licence, described here, for the cases the AGPL does not suit. This is paid and is
+   granted by written agreement.
+
+## When you need the commercial licence
+
+You need it if either applies:
+
+* **You offer swadesh, or a modified version of it, as a network service** and are unwilling or
+  unable to publish the source of that service under the AGPL (AGPL section 13).
+* **You ship swadesh inside a product distributed in binary or object form** — including an
+  application, an appliance or an SDK — and do not wish to release that product under the AGPL.
+
+## When you do not need it
+
+* Running swadesh inside your own organisation to score your own data. This is free under the
+  AGPL and needs no commercial licence.
+* Using swadesh as a build- or evaluation-time tool whose output you own, where swadesh itself is
+  not distributed to your users.
+* Publishing your work under the AGPL, or an AGPL-compatible licence.
+
+If you are unsure which side of a line you are on, ask before you ship.
+
+## How to obtain it
+
+Write to the copyright holder with a short description of the intended use:
+
+    Kevin Peters · Catalytic AI · catalyticgpu.com
+    info@catalyticgpu.com
+
+A commercial licence is negotiated per use. There is no template price list in this file; the terms,
+the fee and the scope are agreed in writing.
+
+## Copyright
+
+The copyright holder is the author named in `NOTICE`. All contributors grant the holder the right
+to license their contributions under both of the above through the contributor agreement in
+`CONTRIBUTING.md`. That is what makes dual licensing possible.
+
+## No warranty
+
+Both licences are offered without warranty, as stated in the AGPL and as agreed in the commercial
+contract. Treat the scores swadesh produces as you would any measurement: verify them on your own
+data before relying on them.

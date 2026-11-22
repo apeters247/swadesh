@@ -155,9 +155,21 @@ translation and its reference: they count shared n-grams.
 
 ## Credits
 
-swadesh subclasses and depends on [sacreBLEU](https://github.com/mjpost/sacrebleu) by Matt Post
-and contributors (Apache-2.0). Its tokenizers are ports of sacreBLEU's. chrF is due to
+swadesh reproduces [sacreBLEU](https://github.com/mjpost/sacrebleu) by Matt Post and contributors
+(Apache-2.0), and the Python package still imports it in five modules. The Rust implementations were
+written from published specifications and from measurement of sacreBLEU's output, not from its
+source; `docs/spec/` records each one and `NOTICE` says exactly what remains derived. chrF is due to
 Maja Popović; BLEU to Papineni et al. (2002). Please keep citing sacreBLEU
 ([Post, 2018](https://aclanthology.org/W18-6319/)) when you report scores: they *are* sacreBLEU scores.
 
-License: Apache-2.0.
+## Licence
+
+swadesh is dual-licensed:
+
+* **AGPL-3.0-or-later** — free. Running it inside your organisation to score your own data, in CI,
+  in research and in open-source work all cost nothing. See `LICENSE`.
+* **Commercial licence** — for shipping swadesh inside a closed product, or offering it (or a
+  modified version) as a network service without publishing that service's source. See
+  `LICENSE.commercial`.
+
+`docs/licensing.md` sets out which side of that line a given use falls on.
