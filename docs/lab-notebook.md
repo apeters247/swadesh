@@ -1745,4 +1745,33 @@ against the frozen oracle and the full parity suite.
 **Still inherited.** The three classes continue to subclass sacreBLEU's for `_cache_references`,
 `sentence_score`, `_extract_reference_info` and the constructor constants. Those are the next slice;
 the score objects were the part that mattered for the licence, because they were the last thing the
-corpus path constructed from sacreBLEU's code.
+corpus path constructed from sacreBLEU's code.---
+
+## 2026-11-22 (continued) — metrics.py: reference caching and sentence scoring moved
+
+Two more inherited methods out of sacreBLEU, both at parity.
+
+**`_segment_ref_cache`** — the per-segment reference info, and where `num_refs` comes from. The
+`None` entries are dropped *before* the count, so a segment with one real reference and one `None`
+counts as one, and counts that vary across segments give `-1`. This is the rule that made `None`
+handling look inconsistent in several earlier sessions; it is in `docs/spec/metrics.md` and now in
+the code, in one place.
+
+**`_sentence_score`** — one segment through this metric's own statistics and aggregate, replacing
+the four `_SacreMetric.sentence_score` fallbacks.
+
+**A collision that cost three tries.** `_FastMixin` already had `_cache_references` returning the
+`_RefCache` wrapper. My new method took the same name and shadowed it, which surfaced 248 failures
+against 508 passing — and the error (`'list' object has no attribute 'has_empty'`) pointed at the
+wrapper rather than the shadowing. Renaming to `_segment_ref_cache` took the count to 47; the
+remaining 46 were one call site the rename had missed, found by grepping for the old name after the
+count refused to move.
+
+**Result.** **508 passed, 1 failed** on 3.11 (the known `fuzz42 intl` case), **506 passed, 13
+skipped, 0 failed** on both 3.12 and 3.14.
+
+**What is left in `metrics.py`:** the class definitions themselves —
+`class BLEU(_FastMixin, _SacreBLEU)` and its two siblings. They supply `_extract_reference_info` (three
+methods, 62 lines), the constructor constants (`MAX_NGRAM_ORDER`, `CHAR_ORDER`, `WORD_ORDER`,
+`BETA`), and the parent `__init__` calls that set up the option attributes. Once those are owned,
+`sacrebleu.metrics` stops being imported here at all.
