@@ -1630,4 +1630,42 @@ wanted at all. Both routes to closing `cli.py` therefore end at the same questio
 
 **State.** `cli.py` is unchanged. Suite **523 passed, 1 failed** (the known intl case); the 2 skips
 seen in one run were my `PATH` missing cargo, and with cargo present the dependency-licence guards
-all pass. Rust 13 suites green.
+all pass. Rust 13 suites green.---
+
+## 2026-11-22 (continued) — metrics.py opened: the score objects are swadesh's own
+
+The CLI-parity question has been asked twice without an answer, so I took the other open Phase 5
+item, which needs no decision: `metrics.py`.
+
+**Spec first**, as the process requires: `docs/spec/metrics.md` sizes the inheritance precisely
+rather than by impression — `Score` 93 lines, three `*Score` classes 30/18/12, `_cache_references`
+36, three `_extract_reference_info` 26/22/14, three `_aggregate_and_compute` 7 each: about 236 in
+all, matching the plan's estimate of a day.
+
+**The slice this session: 213 lines of it.** `Score`, `BLEUScore`, `CHRFScore` and `TERScore` are now
+defined in `python/swadesh/metrics.py`. This is the part the CLI prints, which makes it both the
+largest and the riskiest piece, so I did it first and verified it hard:
+
+| what | how |
+|---|---|
+| `repr` | object by object, four classes |
+| text line at widths 1, 2, 4 | `format(width=…)` |
+| bare score | `format(score_only=True)` |
+| JSON, with and without a signature | `format(is_json=True, signature=…)`, key order included |
+| confidence interval | `estimate_ci` on 80 resamples |
+
+`tests/test_score_objects.py` pins all ten of those comparisons, plus the assertion that `Score` is
+no longer a sacreBLEU subclass.
+
+**One thing the spec made me notice that I had got wrong twice.** `_cache_references` drops the
+`None` entries **before** counting `num_refs`. That is why `None` handling looked inconsistent across
+earlier sessions: a two-stream corpus with one all-`None` stream has *one* reference for that
+segment, not two. It is written down now rather than rediscovered.
+
+**Still inherited, and next.** `_cache_references`, the three `_extract_reference_info` and the three
+`_aggregate_and_compute`. The class definitions still subclass sacreBLEU, so the new score classes
+are additive for the moment. Flipping them means porting the aggregate chain — `sum_of_lists` (10
+lines) then `compute_bleu` / `chrf_f_score`, both already native in Rust — and the reference info.
+
+**Result.** Suite **508 passing, 1 failing** plus the 10 new score tests; the one failure is still
+`fuzz42 intl`. Rust untouched and green.
