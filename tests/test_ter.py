@@ -54,7 +54,8 @@ def _refs_like(hyps, data, n_refs):
 
 
 def assert_same(ours, theirs):
-    assert type(ours) is type(theirs)
+    # The score objects are swadesh's own now, so the types differ by design; compare the
+    # observable fields the module docstring promises instead.
     assert ours.score == theirs.score, (ours.score, theirs.score)
     assert ours.num_edits == theirs.num_edits
     assert ours.ref_length == theirs.ref_length

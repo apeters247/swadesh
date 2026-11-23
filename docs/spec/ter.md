@@ -52,32 +52,45 @@ Two tokenizers, selected by `normalized`.
 3. Split on spaces. **No punctuation is separated.**
 
 Measured: `"a.b"` stays `"a.b"`, `"a;b"` stays `"a;b"`, `"end."` stays `"end."`. Only whitespace
-splits. With `no_punct = true`, one more step runs before the split: every ASCII punctuation
-character is **deleted** (not separated), so `"a.b"` becomes `"ab"` and `"Hello, world!"` becomes
-`"hello world"`.
+splits. With `no_punct = true`, one more step runs before the split: a fixed set of ASCII
+punctuation is **deleted** (not separated), so `"a.b"` becomes `"ab"` and `"Hello, world!"` becomes
+`"hello world"`. The set is exactly `!` `"` `(` `)` `,` `.` `:` `;` `?` — nine characters. The
+other ASCII punctuation (`#` `$` `%` `&` `'` `*` `+` `-` `/` `<` `=` `>` `@` `[` `\` `]` `^` `_`
+`` ` `` `{` `|` `}` `~`) survives and stays attached to its neighbours. Measured by sweeping
+`string.punctuation`: `a&b` stays `a&b`, `a#b` stays `a#b`. This is why the entity step of
+section 3.2 matters: the `&` it produces survives `no_punct`.
 
 ### 3.2 `normalized = true` (the sacreBLEU "normalized" tokenizer)
 
 1. Lowercase unless `case_sensitive`.
-2. Normalise headline quotes and apostrophes: `“ ” „ ‟ « » ‘ ’ ‚ ‛` are mapped so that the
+2. **Unescape XML entities.** Four sequential global replacements, in this order: `&amp;` → `&`,
+   `&lt;` → `<`, `&gt;` → `>`, `&quot;` → `"`. The pass runs after lowercasing, so the four
+   entities are covered case-insensitively when `case_sensitive` is false; with
+   `case_sensitive = true` only the lowercase spellings are replaced. Measured on
+   `_preprocess_segment`: `&amp;` → `&`, `&AMP;` → `&` (default) but `&AMP;` → `& AMP ;`
+   (`case_sensitive`), `&amp;lt;` → `<`, `&amp;amp;` → `& amp ;`, `&amp;AMP;` → `& amp ;`. The
+   order matters: `&amp;` runs first, so `&amp;lt;` collapses to `<` while `&amp;amp;` leaves the
+   second `amp;` for the tokenizer to split. The default tokenizer (section 3.1) does not unescape
+   entities at all: `&amp;` stays `&amp;`.
+3. Normalise headline quotes and apostrophes: `“ ” „ ‟ « » ‘ ’ ‚ ‛` are mapped so that the
    *apostrophe-like* marks become `'` and the quote-like marks stay themselves. Measured: `“x”`
    survives as one token `“x”`, while `"x"` becomes `" x "`. The distinction matters: `"` (U+0022)
    is in the separating set, `“ ` `”` (U+201C/201D) are not.
-3. Python whitespace → single space, collapse, strip.
-4. **Protect numbers.** A maximal run of ASCII digits, optionally with internal `,` or `.` between
+4. Python whitespace → single space, collapse, strip.
+5. **Protect numbers.** A maximal run of ASCII digits, optionally with internal `,` or `.` between
    digits (`3.14`, `1,000`, `1.2.3`), is a single token and is not split at its internal marks.
    Measured: `3.14` stays, `1-2-3` splits (hyphens are *not* protected inside a digit run), `a.14`
    splits, `.3.14` keeps the digits together but leaves the leading dot separate.
-5. **Protect letters-hyphen.** A hyphen with a letter-like character immediately on both sides is
+6. **Protect letters-hyphen.** A hyphen with a letter-like character immediately on both sides is
    part of the word: `a-b` stays, `12-13` splits, `a-13` stays, `13-a` splits, `1-x` splits, `x-1`
    stays. So the condition is "both neighbours are non-space, non-digit", not "both are letters":
    measured `é-1` stays and `a-é` stays. Treat it as: a hyphen is protected when the character
    before it is not a space or digit and the character after it is not a space or digit.
-6. **Separate the remaining ASCII punctuation.** Every ASCII character in `!` `"` `#` `$` `%`
+7. **Separate the remaining ASCII punctuation.** Every ASCII character in `!` `"` `#` `$` `%`
    `&` `(` `)` `*` `+` `,` `/` `:` `;` `<` `=` `>` `?` `@` `[` `\` `]` `^` `_` `` ` `` `{` `|`
    `}` `~` · U+0021..U+007E is put on its own token, **except**:
    - `'` (U+0027), which never separates (`don't` stays one word), and
-   - `.` and `,` protected by rule 4, and `-` protected by rule 5.
+   - `.` and `,` protected by rule 5, and `-` protected by rule 6.
 
    None of the non-ASCII punctuation separates: `—`, `–`, `«`, `»`, `、`, `。`, `，`, `…`, `§`, `°`,
    `¡`, `¿` all stay attached to their neighbours. This is a real asymmetry of the oracle and is
@@ -86,11 +99,11 @@ character is **deleted** (not separated), so `"a.b"` becomes `"ab"` and `"Hello,
    The class is exactly ASCII, code points `0x00`–`0x7F`. Measured: `0x7E` (`~`) separates, `0x7F`
    (DEL) and `0x80` do not.
 
-7. Collapse spaces again and split.
+8. Collapse spaces again and split.
 
 With `no_punct = true`, the deletion set of section 3.1 runs first, but **in normalized mode a
 deleted mark is replaced by a space, not removed**, so it still separates tokens. The exception is
-`.` and `,` between ASCII digits: those are part of the protected number token (step 4), so deleting
+`.` and `,` between ASCII digits: those are part of the protected number token (step 5), so deleting
 them joins the digits. Measured on `_preprocess_segment`:
 
 | input | `no_punct` | `normalized, no_punct` |
@@ -258,12 +271,16 @@ For each segment, with hypothesis and the non-missing references:
 the segment fixtures rejected on 138 of 700 rows. `num_edits` is therefore integral; corpus TER is
 `sum(num_edits) / sum(avg_ref_len)` over segments.
 
-**Not reproduced (justified by measurement).** The reference implementation happens to preprocess
-each reference twice: once when references are cached and once when they are extracted. That is
-only observable if the tokenizer is not idempotent. It is idempotent — probed on apostrophe-heavy
-inputs (`dont''s`, `the 's`, `44 -0038' s`) in both tokenizer modes, all fixed points after one
-pass. So this specification requires one pass per reference, and the fixtures (§6) enforce
-equivalence of the outcome rather than of the number of calls.
+**Measured: the reference path preprocesses each reference twice.** The reference implementation
+runs the tokenizer once when references are cached and once when they are extracted. That is only
+observable where the tokenizer is not idempotent. It is idempotent on the apostrophe-heavy inputs
+first probed (`dont''s`, `the 's`, `44 -0038' s`), but **not** on a possessive followed by a lone
+`.` or `,`: `a's.` → `a's .` → `a 's .`, and `a's,` → `a's ,` → `a 's ,`. The second pass splits the
+`'s` that the first pass left attached. So the double preprocessing is observable for that narrow
+class. The native kernel currently preprocesses once and therefore disagrees with the oracle on
+`a's.` and `a's,` (reference length 2 against the oracle's 3, measured 2026-11-22). That gap is
+recorded in the lab notebook and not yet closed; the fixtures (§6) enforce the outcome, so a
+double-pass implementation would be accepted without changing them.
 
 ## 6. Verification plan
 

@@ -145,7 +145,8 @@ pub fn bleu_stats_segment(cfg: &BleuConfig, hyp: &str, refs: &[&str], out: &mut 
             if total == 0 {
                 continue;
             }
-            let correct = if fill_ref_max(hyp_idv, ref_ids, n, sc) {
+            let correct = if fits(n, 32) {
+                fill_ref_max(hyp_idv, ref_ids, n, sc);
                 let main = &mut sc.ref_max;
                 let mut matched = 0i64;
                 for k in packed_windows(hyp_idv, n, 32) {
@@ -155,7 +156,13 @@ pub fn bleu_stats_segment(cfg: &BleuConfig, hyp: &str, refs: &[&str], out: &mut 
                 }
                 matched
             } else {
-                0
+                // spec 2.6: orders above four do not fit a u128 key at 32 bits. Counting through
+                // the general wide-key representation is exact; returning "no key" here used to
+                // report zero matches and silently depress the score.
+                let hyp_runs = crate::ngram::count(hyp_idv, n, 32);
+                let ref_runs = crate::ngram::max_merge(
+                    ref_ids.iter().map(|r| crate::ngram::count(r, n, 32)).collect());
+                crate::ngram::clipped_matches(&hyp_runs, &ref_runs) as i64
             };
             out[2 + (n - 1)] = correct;
         }
@@ -181,6 +188,20 @@ mod tests {
         assert_eq!(r[0], 5);
         assert_eq!(r[1], 5);
         assert_eq!(&r[2..], &[5, 4, 3, 2, 5, 4, 3, 2]);
+    }
+
+    #[test]
+    fn orders_above_four_count_exactly() {
+        // spec 2.6: 5- and 6-grams exceed the u128 packed budget and must use wide keys.
+        let r = row("a b c d e f g", &["a b c d e f g"], 6);
+        assert_eq!(r[0], 7);
+        assert_eq!(r[1], 7);
+        assert_eq!(&r[2..8], &[7, 6, 5, 4, 3, 2], "correct 1..6");
+        assert_eq!(&r[8..14], &[7, 6, 5, 4, 3, 2], "total 1..6");
+
+        let r = row("a b c d e f g", &["a b c d e f X"], 5);
+        assert_eq!(&r[2..7], &[6, 5, 4, 3, 2], "correct 1..5");
+        assert_eq!(&r[7..12], &[7, 6, 5, 4, 3], "total 1..5");
     }
 
     #[test]

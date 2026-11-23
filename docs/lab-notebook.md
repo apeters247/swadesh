@@ -1969,3 +1969,60 @@ five-file selection is now **648 passed, 1 failed** on 3.11.14 and **634 passed,
 **Why it matters.** The "zero mismatches" claim for these two models is now a test the suite runs,
 not a number in a log. A future change to any metric that moves a real-output score fails here.
 
+
+---
+
+## 2026-11-22 (continued) — TER tokenizer: XML entities and the measured deletion set
+
+**The entity rule.** In `normalized = true` mode the oracle unescapes four XML entities before
+tokenizing. Measured on `_preprocess_segment` (sacreBLEU 2.6.0, Python 3.11.14): four sequential
+global replacements, in the order `&amp;` → `&`, `&lt;` → `<`, `&gt;` → `>`, `&quot;` → `"`. The
+order matters: `&amp;lt;` → `<` because `&amp;` runs first and leaves `&lt;`; `&amp;amp;` → `&amp;`
+because the second `amp;` has no `&`, so it tokenizes as `& amp ;`. The replacement runs *after*
+lowercasing, so it is case-insensitive when `case_sensitive = false` (`&AMP;` → `&`) and matches
+only the lowercase spellings when `case_sensitive = true` (`&AMP;` → `& AMP ;`). The default
+tokenizer (`normalized = false`) does not unescape at all: `&amp;` stays `&amp;`.
+
+**Second correction found while measuring.** The spec's section 3.1 claimed `no_punct` deletes
+*every* ASCII punctuation character. Sweeping `string.punctuation` through `_preprocess_segment`
+shows the set is nine characters: `! " ( ) , . : ; ?`. The rest survive; `&` in particular survives,
+which is why the entity replacement matters. The code's `is_ascii_punct` already matched the measured
+set; only the prose was wrong. Section 3.1 and the `is_ascii_punct` doc comment are corrected.
+
+**Implementation.** `crates/swadesh-core/src/ter_clean.rs`: in `tokenize`, when `normalized` is set
+and the text contains `&`, lowercase the whole segment first (respecting `case_sensitive`), then run
+the four replacements in order, then continue. Spec section 3.2 gains step 2 and the later steps
+renumber; cross-references updated. A new unit test `normalized_unescapes_xml_entities` covers the
+four entities, the order (`&amp;lt;`, `&amp;amp;`), the case-sensitivity gate, and the default-mode
+no-op.
+
+**Verification.**
+- 1,920 differential comparisons against the oracle: 120 random entity-heavy segments × 16 option
+  combinations (`normalized` × `no_punct` × `asian_support` × `case_sensitive`), zero score
+  mismatches.
+- Full workspace `cargo test --release`: 13 suites green, 112 tests.
+- `tests/test_frozen_oracle.py` on 3.11.14: 16 passed, 1 failed — the known `fuzz42:BLEU intl`
+  cross-version failure, unchanged.
+- `tests/test_ter.py` with the type-identity assertion removed: **31 failed, 20 passed, 2 skipped**
+  (475 s), down from 49 failed. The entity fix closes the entity class; the rest are separate,
+  pre-existing tokenizer and shift-search gaps.
+
+**Remaining TER gaps (recorded, not fixed).**
+1. *Reference double preprocessing.* `_cache_references` preprocesses each reference, then
+   `_extract_reference_info` preprocesses it again. The tokenizer is not idempotent on a possessive
+   followed by a lone `.` or `,`: `a's.` → `a's .` → `a 's .`. The native kernel preprocesses once,
+   so `a's.` and `a's,` disagree (reference length 2 against the oracle's 3). Spec section 5's
+   "not reproduced" paragraph is corrected to state this and the gap.
+2. *Possessive split lookahead.* The oracle splits `'s` only when it is followed by end-of-input or
+   a separating mark, and *not* when followed by `.`, `,`, or `'`. The native piece scanner cuts a
+   lone `.`/`,` into its own piece before the `'s` decision, so `a's.` becomes `a 's .` instead of
+   `a's .`. `'s'`, `a's'`, `x's'` are also split wrongly (native 3 tokens, oracle 1).
+3. *Newline-hyphen.* `-\n-\n` preprocesses to `-` (one token) in the oracle; the native tokenizer
+   keeps two. `a\n-\nb` gives `a b` in the oracle, three tokens natively.
+4. *Long-sentence shift search.* 15 failures in `test_ter_long_sentences_shifts`, typically one edit
+   short (native 47 against the oracle's 48). The shift candidate budget or tie-breaking differs.
+5. *Sentence-score ExceptionGroups.* 8 failures, three distinct sub-cases, all on empty hypotheses
+   with newline-hyphen references; the causes are covered by gaps 2 and 3.
+
+None of these is caused by the entity change; each predates it. The entity fix is committed with the
+suite still red on these five classes, because closing them is a separate slice.

@@ -36,7 +36,7 @@ const OP_DEL: u8 = b'd';
 // ------------------------------------------------------------------ character classes
 
 /// ASCII punctuation that the normalized tokenizer separates, except `'`, and except `. , -`
-/// where the number and hyphen rules protect them (spec 3.2 step 6).
+/// where the number and hyphen rules protect them (spec 3.2 step 7).
 #[inline]
 fn separates(c: char) -> bool {
     matches!(c,
@@ -52,10 +52,16 @@ fn is_ascii_digit(c: char) -> bool {
 /// Fullwidth and CJK punctuation deleted in `no_punct` Asian mode (spec 3.3).
 #[inline]
 fn is_asian_punct(c: char) -> bool {
+    // spec 3.3: exactly 39 code points, measured by comparing `_preprocess_segment` with and
+    // without `asian_support` over 0x2E00..0x3100 and 0xFF00..0xFFF0. U+FF0D is not in the set.
     matches!(c,
-        '\u{FF01}' | '\u{FF02}' | '\u{FF08}' | '\u{FF09}' | '\u{FF0C}' | '\u{FF0E}' | '\u{FF1A}'
-        | '\u{FF1F}' | '\u{FF0D}' | '\u{3001}' | '\u{3002}' | '\u{300C}' | '\u{300D}' | '\u{300E}'
-        | '\u{300F}' | '\u{3010}' | '\u{3011}' | '\u{3008}' | '\u{3009}' | '\u{300A}' | '\u{300B}')
+        '\u{3001}' | '\u{3002}'
+        | '\u{3008}'..='\u{3011}'
+        | '\u{3014}'..='\u{301F}'
+        | '\u{30FB}'
+        | '\u{FF01}' | '\u{FF02}' | '\u{FF08}' | '\u{FF09}' | '\u{FF0C}' | '\u{FF0E}'
+        | '\u{FF1A}' | '\u{FF1B}' | '\u{FF1F}'
+        | '\u{FF61}'..='\u{FF65}')
 }
 
 /// Punctuation deleted under `no_punct`, measured as an explicit set rather than the whole
@@ -86,11 +92,12 @@ fn is_asian(c: char) -> bool {
         | 0xFF0C
         | 0xFF0E
         | 0xFF1A
+        | 0xFF1B
         | 0xFF1F
         | 0xFF61..=0xFF65)
 }
 
-/// Headline quote marks folded to their plain form before tokenizing (spec 3.2 step 2).
+/// Headline quote marks folded to their plain form before tokenizing (spec 3.2 step 3).
 #[inline]
 
 // ------------------------------------------------------------------ tokenizer
@@ -119,33 +126,72 @@ fn push_lower(buf: &mut String, c: char, case_sensitive: bool) {
 /// Measured: `( )` are always deleted, `[ ] { }` never are, and everything else follows the fixed
 /// small set in `is_ascii_punct`. Note the asymmetry that made this worth measuring: the plain
 /// deletion set is not "all ASCII punctuation", and brackets are not a class of their own.
-fn strip_punct(raw: &[char], asian: bool) -> Vec<char> {
-    raw.iter()
-        .copied()
-        .filter(|&c| {
-            if is_asian_punct(c) && asian {
-                return false;
+fn strip_punct(raw: &[char], asian: bool, normalized: bool) -> Vec<char> {
+    let mut out = Vec::with_capacity(raw.len());
+    for (i, &c) in raw.iter().enumerate() {
+        let delete = (is_asian_punct(c) && asian) || is_ascii_punct(c) || c == '(' || c == ')';
+        if delete {
+            // spec 3.2: the default mode removes the mark outright, so "a?b" stays one token;
+            // the normalized mode leaves a separator, so it becomes "a b". The exception is a
+            // dot or comma between ASCII digits, part of the protected number token: deleting it
+            // joins the digits, so "2.2" stays "22" and "1,000" stays "1000".
+            if normalized {
+                let joins = (c == '.' || c == ',')
+                    && i > 0
+                    && is_ascii_digit(raw[i - 1])
+                    && raw.get(i + 1).map_or(false, |&n| is_ascii_digit(n));
+                if !joins {
+                    out.push(' ');
+                }
             }
-            !(is_ascii_punct(c) || c == '(' || c == ')')
-        })
-        .collect()
+        } else {
+            out.push(c);
+        }
+    }
+    out
 }
 
 /// Split `text` into TER words (spec section 3).
 ///
 /// Structure, which the measurements forced: the segment is first cut into *pieces* on
-/// **whitespace and on the digit-separator pattern only** (spec 3.2 steps 3-4), and the remaining
-/// marks are then resolved inside each piece (step 6). The piece boundaries change how the hyphen
+/// **whitespace and on the digit-separator pattern only** (spec 3.2 steps 4-5), and the remaining
+/// marks are then resolved inside each piece (step 7). The piece boundaries change how the hyphen
 /// rule decides, so the two passes are not interchangeable.
 pub fn tokenize(cfg: &TerConfig, text: &str) -> Vec<String> {
-    let asian = cfg.asian_support && text.chars().any(is_asian);
+    // spec 3.2 step 2: in normalized mode the XML entities are unescaped after lowercasing, so
+    // uppercase forms are covered only when `case_sensitive` is false. Four sequential global
+    // passes in this order: "&amp;lt;" collapses to "<" because "&amp;" runs first, and
+    // "&amp;amp;" leaves "&amp;" because the second "amp;" has no "&". The pre-lowercase only
+    // runs when an entity can be present, so segments without "&" keep the original code path.
+    let unescaped: String;
+    let text: &str = if cfg.normalized && text.contains('&') {
+        let mut s = String::with_capacity(text.len());
+        for c in text.chars() {
+            push_lower(&mut s, c, cfg.case_sensitive);
+        }
+        for (from, to) in [("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"), ("&quot;", "\"")] {
+            if s.contains(from) {
+                s = s.replace(from, to);
+            }
+        }
+        unescaped = s;
+        &unescaped
+    } else {
+        text
+    };
+    // Two different gates, measured (spec 3.3.1 and 3.3.2): the fullwidth punctuation set of
+    // `no_punct` applies whenever `asian_support` is on, but the per-character split only happens
+    // in normalized mode. Without the second gate `asian_support` alone disagrees with the oracle
+    // on 227 of 300 random CJK segments.
+    let asian_text = cfg.asian_support && text.chars().any(is_asian);
+    let asian = cfg.normalized && asian_text;
     let raw: Vec<char> = text.chars().collect();
     let mut out: Vec<String> = Vec::new();
 
     // Characters deleted by `no_punct` never reach the piece scanner. Which ones is decided in
     // `strip_punct`, because it depends on what has come before.
     let kept: Vec<char> = if cfg.no_punct {
-        strip_punct(&raw, asian)
+        strip_punct(&raw, asian_text, cfg.normalized)
     } else {
         raw.clone()
     };
@@ -704,6 +750,88 @@ mod tests {
         assert_eq!(words(&cfg, "\u{4e2d}\u{6587}\u{3002}"), vec!["\u{4e2d}", "\u{6587}", "\u{3002}"]);
         // Katakana is not in the Asian ranges, so it stays one token.
         assert_eq!(words(&cfg, "\u{30a2}\u{30a4}"), vec!["\u{30a2}\u{30a4}"]);
+    }
+
+    #[test]
+    fn normalized_no_punct_leaves_a_separator() {
+        // spec 3.2: "a?b" -> "a b" in normalized mode, "ab" in the default mode.
+        let norm = TerConfig { normalized: true, no_punct: true, ..TerConfig::default() };
+        assert_eq!(words(&norm, "a?b"), vec!["a", "b"]);
+        assert_eq!(words(&norm, "a?b?c"), vec!["a", "b", "c"]);
+        assert_eq!(words(&norm, "a.b"), vec!["a", "b"]);
+        assert_eq!(words(&norm, "a[b]c"), vec!["a", "[", "b", "]", "c"]);
+        let plain = TerConfig { no_punct: true, ..TerConfig::default() };
+        assert_eq!(words(&plain, "a?b"), vec!["ab"]);
+        assert_eq!(words(&plain, "a?b?c"), vec!["abc"]);
+    }
+
+    #[test]
+    fn normalized_no_punct_joins_digits_and_spaces_other_marks() {
+        // spec 3.2: only an ASCII dot or comma between digits joins after deletion.
+        let cfg = TerConfig { normalized: true, no_punct: true, ..TerConfig::default() };
+        assert_eq!(words(&cfg, "2.2"), vec!["22"]);
+        assert_eq!(words(&cfg, "1,000"), vec!["1000"]);
+        assert_eq!(words(&cfg, "12.34.56"), vec!["123456"]);
+        assert_eq!(words(&cfg, "2?2"), vec!["2", "2"]);
+        assert_eq!(words(&cfg, "a.b"), vec!["a", "b"]);
+        assert_eq!(words(&cfg, "a[b]c"), vec!["a", "[", "b", "]", "c"]);
+    }
+
+    #[test]
+    fn normalized_unescapes_xml_entities() {
+        // spec 3.2 step 2: four sequential global replacements after lowercasing. "&amp;" runs
+        // first, so "&amp;lt;" collapses to "<" while "&amp;amp;" leaves "&amp;" for the splitter.
+        let cfg = TerConfig { normalized: true, ..TerConfig::default() };
+        assert_eq!(words(&cfg, "&amp;"), vec!["&"]);
+        assert_eq!(words(&cfg, "&lt;"), vec!["<"]);
+        assert_eq!(words(&cfg, "&gt;"), vec![">"]);
+        assert_eq!(words(&cfg, "&quot;"), vec!["\""]);
+        assert_eq!(words(&cfg, "&amp;lt;"), vec!["<"]);
+        assert_eq!(words(&cfg, "&amp;gt;"), vec![">"]);
+        assert_eq!(words(&cfg, "&amp;amp;"), vec!["&", "amp", ";"]);
+        assert_eq!(words(&cfg, "a&amp;b"), vec!["a", "&", "b"]);
+        // Lowercasing runs first, so uppercase spellings are covered when case_sensitive is off.
+        assert_eq!(words(&cfg, "&AMP;"), vec!["&"]);
+        assert_eq!(words(&cfg, "&AMP;LT;"), vec!["<"]);
+        // With case_sensitive on, only the lowercase spellings are replaced.
+        let cs = TerConfig { normalized: true, case_sensitive: true, ..TerConfig::default() };
+        assert_eq!(words(&cs, "&amp;"), vec!["&"]);
+        assert_eq!(words(&cs, "&AMP;"), vec!["&", "AMP", ";"]);
+        // The default tokenizer does not unescape entities at all.
+        let plain = TerConfig::default();
+        assert_eq!(words(&plain, "&amp;"), vec!["&amp;"]);
+    }
+
+    #[test]
+    fn asian_punct_set_has_ff1b_and_not_ff0d() {
+        // spec 3.3: 39 code points, measured; U+FF1B is in the set and U+FF0D is not.
+        let cfg = TerConfig {
+            normalized: true,
+            no_punct: true,
+            asian_support: true,
+            ..TerConfig::default()
+        };
+        assert_eq!(words(&cfg, "a\u{FF1B}b"), vec!["a", "b"]);
+        assert_eq!(words(&cfg, "a\u{FF0D}b"), vec!["a\u{FF0D}b"]);
+        assert_eq!(words(&cfg, "a\u{FF61}b"), vec!["a", "b"]);
+        assert_eq!(words(&cfg, "a\u{3014}b"), vec!["a", "b"]);
+    }
+
+    #[test]
+    fn asian_support_without_normalized_does_not_split() {
+        // spec 3.3.1: the per-character split is gated on `normalized`.
+        let cfg = TerConfig { asian_support: true, ..TerConfig::default() };
+        assert_eq!(words(&cfg, "\u{4f60}\u{597d}\u{3002}\u{4e16}\u{754c}"),
+                   vec!["\u{4f60}\u{597d}\u{3002}\u{4e16}\u{754c}"]);
+    }
+
+    #[test]
+    fn asian_support_without_normalized_still_strips_fullwidth_punct() {
+        // spec 3.3.2: the `no_punct` fullwidth set is not gated on `normalized`.
+        let cfg = TerConfig { asian_support: true, no_punct: true, ..TerConfig::default() };
+        assert_eq!(words(&cfg, "a\u{3002}b"), vec!["ab"]);
+        let plain = TerConfig { no_punct: true, ..TerConfig::default() };
+        assert_eq!(words(&plain, "a\u{3002}b"), vec!["a\u{3002}b"]);
     }
 
     #[test]

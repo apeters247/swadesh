@@ -25,34 +25,42 @@ A new test fails if `PENDING` ever grows, and if a module appears in both sets.
 
 ## Pending, with the actual obstacle named
 
-### `metrics.py` — the largest
+### `metrics.py` — only the subclass scaffolding remains
 
-It subclasses sacreBLEU's `BLEU`, `CHRF` and `TER` to inherit four things: `_cache_references` (36
-lines), `_aggregate_and_compute` (8 lines, per metric), `_extract_reference_info` (26 lines), and the
-`BLEUScore` / `CHRFScore` / `TERScore` value objects whose formatting the CLI prints. swadesh already
-overrides `corpus_score` and `sentence_score`, so the inheritance is almost entirely for those.
+Everything the metric classes *do* is swadesh's own: the score objects with their `format()` and
+`__str__`, `sum_of_lists`, `_aggregate_and_compute`, `_score_from_row`, `_segment_ref_cache`,
+`_sentence_score`, and all six fallback statistics methods — TER's two, and now BLEU's and chrF's
+`_extract_reference_info` and `_compute_segment_statistics`.
 
-Standalone needs its own score objects with `format()`, `__str__` and the signature plumbing, plus
-the aggregate arithmetic for three metrics. That is the day of work the plan anticipated, and it is
-the next slice.
+What is still inherited is the scaffolding a subclass cannot avoid: the constructors and their
+argument validation, the tokenizer plumbing, the constants, the signature printing, and
+`_compute_score_from_stats` (whose identity the bootstrap fast path recognises). So `metrics.py`
+stays in the provenance `PENDING` set until that scaffolding is rewritten or the classes stop being
+subclasses.
 
-### `cli.py` — blocked on a packaging decision, not on code
+### `cli.py` — measured, and staying a documented adapter
 
 It is 19 lines: `swadesh.patch()`, then delegate to `sacrebleu.sacrebleu.main`. The delegation exists
-because sacreBLEU's CLI *is* the contract, and `patch()` makes every metric on the path native.
+because sacreBLEU's CLI *is* the contract, and `patch()` makes every metric on the path native. The
+question was whether to replace it with the Rust CLI. Measured on troy-1, 2026-11-22:
 
-The obvious standalone replacement is to call the **Rust CLI**, which already exists
-(`crates/swadesh-cli`, binary `swadesh`, byte-verified against sacreBLEU). Two obstacles:
+| route | 77-case CLI parity |
+|---|---|
+| the adapter, today | **77/77** |
+| Rust CLI only, binary or `_swadesh.run_cli` | 38/77 |
+| Rust, else the adapter on nonzero exit | 73/77 |
+| Rust, else the adapter for help/version too | 77/77 |
 
-1. `maturin` builds only the extension module (`module-name = "swadesh._swadesh"`); a wheel does not
-   carry the CLI binary, so `python -m swadesh.cli` could not find it.
-2. The parity tests run `python -m swadesh.cli` and compare stdout byte for byte with the sacreBLEU
-   binary across 50+ flag combinations. Switching the implementation behind that entry point is a
-   behavioural change that must be re-verified end to end, not a rename.
+The Rust CLI is also not correct inside the flags it claims: `tests/test_cli.py` (448 cases) gives
+**392 passed, 56 failed**, 50 of them TER. The 39 failures at the 77-case gate are help/version text,
+`-ci`/`-par`/`-pbs`, test sets, `--detail`, `--citation`, and argparse error wording. Bringing it to
+parity is 10.5–17.5 days, dominated by the test-set registry (3–7 d) and TER/chrF/BLEU correctness
+(2–4 d). The hybrid route buys no wall-clock time in the Python package, because `import swadesh`
+already dominates process startup, and a wheel cannot carry the binary anyway (`maturin` builds only
+the extension module).
 
-So `cli.py` needs either a maturin binary target added to the wheel, or an in-process binding to the
-CLI logic. Both are packaging work; neither is a licence problem once done, because the CLI is
-already clean-room.
+**Decision: keep `cli.py` as the documented adapter.** The Rust CLI stays the standalone binary. The
+adapter's behaviour is the contract and is 77/77 by construction.
 
 ### `verify.py` — permanent
 
