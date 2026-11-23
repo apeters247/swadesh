@@ -2026,3 +2026,11 @@ no-op.
 
 None of these is caused by the entity change; each predates it. The entity fix is committed with the
 suite still red on these five classes, because closing them is a separate slice.
+
+
+**Push route.** The GitHub remote `git@github.com:apeters247/swadesh.git` is now configured in the
+local repo. The repo is owned by `kpeters`, who has no GitHub key; the key that authenticates as
+`apeters247` belongs to `andrew`. The push therefore goes through a bundle: `git bundle create
+/tmp/swadesh-master.bundle master` as `kpeters`, then clone or fetch from the bundle as `andrew` and
+`git push origin master`. The first push created `refs/heads/master` at `e5c7179`; the repo was empty
+before. This is the same staging pattern the notebook already records for installs.
