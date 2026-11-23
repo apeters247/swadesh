@@ -89,21 +89,27 @@ character is **deleted** (not separated), so `"a.b"` becomes `"ab"` and `"Hello,
 7. Collapse spaces again and split.
 
 With `no_punct = true`, the deletion set of section 3.1 runs first, but **in normalized mode a
-deleted mark is replaced by a space, not removed**, so it still separates tokens. Measured on
-`_preprocess_segment`:
+deleted mark is replaced by a space, not removed**, so it still separates tokens. The exception is
+`.` and `,` between ASCII digits: those are part of the protected number token (step 4), so deleting
+them joins the digits. Measured on `_preprocess_segment`:
 
 | input | `no_punct` | `normalized, no_punct` |
 |---|---|---|
 | `a?b` | `ab` | `a b` |
 | `a?b?c` | `abc` | `a b c` |
 | `a.b` | `ab` | `a b` |
+| `2.2` | `22` | `22` |
+| `1,000` | `1000` | `1000` |
+| `12.34.56` | `123456` | `123456` |
+| `2?2` | `22` | `2 2` |
 | `a (b) c` | `a b c` | `a b c` |
 | `a[b]c` | `a[b]c` | `a [ b ] c` |
 
-The default mode removes the mark outright, so `a?b` stays one token; the normalized mode leaves a
+The default mode removes every mark outright, so `a?b` stays one token; the normalized mode leaves a
 separator, so it becomes two. `[` and `]` are never deleted in either mode. The same rule applies to
 the fullwidth forms when `asian_support` is on (section 3.3.2): `a。b` becomes `ab` in the default
-mode and `a b` in normalized mode.
+mode and `a b` in normalized mode, and `2。2` becomes `2 2` in both — only the ASCII `.` and `,`
+join digits.
 
 ### 3.3 East Asian support (`asian_support = true`)
 
