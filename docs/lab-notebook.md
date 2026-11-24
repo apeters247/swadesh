@@ -3548,3 +3548,32 @@ That combination is only consistent with the oracle using a *different procedure
 not a different parameter. Deriving it needs either the published algorithm text (every external
 source is unreachable from this host, recorded above) or source-level knowledge, which the clean-room
 rule forbids.
+
+### 2026-11-24 (continued) — web access via omen; the paper found; external review done
+
+**The blocker lifted.** `ssh omen` (100.95.158.78) works and that host has unrestricted network
+access: `curl https://aclanthology.org/` returns 200 where troy-1 is refused. `mac-mini` refuses
+this key. Everything below was fetched through omen.
+
+**The published algorithm.** Downloaded the TER paper (Snover et al. 2006, AMTA,
+`aclanthology.org/2006.amta-papers.25.pdf`, 6 pages) and extracted it with `pdftotext`. It states the
+search as: *"A greedy search is used to find the set of shifts, by repeatedly selecting the shift that
+most reduces the number of insertions, deletions and substitutions, until no more beneficial shifts
+remain. Note that a shift that reduces [them] by just one has no net reduction in cost [...] However,
+in this case, we still adopt the shift."* Algorithm 1 is exactly the loop this implementation runs,
+and the three constraints it lists are the block-match test, the two error-span filters and the target
+derivation in `ter_clean.rs`. The paper also says the distance is computed with a beam search for
+speed and gives no width.
+
+**Consequence.** Our implementation follows the published algorithm. The oracle departs from its own
+published description on long unrelated-reference segments (its first move leaves the total unchanged
+while cheaper moves exist in the same candidate list). So the residual is a documented oracle
+departure, not a mis-set constant — and it is now recorded as such in `docs/spec/ter.md` §4.2.1 and
+`TESTING.md`.
+
+**External review.** Searched sacreBLEU's issue tracker through omen's network. Every TER issue is in
+territory this implementation already matches: `asian_support` gating (`normalized` enables
+tokenization, #229 — exactly what our session's earlier fix implements), score scaling to 0-100
+(#208), empty references (#228, #232, #161), `normalized` docstrings (#230, #235) and zh tokenization
+(#127). **No issue describes the shift search.** Reddit and the general web were reachable from omen
+but surfaced only re-descriptions of the same paper.

@@ -316,6 +316,46 @@ iteration. Iteration ends when no shift reduces the cost, or when 1,000 candidat
 been made in total across the whole segment (the counter is deliberately not reset between
 iterations — measured, §7).
 
+### 4.2.1 The published search, and where the oracle departs from it
+
+The basis for this implementation is the published algorithm, not the oracle's behaviour. Snover et
+al. (2006), *A Study of Translation Edit Rate with Targeted Human Annotation*, AMTA, pp. 223-231
+describes the search as (paraphrasing Algorithm 1, and quoting the constraints):
+
+> The number of edits for TER is calculated in two phases. The number of insertions, deletions, and
+> substitutions is calculated using dynamic programming. A greedy search is used to find the set of
+> shifts, by repeatedly selecting the shift that most reduces the number of insertions, deletions and
+> substitutions, until no more beneficial shifts remain. Note that a shift that reduces the number of
+> insertions, deletions, substitutions by just one has no net reduction in cost, due to the cost of 1
+> for the shift itself. However, in this case, we still adopt the shift [...]. Then dynamic
+> programming is used to optimally calculate the remaining edit distance.
+
+and its three constraints on which shifts may be proposed:
+
+1. the shifted words must match the reference words in the destination position exactly;
+2. the hypothesis words in the original position and the corresponding reference words must **not**
+   match exactly;
+3. the reference words at the destination position must be misaligned before the shift.
+
+The loop is: repeat `find the shift that most reduces the edit distance; if it reduces, apply it and
+count one edit` until no shift reduces it, then add the final edit distance. The paper also notes that
+the distance is computed with a beam search for speed, and gives no beam width.
+
+**This implementation follows that description.** The three constraints are the block-match test, the
+two error-span filters and the target derivation in `ter_clean.rs`; the gain is the reduction in the
+edit distance; gain-1 shifts are adopted, as the paper says.
+
+**The oracle departs from its own published description on long, unrelated-reference segments.** On
+such a segment (57 vs 56 words, ours 42 edits, oracle 43) the oracle's first move is one that leaves
+its total unchanged, while 65 candidates in the same candidate list would have reduced it and three
+would have reduced it further; see `TESTING.md` for the measurement and the twenty-two candidate
+mechanisms that have been tried. The departure is documented rather than copied: it appears only when
+the reference is not a translation of the hypothesis (0 of 80 realistic block-moved references, 3 of
+80 unrelated long references, 1 of 4,000 random), and no public description of it exists — the
+external review of sacreBLEU's issue tracker found only tokenization gating (#229), score scaling
+(#208), empty references (#228, #232, #161) and `normalized` docstrings (#230, #235), all of which
+this implementation already matches.
+
 ### 4.3 Counting
 
 `num_edits = edit_distance(after final shift) + number_of_shifts`. The final edit distance is

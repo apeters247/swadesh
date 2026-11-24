@@ -95,6 +95,19 @@ metric (banded vs full matrix, identical), the gain source (alignment error coun
 (at the block's start or boundary, 12-14/80), the full-matrix alignment for candidates (identical)
 and first-improvement hill climbing (71/80). Nineteen mechanisms in total.
 
+**Against the published algorithm.** `docs/spec/ter.md` §4.2.1 quotes the description this
+implementation follows (Snover et al. 2006, Algorithm 1 and its three constraints). The oracle departs
+from that description on these long unrelated-reference segments: its first move leaves its total
+unchanged where cheaper moves exist in the same candidate list. The implementation follows the
+published algorithm, so the divergence is the oracle's, not a known constant that was mis-set.
+
+**External review (2026-11-24).** The sacreBLEU issue tracker was searched from a host with working
+network access. Every issue touching TER is about something this implementation already matches:
+`asian_support` gating (`normalized` is what enables tokenization, #229), score scaling to 0-100
+(#208), empty references and empty segments (#228, #232, #161), `normalized` docstrings (#230, #235)
+and zh tokenization (#127). **None describes the shift search**, so the departure is undocumented
+publicly and cannot be resolved by reading discussion.
+
 **Next step, if anyone takes it.** The remaining route is structural rather than a knob: re-derive the
 candidate generation and gain accounting of the reference's shift search as a two-stage routine from
 black-box probes. That is a multi-day job with no guarantee, and it is the reason this is documented
