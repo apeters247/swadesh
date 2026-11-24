@@ -2625,3 +2625,33 @@ class character at the very end glues when the character before it is a digit.
 The two remaining fixed-probe mismatches are the two limbs still open: `a./1` (limb 2) and `‘’/1`
 (limb 3). The spec's Status note is updated to drop the trailing rule from its open list.
 
+
+---
+
+## 2026-11-24 (continued) — intl: three passes, not a rule with limbs
+
+**Attempted.** Limb 3, the two-adjacent-quote case, was the last unexplained shape. A probe over
+quote pairs showed that exactly two adjacent quotes glue a following mark to a digit, three split,
+and a quote pair after a word splits. A match that consumes two characters and moves on is a
+left-to-right scan without overlap, not a local predicate.
+
+**Hypothesis tested.** Model the oracle as: drop trailing whitespace, pad every Unicode symbol
+(`S*`) on both sides, then two non-overlapping split scans (non-number followed by punctuation,
+then punctuation followed by a non-number). Against the oracle this gave 0/67 fixed probes and
+0/6,500 random strings on the first run.
+
+**Measured.** The exhaustive matrix followed: all 8,561 punctuation/symbol scalars in three
+contexts (`c1`, `1c1`, `1c`) — every `P` character glues to an adjacent number in all three, every
+`S` character splits in all three, no other output shape. Then every string in `tests/oracle/*.jsonl`
+plus `tests/corpus/model/*.txt`: 13,065 texts, 0 wrong. Trailing Python whitespace is dropped before
+the passes (`7. ` glues like `7.`, `a.` splits). Total: **45,315 cases, 0 wrong**.
+
+The committed scanner differs from the oracle on **224 of 14,376** texts from the same extraction.
+
+**Decision.** The spec is rewritten from this measurement (`docs/spec/intl-absorption.md`,
+`docs/spec/tokenizers.md` section 4) and `tools/intl_reference.py` becomes the executable model.
+The limb-1 clause and the trailing-absorption clause are subsumed by the model rather than
+extended. The implementation follows in the next commit; this entry and the spec land before it.
+
+**Next step.** Port the three passes to `tokenize_intl_clean.rs`, rebuild, and run the parity
+suites; the `fuzz42` counterexample should either disappear or move to a different shape.

@@ -101,24 +101,27 @@ Two consequences that an implementation must get right:
 
 ## 4. `intl`
 
-Same skeleton as `13a`, with the internationalised class for rule A and **no** `&amp;` rule:
+The full measured model, with its evidence, is `docs/spec/intl-absorption.md`. In summary, given a
+segment:
 
-1. Surround with spaces every character in the class `\p{P} \p{S} \p{N}`.
-2. Attach a trailing `.`/`,` to the preceding token unless it ends in a digit; detach a leading
-   `.`/`,` from a following non-digit.
-3. No separate `%` rule and no entity decoding. `%` is split by rule 1 only where rule 1
-   applies; observed: `"100%"` stays `100%` under `intl` but becomes `100 %` under `13a`, because
-   `%` is in `13a`'s rule-A class but not in `intl`'s.
-   (`→` behaves the other way: not split by `13a`, split by `intl`.) The two classes therefore
-   differ, and the implementation must not treat `intl` as `\p{P}\p{S}\p{N}` wholesale.
-4. No entity decoding and no `<skipped>`/`-\n` removal: `"a&amp;b"` becomes `a & amp ; b`
-   (the `;` splits by rule 1) and `"a<skipped>b"` becomes `a < skipped > b`, whereas `13a` gives
-   `a & b` and `ab`. Measured on both.
+0. Drop trailing Python whitespace.
+1. Pad every Unicode symbol (`S*`) with a space on both sides.
+2. Scan left to right: a non-number followed by punctuation (`P*`) gets a space around both, and
+   the scan resumes after the pair.
+3. Scan again: punctuation followed by a non-number gets a space around both, resuming after the
+   pair.
+4. Split on Python whitespace.
 
-Whitespace handling is identical to `13a`.
+Consequences: punctuation glues to numbers (`3%4`, `3.5%`, `_1`) while symbols never do (`$5`,
+`¥6F`, `→`); punctuation is separated from every non-number neighbour (`a%1`); the
+pair-consuming scan is why `‘’/1` → `‘ ’ /1` while `./1` → `. / 1`. `%` and `→` differ from `13a` exactly as
+measured before, and both follow from this model.
 
-The difference between `13a` and `intl` is therefore: `intl` splits on numbers and all
-punctuation/symbols in one pass and leaves ampersand escapes alone.
+No entity decoding and no `<skipped>`/`-\n` removal: `"a&amp;b"` becomes `a & amp ; b` and
+`"a<skipped>b"` becomes `a < skipped > b`, whereas `13a` gives `a & b` and `ab`. Measured on both.
+
+Whitespace handling is identical to `13a`, except that trailing whitespace is dropped before the
+passes (so `"7. "` glues like `"7."`).
 
 ## 5. `zh`
 

@@ -1,82 +1,76 @@
-# intl tokenizer: the number-absorption rule
+# `intl` tokenizer: the measured model
 
-Written before the implementation, from black-box measurement of the oracle (sacreBLEU 2.6.0,
-`TokenizerV14International`). The implementation is **not** in the tree: see "Status".
+Written **before** the implementation, from black-box measurement of the oracle (sacreBLEU 2.6.0,
+`TokenizerV14International`). The oracle was probed only through its public tokenizer output; no
+oracle source was read.
 
-## The question
+This supersedes the earlier "number-absorption rule" in this file. That rule was assembled from
+single probes and got three things wrong: it claimed a mark after a word ending in a letter glues
+(the probes show the opposite), it could not explain the two-adjacent-quote case, and it had no
+account of why `a.2/1` leaves `2/1` glued while `2/1` alone splits. The model below explains all
+three as one mechanism, and the reference implementation in `tools/intl_reference.py` matches the
+oracle on 45,315 measured cases with zero differences.
 
-When a mark sits immediately before a run of digits, does the mark join the number or stand alone?
+## The model
 
-    '?1'      -> '?1'        glued
-    'x?1'     -> 'x ? 1'     split
-    'a./1'    -> 'a . /1'    glued
-    '2./9'    -> '2 . / 9'   split
-    '?𝟎符'    -> '?𝟎符'       glued
-    '‘’/1'    -> '‘ ’ /1'    glued
+Given a segment `s`:
 
-## Measured facts
+0. Drop trailing Python whitespace (`isspace()`: space, tab, NBSP, U+3000, …).
+1. Every Unicode **symbol** (general category `S*`) becomes its own token: pad it with a space on
+   both sides.
+2. Scan left to right. When a character that is **not a number** (category `N`) is immediately
+   followed by **punctuation** (category `P*`), insert a space around both characters and resume
+   the scan after the pair.
+3. Scan left to right again. When punctuation is immediately followed by a **non-number**, insert a
+   space around both characters and resume after the pair.
+4. Split the result on Python whitespace.
 
-**One mark at position 0.** Every ASCII mark glues except `$ + < = > ^ ` | ~`, all of which are
-Unicode `\p{S}`. Every `\p{P}` mark glues, ASCII and non-ASCII alike (`‘ ’ “ ” « » （ 、`). This is
-exactly the set `splits_after_digit` already holds.
+The scan consumes both characters of a match. That single detail is the whole story of the cases
+that defeated the earlier rule.
 
-**One mark after a word.** Glues only when the word ends in a letter: `a./1`, `ab./1`. Splits after
-a digit (`2./9`, `22./9`, `x2./9`, `a2./9`, `1./2`), and splits after a letter for every other mark
-(`a?1`, `a,1`, `a/1`, `a'1`, `a)1`, `a-1`, `a’1`, `x!Ⅷ`).
+## What the model predicts, and why
 
-**Two marks in a row.** `'?1`, `‘/1`, `’/1`, `./1`, `!/1`, `?/1`, `//1`, `,/1`, `&/1`, `@/1`,
-`(/1`, `\/1`, `_/1` all split.
+* **Punctuation glues to numbers; symbols never do.** `3%4` → `3%4`, `3.5%` → `3.5%`, `9。9u` →
+  `9。9u`, `_1` → `_1`, but `$5` → `$ 5`, `¥6F` → `¥ 6F`, `☆3` → `☆ 3`, `→` after a digit splits.
+  Punctuation is separated from every non-number neighbour: `a%1` → `a % 1`, `a?/1` → `a ? /1`.
+* **Pair consumption.** In `‘’/1` pass 2 pairs `‘` with `’` and resumes at `/`; `/` is not
+  followed by punctuation, so `/1` glues: `‘’/1` → `‘ ’ /1`. In `./1` pass 2 pairs `.` with `/`
+  and resumes at `1`: `./1` → `. / 1`. Two marks split, two quotes glue, and neither needs a
+  special case.
+* **`a./1`** → pass 2 pairs `a` with `.`, resumes at `/`, `/1` glues → `a . /1`.
+  **`2./9`** → `2` is a number so pass 2 cannot pair it with `.`; `.` pairs with `/` → `2 . / 9`.
+  **`a.2/1`** → `a` pairs with `.`, resumes at `2`; `2`/`/` cannot pair (number), `/1` glues →
+  `a . 2/1`.
+* **Trailing whitespace** is dropped before the passes, so `7. ` behaves like `7.` and glues,
+  while `a.` splits (`a` pairs with `.`).
+* **`_`** is `Pc`, i.e. punctuation: `_1` glues, `a_1` → `a _ 1`, `1_` glues.
+* **ZWJ** (U+200D, category `Cf`) is neither punctuation, symbol nor number, so it is its own
+  token between the padded symbols: `👨‍👩` → `👨` `‍` `👩`, exactly as the oracle does.
 
-**Except two adjacent quotes.** `‘’/1`, `’’/1`, `‘‘/1`, `''/1`, `'’/1`, `‘'/1` all glue. This is the
-one case that resisted a predicate.
+## Measurement
 
-**After a digit** the mark never glues, in any position.
+`tools/intl_reference.py` is the model as executable code. It imports the oracle only to compare
+outputs and exits non-zero on any difference. Batteries and results (2026-11-24):
 
-## Rule
+| battery | cases | wrong |
+|---|---|---|
+| fixed probe list (limbs, quotes, digits, trailing space, `_`, ZWJ, emoji) | 67 | 0 |
+| random strings over ASCII, all `P`/`S` in U+00A0–U+20FF, CJK punctuation, seed 5 | 6,500 | 0 |
+| every `P`/`S` scalar (8,560) plus `_` as `c1` (start of segment) | 8,561 | 0 |
+| same scalars as `1c1` (between numbers) | 8,561 | 0 |
+| same scalars as `1c` (after a number, end of segment) | 8,561 | 0 |
+| corpus: all strings in `tests/oracle/*.jsonl` plus `tests/corpus/model/*.txt` | 13,065 | 0 |
+| **total** | **45,315** | **0** |
 
-A mark joins a following digit run when the mark is not `\p{S}` **and** one of:
+The exhaustive matrix is the load-bearing evidence for the number rule: across all 8,561
+punctuation and symbol scalars, every `P` character glues to an adjacent number in all three
+contexts and every `S` character splits in all three, with no other output shape.
 
-1. it is the first character of the segment, or
-2. it follows a word that ends in a letter, or
-3. it is the second of two adjacent quote marks at the start of a word.
+For comparison, the committed hand-rolled scanner (before this change) differs from the oracle on
+224 of 14,376 texts from the same corpus extraction.
 
-Everything else splits.
+## Status
 
-**Measured note (2026-11-24), which the limb-2 wording above does not capture.** A `prefix + mark +
-1` matrix over every mark shows the glue when the prefix is empty (limb 1) or ends in a mark, and a
-split when it ends in a letter or a digit - so "follows a word that ends in a letter" is the opposite
-of what the probes show for the simple cases. It is also not a local rule: `a.2/1` gives
-`a` `.` `2/1`, where the mark does not split between two digits, while `2/1` alone does split. A
-stateful model (after a word and a mark, a number run absorbs an internal mark) is needed; see the
-lab notebook entry of 2026-11-24.
-
-## Status: limb 1 implemented; limbs 2 and 3 pending
-
-Limb 1 shipped on 2026-11-24 as a single guarded clause in `tokenize_intl_clean.rs`:
-`i == 0 && (is_punct(c) || c == '_')`, under the existing `\p{S}` exclusions and the outer
-"followed by a digit" test. Measured: the fixed probe set went from 12 of 29 wrong to 3 of 29, and a
-3,000-case random sweep over `\p{P}`/`\p{N}`/`\p{S}`/letter characters from 611 to 372. The suite
-counts did not move, because each of those hypothesis tests reports its first counterexample and the
-BLEU one's counterexample simply moved on to limb 2.
-
-Still open: limb 2 (a mark after a word that ends in a letter) and limb 3 (the quote pairs). The
-trailing-punctuation rule in the lead path was fixed on 2026-11-24: the rule already existed in the
-main digit-run branch and was simply missing from the lead path, so `?1%` glues as the oracle does
-while `?1a%`, `?1%%`, `?1~` and `?1😀` do not. Fixed probes 3 -> 2, random sweep 372 -> 343.
-
-The rest of this section is the original attempt record, kept because it names the blocker.
-
-I attempted this rule nine times on 2026-11-22. Attempts 1-5 are recorded in the lab notebook; each
-fixed the cases it was measured against and regressed others, and the final state was worse than the
-committed one, so the tokenizer is back to its committed form. The blocker is limb 3: the quote-pair
-case is the only one whose predicate I could not derive, and without it the other two limbs produce
-`‘’/1` -> `‘ ’ / 1` where the oracle gives `‘ ’ /1`.
-
-**What the corpus needs.** The remaining oracle failure (`fuzz42:BLEU intl`) needs limbs 1 and 2
-only: `?𝟎符` (limb 1) and `a./1` (limb 2). Limb 3 appears in `fuzz66`, which the committed
-tokenizer already passes. So a partial implementation covering limbs 1 and 2 would close the open
-case — the reason I did not ship it is that my limb-1 implementation also re-admitted `./1`, `’/1`
-and `!/1` through a path I had not separated from the quote case.
-
-**Next step.** Determine why two adjacent quotes behave differently from other two-mark chains;
-then implement all three limbs together and re-run the 1,177-text sweep.
+The implementation follows in the next commit: `crates/swadesh-core/src/tokenize_intl_clean.rs` is
+replaced by the three passes above. The earlier limb-1 and lead-path trailing-absorption clauses
+are subsumed by the model rather than extended.
