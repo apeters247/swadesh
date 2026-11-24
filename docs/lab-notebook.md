@@ -3233,3 +3233,26 @@ closes a whole regime that used to disagree 20 times in 4,000 and leaves the oth
 The untried structural candidate is the gain accounting: ours recomputes the banded distance for
 every candidate, while the published loop derives the gain from the alignment's error counts, which
 would accept or reject a marginal candidate differently.
+### 2026-11-24 (continued) — TER: where the residual lives, and the budget re-confirmed
+
+**Attempted.** Built a battery in the exact regime of `test_ter_long_sentences_shifts` — the test's
+own 16-word vocabulary, 20-60 tokens, both of its modes — to find which regime the 18 remaining
+failures occupy.
+
+**Measured.** With the corrected tie-break:
+
+| regime | mismatch |
+|---|---|
+| "perturbed" (reference built from up to four block moves) | **0/80** |
+| "independent" (random reference of 20-60 tokens) | **3/80**, all at 51-59 tokens |
+
+So the residue is the long *unrelated*-reference case, where the edit distance is around 40 and the
+search does many iterations. Sweeping the evaluation budget there: 500 -> 16/80, **1000 -> 3/80**,
+1500 -> 8/80, 3000 -> 8/80, 10000 -> 8/80. The spec's 1,000 is the optimum in this regime as well,
+and an unbounded search is *worse*, which is the same one-sided story as everywhere else.
+
+**Decision.** No code change from this measurement; it localises the residue and re-confirms two
+constants. The remaining candidate is the gain accounting: ours recomputes the banded distance for
+every candidate, while the published loop derives the gain from the alignment's error counts. That
+difference would only show up where a candidate's recomputed distance disagrees with the
+alignment-derived gain — i.e. exactly the long, many-iteration case.
