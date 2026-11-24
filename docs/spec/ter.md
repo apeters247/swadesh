@@ -167,7 +167,9 @@ them joins the digits. Measured on `_preprocess_segment`:
 one-character lookahead.** Deleting a `.` or `,` still leaves the `'s` lookahead seeing that mark,
 which is not a step-8 separator, so the word does not close: `a's.` and `a's,` stay one token
 (`a's`) where the segment would give two (`a 's`). A deleted `?` or `;` *is* a step-8 separator, so
-`a's?b` gives `a 's b`. A deleted `.` between digits still joins (`2.2` -> `22`). The whole
+`a's?b` gives `a 's b`. The `asian_support` deletion set behaves the same way: none of `，` `。`
+`？` `！` is a step-8 separator (that list is ASCII-only), so `a's，` stays one token under
+`normalized, no_punct, asian_support` (measured 2026-11-24). A deleted `.` between digits still joins (`2.2` -> `22`). The whole
 no_punct behaviour therefore follows from "`.`,`,` are resolved by the rule-6 piece scanner, and a
 mark piece that survives is dropped under no_punct, while the other marks are replaced by a space".
 
