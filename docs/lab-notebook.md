@@ -2222,3 +2222,29 @@ owner's legal call, flagged here rather than assumed final. Add a WMT22 provenan
 `NOTICE`. Add `tests/test_version.py` asserting the three version sources agree. Run the MCP module
 with `mcp` installed and record the result.
 
+**Landed (item 5).**
+
+- `NOTICE` now names the copyright holder — "Copyright (c) 2026 Kevin Peters", with a line saying
+  contributions are assigned to that holder under `CLA.md`, so the licensor for both the AGPL and the
+  commercial licence is identifiable. **This is the owner's legal call to confirm**: the name is the
+  one the repository already used (`LICENSE.commercial`'s contact block), not one I invented.
+- `NOTICE` gains a WMT provenance bullet: the `wmt22.*.jsonl` fixtures are sacreBLEU outputs (scores
+  only, no text), the corpus is fetched by `bench/get_data.sh` via `sacrebleu -t wmt22`, and the
+  model corpora carry their own text.
+- `tests/test_version.py` added: Python `__version__` == `[workspace.package]` version, every crate
+  uses `version.workspace = true`, and the installed distribution metadata matches when present.
+- MCP: `mcp` installed into `~/venv311`; `tests/test_mcp.py` now collects and **3 pass** (it was
+  collecting zero). The module already had `pytest.importorskip("mcp")`, so it was "optional" in
+  name only until now.
+
+**Measured.** `tests/test_version.py tests/test_dependency_licences.py tests/test_provenance.py` ->
+**20 passed**. The goal's seven-file selection, same interpreter:
+
+    71 failed, 652 passed, 2 skipped
+    differential 31, ter 22, deep 9, coverage_gaps 5, fuzz_unicode 3, frozen_oracle 1
+
+**A measurement caveat worth recording.** The hypothesis-driven suites are not derandomized, so the
+failing counts move between runs: `tests/test_ter.py` has been observed at both 20 and 22 failures on
+the same commit and the same interpreter. The "before/after" numbers elsewhere in this notebook are
+single runs; only an exact zero is seed-independent, which is what the goal's proof needs.
+

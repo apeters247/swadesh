@@ -1,6 +1,8 @@
 swadesh
-Copyright the swadesh contributors. Licensed under the GNU Affero General Public License,
-version 3 or later (see `LICENSE`); a commercial licence is available (see `LICENSE.commercial`).
+Copyright (c) 2026 Kevin Peters. Licensed under the GNU Affero General Public License, version 3 or
+later (see `LICENSE`); a commercial licence is available (see `LICENSE.commercial`). Contributions
+are assigned to this holder under `CLA.md`, so the holder named here is the licensor for both the
+AGPL and the commercial licence.
 
 ## Original to swadesh
 
@@ -46,3 +48,9 @@ the Python package.
   `tools/gen_tables.py` from the Unicode Character Database, which is distributed under the Unicode
   Terms of Use.
 * **NumPy.** The Python package uses NumPy for the float32 bootstrap scorers. NumPy is BSD-licensed.
+* **WMT test data.** `tests/oracle/wmt22.*.jsonl` record sacreBLEU's outputs on the WMT22 test sets
+  for seven language pairs, 400 lines each; those files carry expected scores only, no text. The
+  corpus they were frozen from is downloaded by `bench/get_data.sh` with
+  `sacrebleu -t wmt22 -l <lp> --echo ref|src` into `bench/data/`, which is not tracked. The
+  model-output corpora under `tests/corpus/model/` carry their own source lines, hypotheses and
+  references. WMT test sets are published by the WMT organisers for research use.
