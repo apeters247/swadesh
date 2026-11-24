@@ -2034,3 +2034,39 @@ local repo. The repo is owned by `kpeters`, who has no GitHub key; the key that 
 /tmp/swadesh-master.bundle master` as `kpeters`, then clone or fetch from the bundle as `andrew` and
 `git push origin master`. The first push created `refs/heads/master` at `e5c7179`; the repo was empty
 before. This is the same staging pattern the notebook already records for installs.
+
+
+---
+
+## 2026-11-24 — ship-readiness goal opens; the publish paths come out first
+
+**Attempted.** First slice of the ship-readiness goal: remove the public-publish paths (blocker 2)
+and prune the stale worktrees (part of blocker 5), before starting on the correctness clusters.
+
+**Measured** (repo at `90c6ff4`, clean tree):
+
+- `rg -n "pypi-publish|cargo publish|publish_github" .github tools` -> 2 hits:
+  `.github/workflows/release.yml:104` (`pypa/gh-action-pypi-publish@release/v1`) and `:121`
+  (`cargo publish -p swadesh-core --locked`).
+- `release.yml` triggers on `push: tags: ["v*"]` **and** `workflow_dispatch`; it carries jobs
+  `publish-pypi` (environment `pypi`, `id-token: write`) and `publish-crates`. The wheel/sdist build
+  jobs are separate and only upload workflow artefacts.
+- `LAUNCH.md` is a complete public-launch plan: create a public repo, run `tools/publish_github.sh`,
+  add PyPI trusted publishing, `git tag v0.1.0 && git push --tags`, `maturin publish`, then Show HN /
+  r/MachineLearning / X / Hugging Face drafts.
+- `tools/publish_github.sh` pushes to the public repo and prints "add PyPI trusted publishing and
+  run: `git tag v0.1.0 && git push --tags`".
+- `git worktree list` -> three **prunable** registrations at `/var/www/llmeval-wt/{bleu,cli-io,pycall}`;
+  that directory does not exist on troy-1.
+- Infra note: `rg` was not installed on troy-1; installed `ripgrep 15.1.0` via apt so the goal's
+  proof command runs as written.
+
+**Decision.**
+
+- Keep `release.yml`'s build jobs (they build artefacts; they do not publish). Delete the two publish
+  jobs and drop the `push: tags` trigger, so a tag can no longer start anything.
+- Rewrite `LAUNCH.md` as a private-only release note; delete `tools/publish_github.sh`.
+- `git worktree prune`; keep the `speed/*` branches, which are the only record of that work.
+- Pushing to the private `apeters247/swadesh` stays allowed; no `v*` tag, no PyPI, no crates.io.
+
+**Next.** Correctness cluster 1: TER numeric type, values, `normalized` mode and long-sentence shifts.
