@@ -16,7 +16,7 @@
 use crate::stats::ChrfConfig;
 use crate::table::{fits, packed_windows, CountTable};
 use rustc_hash::FxHashMap;
-use crate::unicode::{py_split, py_strip};
+use crate::unicode::{is_py_space, py_split, py_strip};
 
 /// Characters of a string as a `Vec<char>`, honouring the whitespace-removal option.
 
@@ -58,11 +58,13 @@ pub fn remove_punctuation(sent: &str) -> Vec<&str> {
 }
 
 fn char_seq(s: &str, keep_whitespace: bool) -> Vec<u32> {
-    let s = py_strip(s);
+    // Measured 2026-11-24: with `whitespace=True` the characters participate as they are, without
+    // any strip -- a reference "a-\n" has three characters. With `whitespace=False` every Python
+    // whitespace character is removed.
     if keep_whitespace {
         s.chars().map(|c| c as u32).collect()
     } else {
-        s.chars().filter(|c| !c.is_whitespace()).map(|c| c as u32).collect()
+        s.chars().filter(|c| !is_py_space(*c)).map(|c| c as u32).collect()
     }
 }
 
@@ -113,42 +115,6 @@ fn order_stats(hyp: &[u32], refs: &[u32], n: usize, bits: u32) -> (i64, i64, i64
     (m, h_total, r_total)
 }
 
-/// The f-score chrF uses to choose among references, computed from a stats row.
-fn f_score(stats: &[i64], order: usize, beta: i64, eps: bool) -> f64 {
-    let mut sum_p = 0.0;
-    let mut sum_r = 0.0;
-    let mut cnt = 0;
-    for n in 0..order {
-        let h = stats[3 * n] as f64;
-        let r = stats[3 * n + 1] as f64;
-        let m = stats[3 * n + 2] as f64;
-        let (p, rc) = if eps {
-            if h > 0.0 && r > 0.0 {
-                ((m + 1.0) / (h + 1.0), (m + 1.0) / (r + 1.0))
-            } else {
-                continue;
-            }
-        } else if h > 0.0 && r > 0.0 {
-            (m / h, m / r)
-        } else {
-            continue;
-        };
-        sum_p += p;
-        sum_r += rc;
-        cnt += 1;
-    }
-    if cnt == 0 {
-        return 0.0;
-    }
-    let p = sum_p / cnt as f64;
-    let r = sum_r / cnt as f64;
-    if p + r == 0.0 {
-        return 0.0;
-    }
-    let bb = beta as f64 * beta as f64;
-    (1.0 + bb) * (p * r) / (bb * p + r)
-}
-
 /// Compute the statistics row for one segment.
 pub fn chrf_stats_segment(cfg: &ChrfConfig, hyp: &str, refs: &[&str], out: &mut Vec<i64>) {
     let order = cfg.char_order + cfg.word_order;
@@ -179,7 +145,11 @@ pub fn chrf_stats_segment(cfg: &ChrfConfig, hyp: &str, refs: &[&str], out: &mut 
                 stats.push(m);
             }
         }
-        let f = f_score(&stats, order, cfg.beta, cfg.eps_smoothing);
+        // The reference chosen is the one the metric's own score prefers, so selection must use
+        // the scoring f-score (eps-aware), not a separate formula. Measured 2026-11-24 on
+        // `hyp='' refs=['a','']` and `hyp='b' refs=['','a']`: the oracle's row is the one with the
+        // higher `chrf_f_score`, ties keeping the first reference.
+        let f = crate::score::chrf_f_score(&stats, order, cfg.beta, cfg.eps_smoothing);
         if f > best_f {
             best_f = f;
             out.clear();
