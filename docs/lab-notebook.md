@@ -3148,3 +3148,39 @@ changed figure is now a re-measurement, and the CLI row says why it cannot be ve
 has no hits, `tools/publish_github.sh` is gone and `LAUNCH.md` is the private-only note. `git worktree
 list` shows only the main tree; `tests/test_version.py` exists; `NOTICE` names the holder (Kevin
 Peters).
+
+### 2026-11-24 (continued) — TER shift search: the tie-break axis, and the study closed
+
+**Attempted.** The last unexplored axis of `best_shift` was its tie-break key
+`(gain, len, -s_h, -idx)`. Two replacements were scored on the 4,000-sequence battery: pure gain with
+the first candidate winning (`>`), and pure gain with the last winning (`>=`).
+
+**Measured.**
+
+| variant | battery mismatches |
+|---|---|
+| **committed** (gain, then longer block, then smaller start, then smaller target) | **20/4000** |
+| pure gain, first wins | 507/4000 |
+| pure gain, last wins | 764/4000 |
+
+**Decision.** Reverted (binary byte-identical, md5 `ec1711…`). With these two, every axis of the
+committed search has been perturbed and measured, and the committed configuration is a strict local
+optimum on all eight:
+
+| axis | best alternative | committed |
+|---|---|---|
+| candidate blocks | maximal-run only 55 | 20 |
+| acceptance threshold | gain >= 2: 514 | 20 |
+| iteration count | one shift: 1351 | 20 |
+| candidate set | aligned pairs only: 2141 | 20 |
+| per-iteration cap | 25: 670 | 20 |
+| block-length cap | 50: 20 (unchanged) | 20 |
+| tie-break | first 507 / last 764 | 20 |
+
+**Conclusion for the next attempt.** Perturbation is exhausted; the residual 0.5% cannot be reached
+by changing one bound. The oracle must differ structurally — the two candidates left are the source
+of the alignment used for candidate generation (ours is the banded traceback; the oracle may use the
+full matrix, since the band is documented as a scoring detail, not a generation one) and the exact
+gain accounting (ours recomputes the banded distance; TERCOM's published loop derives the gain from
+the alignment's error counts). Both are larger changes than a bound, and both need their own
+measurement plan before code.
