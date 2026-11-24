@@ -2918,3 +2918,39 @@ papered over.
 **Next step.** Pin `is32` by driving `_swadesh.chrf_scores_np2_f32` and the oracle over the exact
 draws that fail (log the failing rows from a fixed-seed run rather than random resamples), then fix
 the tracker; check TER's float32 statistics path with the same method.
+
+---
+
+## 2026-11-24 (continued) — TER normalized tokenisation: two measured rules
+
+**Attempted.** `test_ter_adversarial[1000]` shrinks to options (normalized=True, no_punct=False,
+asian=False, case_sensitive=False) with `hyp='0-'`, `ref=''`: the oracle reports 2 edits, ours 1.
+A keyword battery over random hyphen/mark strings measured the damage: **108 of 4,000** segments
+wrong in normalized mode (0 in default mode).
+
+**Measured.**
+
+1. **A hyphen splits iff the character immediately before it is an ASCII digit.** The committed
+   code also made a trailing hyphen sticky whatever preceded it (`0-` stayed one token; the oracle
+   gives `0` `-`), while `a-` and `Finanz-,` correctly stay. Measured family: `0-`, `9-;`, `0-.`,
+   `12-13`, `13-a`, `1-x` split; `a-`, `a-13`, `x-1`, `-0`, `--0`, `é-1` stay.
+2. **The `.`/`,` digit rule is a parity rule, the same one 13a uses.** For a maximal run of `.`/`,`
+   of length `m`, the run's last mark joins a following digit iff `(m + [a digit precedes the run])`
+   is even; every other mark is its own token. The committed rule ("only between two digits")
+   covers just `m = 1, b = 1`. Measured: `0,9`, `1,000`, `1.2.3` stay; `,9`, `.9` split;
+   `.,9` → `.` `,9`; `..9` → `.` `.9`; `0.,9` → `0` `.` `,` `9`; `...9` → `.` `.` `.` `9`;
+   `.,.,9` → `.` `,` `.` `,9`.
+
+**Change.** `ter_clean.rs`: the hyphen's `standalone` is `prev.is_some_and(is_ascii_digit)`; pass 1
+resolves a whole `.`/`,` run at once with the parity rule.
+
+**Measured after.** The battery is **0/4,000** in normalized mode (was 108) and 0 in default mode;
+`test_ter.py` is **18 failed / 34 passed** (was 28 failed). The remaining `no_punct + 's` case
+(`'a's,'` → the oracle keeps one token where the deleted `,` leaves us ending a piece with
+`TERM_END`) is 83/4,000 on the battery but only the `[1110]` adversarial and sentence_score cases.
+
+**Decision.** `docs/spec/ter.md` rules 6 and 7 are corrected from these measurements, in a separate
+commit before the code.
+
+**Next step.** Pin the `no_punct` + `'s` boundary rule (the deleted mark seems to leave the piece
+with `TERM_OTHER`, not `TERM_END`), then the long-shift search.

@@ -85,15 +85,24 @@ section 3.2 matters: the `&` it produces survives `no_punct`.
    untouched. The default tokenizer has no such rule (`a\n-b` -> `a` `-b`, section 3.1).
 
 5. Python whitespace → single space, collapse, strip.
-6. **Protect numbers.** A maximal run of ASCII digits, optionally with internal `,` or `.` between
-   digits (`3.14`, `1,000`, `1.2.3`), is a single token and is not split at its internal marks.
-   Measured: `3.14` stays, `1-2-3` splits (hyphens are *not* protected inside a digit run), `a.14`
-   splits, `.3.14` keeps the digits together but leaves the leading dot separate.
+6. **Protect numbers.** A maximal run of consecutive `.`/`,` of length `m` whose **last** mark is
+   immediately followed by an ASCII digit joins that digit when `(m + b)` is even, where `b` is 1
+   when the character immediately before the run is an ASCII digit; every other mark of the run is
+   its own token. **Measured 2026-11-24 (this corrects the earlier "between digits" wording, which
+   describes only the `m = 1, b = 1` case):** `3.14`, `1,000`, `1.2.3`, `0,9` stay whole
+   (`m = 1, b = 1`); `,9`, `.9` split (`m = 1, b = 0`); `.,9` -> `.` `,9` and `..9` -> `.` `.9`
+   (`m = 2, b = 0`); `0.,9` -> `0` `.` `,` `9` and `9.,0` -> `9` `.` `,` `0` (`m = 2, b = 1`);
+   `...9` -> `.` `.` `.` `9` (`m = 3`); `.,.,9` -> `.` `,` `.` `,9` (`m = 4`).
+   Hyphens are *not* protected inside a digit run (`1-2-3` splits), and `a.14` splits. On a 4,000
+   segment battery the corrected rule is 0 wrong where the "between digits" form was 108.
 7. **Protect letters-hyphen.** A hyphen with a letter-like character immediately on both sides is
    part of the word: `a-b` stays, `12-13` splits, `a-13` stays, `13-a` splits, `1-x` splits, `x-1`
    stays. So the condition is "both neighbours are non-space, non-digit", not "both are letters":
-   measured `é-1` stays and `a-é` stays. Treat it as: a hyphen is protected when the character
-   before it is not a space or digit and the character after it is not a space or digit.
+   measured `é-1` stays and `a-é` stays. **Sharpened 2026-11-24: the whole rule is "split iff the
+   character immediately before the hyphen is an ASCII digit".** A trailing hyphen follows the same
+   rule, so `a-`, `Finanz-,`, `x-1`, `-0`, `--0` and `-` stay while `0-`, `9-;`, `0-.`, `12-13`,
+   `13-a` and `1-x` split. The earlier form also made a trailing hyphen sticky whatever preceded
+   it, which kept the digit cases `0-` and `9-;` joined: 108 of 4,000 battery segments wrong.
 8. **Separate the remaining ASCII punctuation.** Every ASCII character in `!` `"` `#` `$` `%`
    `&` `(` `)` `*` `+` `,` `/` `:` `;` `<` `=` `>` `?` `@` `[` `\` `]` `^` `_` `` ` `` `{` `|`
    `}` `~` · U+0021..U+007E is put on its own token, **except**:
