@@ -2547,3 +2547,44 @@ The three remaining fixed-probe mismatches name what is left: `‘’/1` (limb 3
 `?1%` (the trailing-punctuation rule is missing from the lead path - the oracle glues, we split), and
 `a./1` (limb 2, a mark after a word ending in a letter). Limb 2 is the bulk of the remaining 372.
 
+---
+
+## 2026-11-24 (continued) — intl limb 2: the spec's wording is contradicted by measurement
+
+**Attempted.** Limb 2 of `docs/spec/intl-absorption.md`, which is stated there as "it follows a word
+that ends in a letter", with `a./1` and `ab./1` as the gluing examples.
+
+**Measured, a mark-by-prefix matrix** (`prefix + mark + '1'`, `_preprocess_segment`, marks
+`. , / ? ! ; : - ) ' ’ 。 ¿` - every one behaves the same):
+
+| prefix | result |
+|---|---|
+| `""` | **glue** (limb 1) |
+| `a`, `ab`, `2`, `a2`, `中` | split |
+| `a.`, `a,`, `a?`, `a/` | **glue** |
+| `x.` | **glue** |
+| `.` | split |
+
+So the mark glues when it is at index 0 **or** when the character before it is a mark - not when the
+preceding word ends in a letter, which is the opposite of the spec's sentence. After a letter or a
+digit it splits, every mark alike (`a?1`, `a,1`, `a/1`, `a'1`, `a)1`, `a-1`, `a’1`, `a。1`, `a¿1`).
+
+**But no local predicate survives the next four cases.** `a../1` splits, `./1` splits, `2./9`
+splits, and yet:
+
+    a.2/1   -> ['a', '.', '2/1']      the mark does not split *between digits* here
+    2/1     -> ['2', '/', '1']        ... while the same pair alone does split
+
+A hypothesis that fits eleven of twelve probes - "glue iff index 0, or the token immediately before
+the mark is itself a mark and the token before that ends in a letter" - is falsified by `a.2/1`, which
+has `2` immediately before the mark and still glues. What that case shows is a mode change: after a
+word and a mark, a digit run absorbs an internal mark, which the committed tokenizer does not model
+at all.
+
+**Decision.** No code change. Limb 2 is recorded as open with the matrix above, because every
+predicate I could state from it is falsified by a case already measured; guessing one would repeat the
+nine failed attempts the spec records. The next attempt should model the oracle as a state machine
+("after a word+mark pair, a number run absorbs internal marks") and probe that mode directly, rather
+than looking for another local rule. The spec's Rule section gains a measured note that its limb-2
+wording does not match these probes.
+

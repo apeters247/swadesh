@@ -42,6 +42,14 @@ A mark joins a following digit run when the mark is not `\p{S}` **and** one of:
 
 Everything else splits.
 
+**Measured note (2026-11-24), which the limb-2 wording above does not capture.** A `prefix + mark +
+1` matrix over every mark shows the glue when the prefix is empty (limb 1) or ends in a mark, and a
+split when it ends in a letter or a digit - so "follows a word that ends in a letter" is the opposite
+of what the probes show for the simple cases. It is also not a local rule: `a.2/1` gives
+`a` `.` `2/1`, where the mark does not split between two digits, while `2/1` alone does split. A
+stateful model (after a word and a mark, a number run absorbs an internal mark) is needed; see the
+lab notebook entry of 2026-11-24.
+
 ## Status: limb 1 implemented; limbs 2 and 3 pending
 
 Limb 1 shipped on 2026-11-24 as a single guarded clause in `tokenize_intl_clean.rs`:
