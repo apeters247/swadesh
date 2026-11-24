@@ -2886,3 +2886,35 @@ measurements above, before the code commit.
 
 **Next step.** The paired-bootstrap dtype: the oracle renders those means as float32
 (`20.94088`) where we render float64 (`20.940879821777344`).
+
+---
+
+## 2026-11-24 (continued) — paired/bootstrap dtype: diagnosis only, cluster open
+
+**Attempted.** The 4 `test_paired_tests_exact_variants[chrfpp/chrf-eps-beta1-bs/ar]` failures plus the
+3 `test_paired_tests_for_float_statistics_ter` / `test_paired_chrf_subclass...` ones are all the
+same shape: the oracle's `mean`/`ci` print as `np.float32` (`mean=20.834093,ci=1.2847443`) where ours
+print as Python floats (`mean=20.83409309387207,ci=1.2847442626953125`) — the same number, a wider
+type.
+
+**Measured.**
+
+* `_swadesh.chrf_scores_np2_f32` against `metric._compute_score_from_stats` on 4,000 random float32
+  rows for `chrF++`, `chrf-eps-beta1`, default chrF and `chrf-eps-beta2`: **0 value or dtype
+  differences**.
+* The actual baseline bootstrap sums (seeded, `SACREBLEU_SEED=12345`, 300 rows, chrF++): **0 of 300
+  rows differ** in value or dtype.
+* Direct reproduction of the failing test (same `_rand_corpus` seeds, `test_type='bs'`): the Result
+  dtypes come out **all float32** in some runs and **float64** in others, with no code difference
+  between the runs. The `is32` flag is produced by the `NpVal` arithmetic tracker, whose result
+  depends on the row values (`eps` is a Python float and can be selected by a zero denominator), and
+  the per-system resamples use a random seed, so the observed dtype is draw-dependent.
+
+**Decision.** No code change this session: the mechanism is understood but the rule for when the
+oracle yields `np.float32` versus a Python float is not yet pinned, and the earlier blanket
+`dtype=np.float32` attempt traded one failure for another. Left open with this diagnosis, not
+papered over.
+
+**Next step.** Pin `is32` by driving `_swadesh.chrf_scores_np2_f32` and the oracle over the exact
+draws that fail (log the failing rows from a fixed-seed run rather than random resamples), then fix
+the tracker; check TER's float32 statistics path with the same method.
