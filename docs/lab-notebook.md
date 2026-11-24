@@ -2390,3 +2390,35 @@ value prints all of them. So the paired-test resampling in those two paths produ
 oracle produces float32 - a dtype difference in the bootstrap, not a repr difference. That belongs
 with the "chrF epsilon and tiny-value drift" cluster rather than here.
 
+---
+
+## 2026-11-24 (continued) — the paired-bootstrap dtype: a blanket float32 cast is wrong
+
+**Attempted.** The three remaining `test_coverage_gaps.py` failures are a float32/float64 render
+difference in the paired-test `mean`/`ci`. The obvious fix looked like `_f32_scores`: its fallback
+branch builds `np.array([...])` from Python floats, which is float64, while its name promises float32.
+
+**Measured.** Plain chrF and TER already agree:
+
+    chrF bs      ours float32 61.42668   theirs float32 61.42668
+    TER bs       ours float32 45.78502   theirs float32 45.78502
+    BLEU bs      ours float64 42.300787102990625  theirs float64 (same)
+    ours _f32_scores dtype: float32 (rows float32, scorer returns numpy floats)
+
+so the dtype is right wherever the row is float32 and the scorer returns a numpy scalar. The failing
+case is the **overridden CHRF subclass**, where the fallback scorer returns Python floats and the
+array becomes float64. The oracle has no `_f32_scores` at all (`hasattr(sacrebleu.significance,
+"_f32_scores") is False`), so its rule has to be inferred per path.
+
+**The experiment and why it is reverted.** Casting the fallback branch to `dtype=np.float32`:
+`test_coverage_gaps.py` went **3 failed / 65 passed -> 4 failed / 64 passed**. It fixed
+`test_paired_tests_for_float_statistics_ter[ar]` and broke
+`test_paired_chrf_without_numpy2_matches_reference[bs]`, so the oracle is not float32 on every path
+that reaches that branch. Reverted; the suite is back to 3 failed / 65 passed and the tree is clean.
+
+**Next.** Probe the oracle's `mean` dtype per path (plain chrF, chrF with `eps_smoothing`, chrF with
+an overridden scorer, TER with the test corpus and parameters) and encode the rule that actually
+matches, rather than casting by name. A blanket cast trades one failure for another; two clusters
+have now produced that pattern (this and the 25-candidate cap in the shift search), which suggests
+both need a per-branch measurement rather than a global knob.
+
