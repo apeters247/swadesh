@@ -2127,3 +2127,28 @@ count is one short (ours 47 against the oracle's 48; `test_deep_ter_long_shifts`
 
 **Next.** The newline-hyphen rule (spec + Rust), then the shift-search difference.
 
+**Landed: the line-break-hyphen rule.** Spec step 4 (new; old steps 4-9 renumbered to 5-10). In
+normalized mode every non-overlapping LF + ASCII-hyphen pair is deleted before tokenization, so
+`a\n-b` joins to `ab` while a hyphen at the *end* of a line is kept (`a-\nb` -> `a- b`). Only
+U+000A and U+002D take part; the default tokenizer has no such rule (`a\n-b` -> `a` `-b`). The
+implementation is a `remove_lf_hyphen` pass over the stripped characters, with a unit test.
+
+Measured after it, on 3.11.14:
+
+| check | before | after |
+|---|---|---|
+| the eight fixed newline-hyphen cases, statistics, both modes | naive form wrong | **all match** |
+| `tests/test_ter.py` | 31 failed, 20 passed | **20 failed, 32 passed** |
+| of which `test_ter_adversarial` | 8 | **2** |
+| of which `test_ter_sentence_score` | 7 | **1** |
+| of which `test_ter_long_sentences_shifts` | 16 | 16 (untouched) |
+| five-file fast set + coverage gaps | 706 passed / 6 failed | 706 / 6 (unchanged) |
+
+**Still open in the TER cluster.** The 16 `test_ter_long_sentences_shifts` failures are the shift
+search (reference lengths agree, the edit count is one or more short). A randomized battery still
+shows divergences outside the alphabet the fixed cases cover: 2/500 in plain `normalized`, 4/500 with
+`asian_support`, and 53/500 with `no_punct` (first case `b?xa's.the` against `the .x(b`: oracle
+`[[3, 3]]`, ours `[[4, 3]]`), so the `no_punct` and CJK interactions need their own pass.
+
+**Next.** The shift search, then the `no_punct`/CJK residue.
+

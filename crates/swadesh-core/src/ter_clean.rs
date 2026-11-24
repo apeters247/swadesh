@@ -156,6 +156,23 @@ const TERM_END: u8 = 0; // end of the segment
 const TERM_SPACE: u8 = 1; // a space or a line feed
 const TERM_OTHER: u8 = 2; // any other cut: other whitespace, a lone mark, an Asian character
 
+/// spec 3.2 step 4: in normalized mode a line feed immediately followed by an ASCII hyphen is
+/// removed, so `a\n-b` becomes `ab`; a hyphen at the *end* of a line is kept (`a-\nb` -> `a- b`).
+/// Only U+000A and U+002D take part.
+fn remove_lf_hyphen(raw: &[char]) -> Vec<char> {
+    let mut out = Vec::with_capacity(raw.len());
+    let mut i = 0;
+    while i < raw.len() {
+        if raw[i] == '\n' && raw.get(i + 1) == Some(&'-') {
+            i += 2;
+        } else {
+            out.push(raw[i]);
+            i += 1;
+        }
+    }
+    out
+}
+
 /// Split `text` into TER words (spec section 3).
 ///
 /// Structure, which the measurements forced: the segment is first cut into *pieces* on
@@ -200,6 +217,7 @@ pub fn tokenize(cfg: &TerConfig, text: &str) -> Vec<String> {
     } else {
         raw.clone()
     };
+    let kept: Vec<char> = if cfg.normalized { remove_lf_hyphen(&kept) } else { kept };
 
     // ---- pass 1: cut into pieces. Each piece carries what ended it, for the possessive
     // lookahead of spec 3.2 step 8: `TERM_END`, `TERM_SPACE` or `TERM_OTHER`.
@@ -821,6 +839,28 @@ mod tests {
         // The default tokenizer does not unescape entities at all.
         let plain = TerConfig::default();
         assert_eq!(words(&plain, "&amp;"), vec!["&amp;"]);
+    }
+
+    #[test]
+    fn normalized_deletes_line_break_hyphens() {
+        // spec 3.2 step 4, measured 2026-11-24.
+        let cfg = TerConfig { normalized: true, ..TerConfig::default() };
+        assert_eq!(words(&cfg, "a\n-b"), vec!["ab"]);
+        assert_eq!(words(&cfg, "x\n-y\n-z"), vec!["xyz"]);
+        assert_eq!(words(&cfg, "\n-"), Vec::<String>::new());
+        assert_eq!(words(&cfg, "a\n-"), vec!["a"]);
+        assert_eq!(words(&cfg, "a \n- b"), vec!["a", "b"]);
+        assert_eq!(words(&cfg, "a\n\n-b"), vec!["a", "b"]);
+        assert_eq!(words(&cfg, "-\n-"), vec!["-"]);
+        // a hyphen at the end of a line is kept
+        assert_eq!(words(&cfg, "a-\nb"), vec!["a-", "b"]);
+        assert_eq!(words(&cfg, "a-\n-b"), vec!["a-b"]);
+        // other whitespace and other hyphen characters are untouched
+        assert_eq!(words(&cfg, "a\r\n-b"), vec!["a", "b"]);
+        assert_eq!(words(&cfg, "a\n\u{2010}b"), vec!["a", "\u{2010}b"]);
+        // and the default tokenizer has no such rule
+        let plain = TerConfig::default();
+        assert_eq!(words(&plain, "a\n-b"), vec!["a", "-b"]);
     }
 
     #[test]
