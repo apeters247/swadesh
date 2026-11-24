@@ -2422,3 +2422,43 @@ matches, rather than casting by name. A blanket cast trades one failure for anot
 have now produced that pattern (this and the 25-candidate cap in the shift search), which suggests
 both need a per-branch measurement rather than a global knob.
 
+---
+
+## 2026-11-24 (continued) — the empty-hypothesis counts are an `add-k` mutation
+
+**Attempted.** The "empty-hypothesis n-gram counts" cluster, which shows up as
+`test_differential.py::test_bleu_corpus` failures with `counts; assert [0, 1] == [0, 0]` (and
+`[0, 2, 2, 2] == [0, 0, 0, 0]` on `zh`).
+
+**Reproduced exactly** from the hypothesis draw the test prints: `hyps=['']`, `refs=[['']]`,
+`tokenize='13a'`, `lowercase=False`, `smooth_method='add-k'`, `smooth_value=2`,
+`effective_order=False`.
+
+    ours   BLEU = 0.00 0.0/0.0/0.0/0.0 ... counts [0, 2, 2, 2] totals [0, 2, 2, 2]
+    theirs BLEU = 0.00 0.0/0.0/0.0/0.0 ... counts [0, 0, 0, 0] totals [0, 0, 0, 0]
+    statistics rows: identical ([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]] both sides)
+
+The statistics agree, so the difference is in the aggregate. Sweeping `smooth_value` shows the rule:
+
+| `smooth_value` | ours counts / totals | oracle counts / totals |
+|---|---|---|
+| 2 | `[0,2,2,2]` / `[2,3,2,2]` | `[0,0,0,0]` / `[2,1,0,0]` |
+| 1 | `[0,1,1,1]` / `[2,2,1,1]` | `[0,0,0,0]` / `[2,1,0,0]` |
+| 0.5 | `[0,0,0,0]` / `[2,1,0,0]` | `[0,0,0,0]` / `[2,1,0,0]` |
+
+**Cause.** BLEU's `_score_from_row` adds smoothing to the reported counts and totals when
+`smooth_method == "add-k"`:
+
+    if self.smooth_method == "add-k":
+        for k in range(1, n):
+            counts[k] += int(sv); totals[k] += int(sv)
+
+The oracle leaves `counts`/`totals` exactly as they came out of the statistics; the smoothing lives
+only in the score arithmetic (which the native `bleu_result_i64` already applies). With a fractional
+`smooth_value` the `int(sv)` cast made the mutation a no-op, which is why only integer values failed.
+
+**Decision.** Remove the mutation so the score object reports the raw counts and totals, and let the
+kernel do the smoothing, as the oracle does. Verify against the frozen oracle, parity, score-object
+and fallback suites, which pin the printed score (the `counts`/`totals` attributes are not in the
+fixtures, so the printed line is the check that the score itself does not move).
+
