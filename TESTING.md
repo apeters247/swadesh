@@ -22,14 +22,25 @@ every failure found becomes a regression test before it is fixed.
 - Shared production VPS: at most 3 parallel jobs (`CARGO_BUILD_JOBS=2`); disk is ~94% full, so keep
   temp files small and `cargo clean` when done. Don't touch GPUs on other machines.
 
-## Status (2026-11-19, end of the testing phase)
+## Status (2026-11-24, re-measured)
 
-| # | Criterion | Result | Evidence |
+The 2026-11-19 version of this table said all seven criteria were **Met**. That predates the
+2026-11-22 clean-room rewrite of the tokenizers and the statistics, and re-measuring on troy-1 shows
+several no longer hold. This table is the current state. Where a figure could not be re-measured it
+says so instead of repeating the old one. The suites are not derandomized, so the failing counts move
+a little between runs; an exact zero is what would be seed-independent.
+
+| # | Criterion | 2026-11-24 | Evidence |
 |---|---|---|---|
-| 1 | Differential exactness | **Met.** 1,000,000 fuzzed cases each for BLEU (×5 tokenizers), chrF, chrF++ and TER; 9.25M sentence comparisons on WMT20–24/IWSLT data in 22 languages; 0 score mismatches. One state difference (`num_refs` after batch `sentence_scores`) was found and fixed. Long-sentence TER (20–200 words) got 1,800 cases, because sacreBLEU itself needs ~1 s per case. | `docs/diff-report.md`, `docs/torture-report.md` |
-| 2 | Mutation score | **Met on the measured set.** 94.6% of 1,229 viable mutants caught, with Python differential tests in the loop; 99.8% excluding 64 documented equivalent mutants. A later Rust-only run exposed gaps in the float32 bootstrap scorers added today; those are now covered by 8,000 bit-exact sacreBLEU fixtures. | `docs/mutation-report.md`, `crates/swadesh-core/tests/np2_scoring.rs` |
-| 3 | Line coverage | **Met.** swadesh-core 95.07%, python/swadesh 99.7%; every remaining line is justified. | `docs/coverage-report.md` |
-| 4 | Crash safety | **Met.** About 336M fuzz executions over 11 targets, 35 min each, under ASan. Two crash bugs found and fixed (a chrF `beta²` overflow and a CLI non-ASCII option panic). Native kernels now raise `ValueError` on malformed input instead of panicking. | `docs/fuzz-report.md`, `fuzz/` |
-| 5 | API and CLI parity | **Met.** 494 parity tests, plus 448 byte-identical CLI tests. Fixed: a fork deadlock in multiprocessing (per-process thread pool), constructor positional arguments, pickling, and error messages. Intentional differences are documented. | `docs/parity-report.md`, `tests/test_parity.py` |
-| 6 | Robustness and performance | **Met.** Linear scaling to 10M segments; sacreBLEU crashes at 10M (BLEU) and on 200 × 1,000-word TER sentences, swadesh doesn't. Bootstrap memory was fixed (1M × 1000: 717 MB vs sacreBLEU's 45.6 GB). Known limit: TER on 1,000-word sentences uses ~160 MB per sentence per thread. | `docs/stress-report.md`, `bench/results/compare-macmini-m4-v2.md` |
-| 7 | Platforms | **Met.** The differential suite passes on Linux x86-64 (VPS: Python 3.10–3.14 × numpy 1.26/2.x, plus free-threaded 3.14t; troy-1: 3.11), Linux ARM64 (GX10: 3.12) and macOS ARM64 (Mac mini: 3.11). | `bench/results/`, compat matrix in git history |
+| 1 | Differential exactness | **Not met.** The seven-file selection reports **71 failing cases**: `test_differential.py` 31, `test_ter.py` 22, `test_deep.py` 9, `test_coverage_gaps.py` 5, `test_fuzz_unicode.py` 3, `test_frozen_oracle.py` 1 (`fuzz42:BLEU intl`). | re-run of the selection below, Python 3.11.14, troy-1 |
+| 2 | Mutation score | **Unverified.** `cargo-mutants` is not installed on troy-1; 94.6% is the 2026-11-19 run and has not been repeated. | `docs/mutation-report.md` |
+| 3 | Line coverage | **Unverified.** Neither `coverage` nor `cargo-llvm-cov` is installed on troy-1; 95.07% / 99.7% are the 2026-11-19 figures. | `docs/coverage-report.md` |
+| 4 | Crash safety | **Partly verified.** Both crash-fix regression tests pass (`swadesh-core` 2, `swadesh-cli` 1). The execution campaign has not been re-run, and its total is quoted inconsistently in this repo: the 2026-11-19 row said 336M while `docs/fuzz-report.md` sums to 365.8M. | `docs/fuzz-report.md`, `fuzz/` |
+| 5 | API and CLI parity | **Partly met.** `tests/test_parity.py` **494 passed**; `tests/test_cli.py` collects **448** and reports **43 failed, 405 passed**. | re-run 2026-11-24 |
+| 6 | Robustness and performance | **Unverified here.** The stress campaign has not been re-run. The README's speed-ups do still hold against `bench/results/final4-troy1-100k.json`, which records `exact: true` on every row. | `docs/stress-report.md`, `bench/results/` |
+| 7 | Platforms | **Unverified except troy-1**, where the differential suite currently fails (row 1). No other platform has been re-run since the clean-room rewrite. | `bench/results/` |
+
+**Known divergences being closed (2026-11-24).** The TER tokenizer and its shift search; the `intl`
+tokenizer's punctuation absorption (the `fuzz42` case); empty-hypothesis n-gram counts; chrF epsilon
+and tiny-value drift; the `PairedTest` repr when the mean is a numpy scalar; and CLI edge BLEU. Each
+has a dated entry in `docs/lab-notebook.md`, which is the running record of what was measured.

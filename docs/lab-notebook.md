@@ -2310,3 +2310,31 @@ report files; `TESTING.md` and `README.md` follow in part 2 with a freshly measu
 re-measured or are historical, and fix the four contradicted lines above. `TESTING.md` and `README.md`
 wait for the fresh CLI number.
 
+**Item 3, part 2 - landed.** `TESTING.md`'s status section is replaced by a dated "2026-11-24,
+re-measured" table that says per criterion whether it is met, partly met, or **unverified** (rows 2,
+3, 6 and - outside troy-1 - 7 are unverified because `cargo-mutants`, `coverage`/`cargo-llvm-cov`
+and the stress campaign were not available or not re-run). `docs/parity-report.md`'s results table
+gains a 2026-11-21 vs 2026-11-24 comparison and a note that the old "574 passed" row is superseded.
+The six reports already carry the historical-status header from part 1.
+
+**Measured, 2026-11-24, venv311, per file** (the numbers now in both tables):
+
+| file | result |
+|---|---|
+| `tests/test_parity.py` | 494 passed |
+| `tests/test_mcp.py` (mcp installed) | 3 passed |
+| `tests/test_cli.py` | 448 collected: 43 failed, 405 passed |
+| `tests/test_differential.py` | 31 failed, 48 passed |
+| `tests/test_ter.py` | 22 failed, 30 passed, 2 skipped |
+| `tests/test_fuzz_unicode.py` | 3 failed, 1 passed |
+| `tests/test_coverage_gaps.py` | 5 failed, 63 passed |
+| `tests/test_regressions.py` | 1 passed |
+
+**The rebuilt binary changed nothing.** After `cargo build --release -p swadesh-cli`, `test_cli.py`
+reports the same 43 failed / 405 passed as the stale-binary run. So the CLI failures are not the
+tokenizer fixes that landed this session: they are the shift search (39 of the 43 are TER) plus the
+CLI edge BLEU cases. That is a useful narrowing for the next slice.
+
+**Item 3 is complete**: `TESTING.md`, `README.md` and the six reports now say what the tree actually
+does, and every number is either re-measured or explicitly marked unverified.
+

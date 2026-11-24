@@ -62,15 +62,21 @@ Not covered: `--download` (needs network; it fetches a set and quits). `spm`, `f
 
 ## Results
 
-| Suite | Result (final run) |
-|---|---|
-| `tests/test_parity.py` + `tests/test_mcp.py` (repaired 2026-11-21) | 497 passed, 0 xfailed (the Rust defects below are fixed or guarded; see "Rust kernels") |
-| `tests/test_mcp.py` | 3 passed (needs the `mcp` extra installed; before that it skipped silently) |
-| `tests/test_cli.py`, `test_coverage_gaps.py`, `test_fuzz_unicode.py`, `test_ter.py`, `test_regressions.py` (re-run 2026-11-21) | 574 passed |
-| of which CLI (`-k cli`) | 77 passed |
-| `tests/test_differential.py` | 57 passed, 1 skipped |
-| `tests/test_fuzz_unicode.py` | 4 passed |
-| `tests/test_ter.py` | 53 passed |
+| Suite | 2026-11-21 | 2026-11-24 (re-measured) |
+|---|---|---|
+| `tests/test_parity.py` | 494 passed | **494 passed** |
+| `tests/test_mcp.py` (`mcp` extra installed) | 3 passed | **3 passed** |
+| of which the CLI cases (`-k cli`) | 77 passed | **77 passed** (inside the 494) |
+| `tests/test_cli.py` | counted in the "574 passed" row | **448 collected: 43 failed, 405 passed** |
+| `tests/test_differential.py` | 57 passed, 1 skipped | **31 failed, 48 passed** |
+| `tests/test_ter.py` | 53 passed | **22 failed, 30 passed, 2 skipped** |
+| `tests/test_fuzz_unicode.py` | 4 passed | **3 failed, 1 passed** |
+| `tests/test_coverage_gaps.py` | counted in the "574 passed" row | **5 failed, 63 passed** |
+| `tests/test_regressions.py` | counted in the "574 passed" row | **1 passed** |
+
+The "574 passed" row above is superseded by the last column: the same files re-measured on
+2026-11-24 have failing cases in the differential, TER, CLI and Unicode-fuzz suites. The `mcp` extra
+is now installed on troy-1, so `tests/test_mcp.py` runs instead of skipping.
 
 Before the fixes, the API tests had 61 failures and the CLI tests had 9 (the first run of this track).
 The 1 skip in `test_differential.py` is an existing skip in that file, not one added by this track.
