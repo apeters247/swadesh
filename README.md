@@ -3,6 +3,10 @@
 **sacreBLEU, bit for bit, in Rust.** BLEU, chrF, chrF++ and TER with the same scores, the same signatures
 and the same CLI, and much faster: 22–46× on one core and 41–331× on a 24-thread desktop.
 
+**Status (2026-11-24).** Bit-exact on the WMT-style corpora and on the 494-case parity suite, but
+*not* on every input yet: the differential, TER, CLI and Unicode-fuzz suites have known failing
+cases that are being closed. `TESTING.md` lists them; `docs/lab-notebook.md` records the work.
+
 <p align="center"><img src="docs/img/benchmark.svg" alt="swadesh vs sacreBLEU on 100k segments: BLEU 129x, chrF 331x, chrF++ 326x faster, identical scores" width="720"></p>
 
 ```bash
@@ -38,7 +42,8 @@ sacreBLEU, never with a tolerance:
   CJK, combining marks, `&amp;`/`<skipped>`/`-\n`, Turkish `İ`, final sigma, astral characters.
 - Real WMT22 test sets across 7 language pairs and all native tokenizers.
 - Python 3.10–3.14 × numpy 1.26 / 2.x, on x86-64 Linux, ARM64 Linux and Apple M4.
-- 290 byte-for-byte comparisons of the standalone CLI against the `sacrebleu` CLI.
+- A byte-for-byte CLI comparison suite of 448 cases against the `sacrebleu` CLI; the current
+  pass count is in `TESTING.md`.
 
 Don't take our word for it. Check it on your own data:
 
@@ -126,10 +131,12 @@ swadesh.PairedTest([("base", base), ("new", new)], {"BLEU": BLEU(references=[ref
   Agents get `corpus_score` (with sacreBLEU signatures and optional bootstrap CIs), `sentence_scores`,
   `mbr_select` and `tokenize` tools, all returning sacreBLEU-identical numbers.
 - **Exact tokenizers.** `swadesh.tokenize(lines, "13a")` returns sacreBLEU's tokenization, in parallel.
-- **In the browser.** The CLI compiles to a 320 KB WebAssembly module; `docs/playground/` is a
-  static page that runs it, with output byte-identical to the `sacrebleu` CLI.
-- **Standalone binary.** `crates/swadesh-cli` is a 650 KB executable with no Python,
-  for CI pipelines and agents. Its output is byte-identical to the sacreBLEU CLI for BLEU, chrF and TER.
+- **In the browser.** The CLI compiles to a roughly 349 KB WebAssembly module; `docs/playground/`
+  is a static page that runs it. CLI parity is not complete yet, as the CLI row of `TESTING.md`
+  records.
+- **Standalone binary.** `crates/swadesh-cli` is a 891 KB executable (726 KB stripped) with no Python,
+  for CI pipelines and agents. `-m bleu` and `-m ter` are byte-identical to the sacreBLEU CLI on
+  WMT22 data; the CLI comparison suite still has failing cases, listed in `TESTING.md`.
 - **Free-threaded Python.** The extension declares `gil_used = false`; on CPython 3.14t with the
   GIL disabled, concurrent threads score in parallel and stay bit-exact. (sacreBLEU's own `lxml`
   import re-enables the GIL unless you run with `PYTHON_GIL=0`.)
