@@ -76,21 +76,29 @@ section 3.2 matters: the `&` it produces survives `no_punct`.
    *apostrophe-like* marks become `'` and the quote-like marks stay themselves. Measured: `“x”`
    survives as one token `“x”`, while `"x"` becomes `" x "`. The distinction matters: `"` (U+0022)
    is in the separating set, `“ ` `”` (U+201C/201D) are not.
-4. Python whitespace → single space, collapse, strip.
-5. **Protect numbers.** A maximal run of ASCII digits, optionally with internal `,` or `.` between
+4. **Delete line-break hyphens.** Every non-overlapping pair of a line feed (U+000A) immediately
+   followed by an ASCII hyphen-minus (U+002D) is removed from the text before anything else
+   looks at it. Measured: `a\n-b` -> `ab`, `x\n-y\n-z` -> `xyz`, `a \n- b` -> `a` `b`,
+   `\n-a` -> `a`, `a\n-` -> `a`, `a\n\n-b` -> `a` `b`, `a\r\n-b` -> `a` `b`, `-\n-` -> `-`.
+   A hyphen at the **end** of a line is not removed: `a-\nb` -> `a-` `b` and `a-\n-b` -> `a-b`.
+   Only U+000A and U+002D: `a\n\u2010b` -> `a` `\u2010b` and `a\u2028-b` -> `a` `-b` are
+   untouched. The default tokenizer has no such rule (`a\n-b` -> `a` `-b`, section 3.1).
+
+5. Python whitespace → single space, collapse, strip.
+6. **Protect numbers.** A maximal run of ASCII digits, optionally with internal `,` or `.` between
    digits (`3.14`, `1,000`, `1.2.3`), is a single token and is not split at its internal marks.
    Measured: `3.14` stays, `1-2-3` splits (hyphens are *not* protected inside a digit run), `a.14`
    splits, `.3.14` keeps the digits together but leaves the leading dot separate.
-6. **Protect letters-hyphen.** A hyphen with a letter-like character immediately on both sides is
+7. **Protect letters-hyphen.** A hyphen with a letter-like character immediately on both sides is
    part of the word: `a-b` stays, `12-13` splits, `a-13` stays, `13-a` splits, `1-x` splits, `x-1`
    stays. So the condition is "both neighbours are non-space, non-digit", not "both are letters":
    measured `é-1` stays and `a-é` stays. Treat it as: a hyphen is protected when the character
    before it is not a space or digit and the character after it is not a space or digit.
-7. **Separate the remaining ASCII punctuation.** Every ASCII character in `!` `"` `#` `$` `%`
+8. **Separate the remaining ASCII punctuation.** Every ASCII character in `!` `"` `#` `$` `%`
    `&` `(` `)` `*` `+` `,` `/` `:` `;` `<` `=` `>` `?` `@` `[` `\` `]` `^` `_` `` ` `` `{` `|`
    `}` `~` · U+0021..U+007E is put on its own token, **except**:
    - `'` (U+0027), which never separates (`don't` stays one word), and
-   - `.` and `,` protected by rule 5, and `-` protected by rule 6.
+   - `.` and `,` protected by rule 6, and `-` protected by rule 7.
 
    None of the non-ASCII punctuation separates: `—`, `–`, `«`, `»`, `、`, `。`, `，`, `…`, `§`, `°`,
    `¡`, `¿` all stay attached to their neighbours. This is a real asymmetry of the oracle and is
@@ -99,13 +107,13 @@ section 3.2 matters: the `&` it produces survives `no_punct`.
    The class is exactly ASCII, code points `0x00`–`0x7F`. Measured: `0x7E` (`~`) separates, `0x7F`
    (DEL) and `0x80` do not.
 
-8. **The possessive `'s` closes the preceding word.** Measured: `a's` -> `a 's` and `a's's` ->
+9. **The possessive `'s` closes the preceding word.** Measured: `a's` -> `a 's` and `a's's` ->
    `a's 's`, while `'s` alone stays `'s`. The split happens exactly when the character after the
    `s` is
 
    - the end of the segment,
    - a space (U+0020) or a line feed (U+000A), or
-   - one of the separating ASCII marks of step 7: `!` `"` `#` `$` `%` `&` `(` `)` `*` `+` `/` `:`
+   - one of the separating ASCII marks of step 8: `!` `"` `#` `$` `%` `&` `(` `)` `*` `+` `/` `:`
      `;` `<` `=` `>` `?` `@` `[` `\` `]` `^` `_` `` ` `` `{` `|` `}` `~`.
 
    It does **not** happen when the next character is a letter or a digit, or `.`, `,`, `'`, `-`, or
@@ -127,11 +135,11 @@ section 3.2 matters: the `&` it produces survives `no_punct`.
    split on exactly `.`, `,` and `'`, and did not split on the other marks, so `a's.` became
    `a 's .` instead of `a's .` and `a's'` became three tokens instead of one (measured 2026-11-24).
 
-9. Collapse spaces again and split.
+10. Collapse spaces again and split.
 
 With `no_punct = true`, the deletion set of section 3.1 runs first, but **in normalized mode a
 deleted mark is replaced by a space, not removed**, so it still separates tokens. The exception is
-`.` and `,` between ASCII digits: those are part of the protected number token (step 5), so deleting
+`.` and `,` between ASCII digits: those are part of the protected number token (step 6), so deleting
 them joins the digits. Measured on `_preprocess_segment`:
 
 | input | `no_punct` | `normalized, no_punct` |
@@ -308,7 +316,7 @@ first probed (`dont''s`, `the 's`, `44 -0038' s`), but **not** on a possessive f
 
 **How it is reproduced.** The native path preprocesses each reference stream once in Python with the
 oracle's own `_preprocess_segment` and lets the kernel tokenize the result, which is the second pass;
-the hypothesis is still tokenized once, as in the oracle. With the possessive rule of step 8 in
+the hypothesis is still tokenized once, as in the oracle. With the possessive rule of step 9 in
 place, a 400-case randomized battery over an apostrophe/whitespace alphabet matches the oracle on
 every corpus statistic in both the default and the normalised mode, and a 600-case battery matches
 the single-pass reference token count exactly (measured 2026-11-24).
