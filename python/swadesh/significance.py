@@ -292,10 +292,11 @@ class Result:
         self.ci = ci
 
     def __repr__(self) -> str:
-        # `str`, not `repr`: the oracle interpolates the fields directly, so a numpy scalar prints
-        # as its bare number (`mean=42.30...`) rather than as `np.float64(42.30...)` (measured
-        # 2026-11-24; docs/spec/significance.md pins the shape, not the primitive).
-        attrs = ",".join(f"{k}={v}" for k, v in vars(self).items())
+        # `str`, not an f-string and not `repr`: the oracle interpolates each field with `str`, so a
+        # numpy scalar prints as its bare number. `f"{v}"` is *not* the same for a `np.float32` --
+        # `__format__` widens it to double, printing `20.83409309387207` where the oracle prints
+        # `20.834093` (measured 2026-11-24; docs/spec/significance.md).
+        attrs = ",".join(f"{k}={v!s}" for k, v in vars(self).items())
         return attrs
 
 
