@@ -136,12 +136,20 @@ fn strip_punct(raw: &[char], asian: bool, normalized: bool) -> Vec<char> {
             // dot or comma between ASCII digits, part of the protected number token: deleting it
             // joins the digits, so "2.2" stays "22" and "1,000" stays "1000".
             if normalized {
-                let joins = (c == '.' || c == ',')
-                    && i > 0
-                    && is_ascii_digit(raw[i - 1])
-                    && raw.get(i + 1).map_or(false, |&n| is_ascii_digit(n));
-                if !joins {
+                // Measured 2026-11-24: `.`/`,` are left for the rule-6 piece scanner, which knows
+                // the digit parity and the piece term, and a mark piece that survives is dropped
+                // in pass 2 when `no_punct` is set. Other marks keep being replaced by a space,
+                // which is what makes `a?b` -> `a b`.
+                if c == '.' || c == ',' {
+                    out.push(c);
+                } else if separates(c) {
                     out.push(' ');
+                } else {
+                    // A deleted non-ASCII mark (the `asian_support` set) is not a step-8
+                    // separator, so for step 9's lookahead it must behave like the mark, not like
+                    // a space at the end of the segment (`a's，` stays one token). The sentinel is
+                    // a boundary that carries TERM_OTHER and never enters a piece.
+                    out.push(STRIP_BOUNDARY);
                 }
             }
         } else {
@@ -150,6 +158,10 @@ fn strip_punct(raw: &[char], asian: bool, normalized: bool) -> Vec<char> {
     }
     out
 }
+
+/// Boundary left by a deleted mark that is *not* a step-8 separator, so the piece it ends takes
+/// `TERM_OTHER` (spec 3.2, measured 2026-11-24).
+const STRIP_BOUNDARY: char = '\u{E001}';
 
 /// What ended a piece, for the possessive lookahead of spec 3.2 step 8.
 const TERM_END: u8 = 0; // end of the segment
@@ -232,6 +244,13 @@ pub fn tokenize(cfg: &TerConfig, text: &str) -> Vec<String> {
         let c = kept[i];
         last_before = last_char;
         last_char = Some(c);
+        if c == STRIP_BOUNDARY {
+            if !piece.is_empty() {
+                pieces.push((std::mem::take(&mut piece), TERM_OTHER));
+            }
+            i += 1;
+            continue;
+        }
         if asian && is_asian(c) {
             // An Asian character is its own piece and also ends the one before.
             if !piece.is_empty() {
@@ -316,6 +335,11 @@ pub fn tokenize(cfg: &TerConfig, text: &str) -> Vec<String> {
             continue;
         }
         if p.len() == 1 {
+            // A lone `.`/`,` is a mark piece: `no_punct` drops it (the rule-6 scanner already cut
+            // it out of the word, so the separation survives without the token).
+            if cfg.no_punct && (p[0] == '.' || p[0] == ',') {
+                continue;
+            }
             let mut w = String::new();
             push_lower(&mut w, p[0], cfg.case_sensitive);
             push(&mut out, &w);
@@ -369,6 +393,9 @@ pub fn tokenize(cfg: &TerConfig, text: &str) -> Vec<String> {
                 let mut w = String::new();
                 push_lower(&mut w, c, cfg.case_sensitive);
                 push(&mut out, &w);
+            } else if cfg.no_punct && (c == '.' || c == ',') {
+                // A digit-protected mark inside a number piece: `no_punct` deletes it, joining
+                // the digits (`2.2` -> `22`).
             } else {
                 push_lower(&mut word, c, cfg.case_sensitive);
             }

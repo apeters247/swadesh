@@ -2971,3 +2971,25 @@ normalized mode `.`/`,` are left for the rule-6 piece scanner and a surviving ma
 when `no_punct` is set; other marks keep being replaced by a space.
 
 **Next step.** Implement, re-run the battery and `test_ter.py`, then the long-shift search.
+
+### 2026-11-24 (continued) — TER `no_punct`: the deleted `.`/`,` keeps its identity
+
+**Attempted.** `test_ter_adversarial[1110]` and `test_ter_sentence_score[1110]` (the `no_punct`
+option combo): the oracle keeps `"a's."` as one token where we give two. The keyword battery had
+83/4,000 wrong with `no_punct`.
+
+**Measured.** With `normalized, no_punct`: `a's.`, `a's,`, `0aa's,`, `a's. b` all keep the word
+unclosed (`a's`, `a's` `b`) because the `'s` lookahead must still see the deleted `.`/`,` (not a
+step-8 separator), while `a's?b` closes (`a 's b`, the deleted `?` *is* a separator) and `2.2` joins
+(`22`). So the deletion is not a plain space for lookahead purposes.
+
+**Decision.** The spec's `no_punct` paragraph records this and the implementation follows: in
+normalized mode `.`/`,` are left for the rule-6 piece scanner and a surviving mark piece is dropped
+when `no_punct` is set; other marks keep being replaced by a space.
+
+**Next step.** Implement, re-run the battery and `test_ter.py`, then the long-shift search.
+
+**Measured after.** The keyword battery is 0/4,000 in all four option combinations (normalized,
++no_punct, +asian_support, default), and a 6,000-segment battery mixing CJK and fullwidth marks is
+0/6,000 in the four asian/no_punct combinations. `test_ter.py` is **16 failed / 36 passed** (was 28
+failed): every remaining failure is `test_ter_long_sentences_shifts`, the shift search.
