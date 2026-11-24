@@ -49,6 +49,35 @@ them with standalone implementations is planned.
 
 Everything in `crates/` is original to this project and carries only AGPL-3.0-or-later.
 
+## Spec-first: what holds, and what does not
+
+`NOTICE` describes the Rust crate as written from published specifications and from black-box
+measurement of sacreBLEU's observable output, and `docs/spec/` is offered as the record of that.
+That holds for the clean-room rewrites, and it does **not** hold for every file in the tree. The
+history shows three areas committed three days before the specification that now describes them, and
+never rewritten since:
+
+| area | spec committed | implementation first committed | spec first? |
+|---|---|---|---|
+| tokenizers: `tokenize_nonechar_clean.rs`, `13a`, `zh`, `intl` | `docs/spec/tokenizers.md` `0f77954`, 11-22 00:34 | `edfd940` 01:43, `3a420e4` 03:21, `515f3ba` 03:42, `87cbc03` 04:05 | yes |
+| BLEU/chrF segment statistics: `bleu_stats_clean.rs`, `chrf_stats_clean.rs` | `docs/spec/stats.md` `c3e3445`, 11-22 04:52 | `3d8df0c` 13:04, `34ecd83` 13:09 | yes |
+| TER: `ter_clean.rs` | `docs/spec/ter.md` `47539ec`, 11-22 13:39 | `db8e08b` 14:17 | yes |
+| **BLEU/chrF numeric core: `score.rs`, `ngram.rs`** | `docs/spec/stats.md`, 11-22 04:52 | `6b13050`, **11-19 04:35** | **no** |
+| **significance kernels: `nprng.rs`, `resample.rs`, `pairwise.rs`** | `docs/spec/significance.md` `478e2f1`, 11-22 17:05 | `7f9b7da` and `60bf8fa` **11-19 04:45**, `5eb8843` 04:49 | **no** |
+| **CLI: `crates/swadesh-cli/`** | `docs/spec/cli-contract.md` `2b13911`, 11-22 15:51 | `main.rs` `943dcf0`, **11-19 04:59** | **no** |
+
+For the three bold rows `git log --since=<spec commit>` over those paths returns nothing, so the
+specification records behaviour after the fact rather than before it. The repository also holds no
+measurement record for them: the lab notebook has no entries dated 2026-11-19, and no probe file for
+that date is tracked.
+
+What this does and does not mean. It does not mean any sacreBLEU source was copied — there is no
+sign of transcription anywhere in the tree (`tokenizer.perl` is named only in the specifications, in
+sentences saying it was not read; `tests/test_provenance.py` guards the module boundaries). What it
+means is that for those three areas the project cannot demonstrate the *spec-first* order that the
+rest of the crate can, so this file does not claim it. Closing the gap means either re-deriving them
+after their specifications, or recording for each one the measurement it was actually derived from.
+
 ## Contributions
 
 To keep dual licensing possible, every contributor agrees to `CLA.md` before a pull request is
