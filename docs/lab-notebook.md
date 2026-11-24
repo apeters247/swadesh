@@ -2279,3 +2279,34 @@ which is exactly what item 4 asks to be written down rather than papered over.
 with the table above and the commit ids, and that says plainly which claim the repository does *not*
 support. No code or spec change: this is the documentation the objective asks for.
 
+---
+
+## 2026-11-24 (continued) — item 3, part 1: the reports, and a stale-binary trap
+
+**Attempted.** Ship-readiness item 3: make the documentation match the tree. Part 1 covers the six
+report files; `TESTING.md` and `README.md` follow in part 2 with a freshly measured CLI count.
+
+**Measured.**
+
+- `tests/test_cli.py` collects **448** and reported **43 failed, 405 passed** - but that run used the
+  `target/release/swadesh` binary last built by the review swarm, i.e. *before* this session's TER
+  fixes. The binary has since been rebuilt (`cargo build --release -p swadesh-cli`, 4.7 s) and the
+  suite is being re-run; the stale number is not going into the docs.
+- `target/release/swadesh` is 912,048 bytes (890.7 KiB); stripped, 742,944 (725.5 KiB). README says
+  "650 KB".
+- The WebAssembly blob embedded in `docs/playground/index.html` decodes to 356,982 bytes
+  (348.6 KiB). README says "320 KB".
+- The README speed-ups do hold: `bench/results/final4-troy1-100k.json` records `exact: true` on every
+  row, with BLEU 129.6x, chrF 331x-class and chrF++ in the same range, matching the SVG's 129x/331x/326x.
+- Contradicted claims found by grep, each a one-line fix: `docs/how-its-exact.md:309` says "TER is
+  sacreBLEU's Python code" (TER is native); `docs/guide.md:403` says the Rust CLI "does not support
+  `-m ter`" (it does); `CHANGELOG.md:36` says "TER is not native ... the Rust binary rejects
+  `-m ter`"; `docs/fuzz-report.md:64` reports "108 passed, 3 skipped, 0 failed" for
+  `test_differential.py` + `test_ter.py`, which now have failing cases.
+- `docs/coverage-report.md` has no "nine" string; the earlier audit's "nine CLI parity cases fail"
+  line is not present in this revision (grep finds nothing), so there is nothing to correct there.
+
+**Decision.** Add a dated status header to each of the six reports saying whether its numbers were
+re-measured or are historical, and fix the four contradicted lines above. `TESTING.md` and `README.md`
+wait for the fresh CLI number.
+
