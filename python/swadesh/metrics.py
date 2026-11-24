@@ -496,11 +496,15 @@ class BLEU(_FastMixin, _SacreBLEU):
         )
         counts = [ints[2 + k] for k in range(n)]
         totals = [ints[2 + n + k] for k in range(n)]
-        if self.smooth_method == "add-k":
-            sv = self.smooth_value if self.smooth_value is not None else 1.0
+        # `add-k` shows up in the reported counts and totals as well as in the score, but only when
+        # the corpus has at least one match at the first order: with none, the oracle leaves both
+        # blocks raw (measured 2026-11-24, docs/lab-notebook.md). The value is added unchanged, so
+        # the blocks can become fractional (`smooth_value=0.5` gives counts [2, 1.5, 0.5, 0.5]).
+        if self.smooth_method == "add-k" and counts and counts[0] > 0:
+            sv = self.smooth_value if self.smooth_value is not None else 1
             for k in range(1, n):
-                counts[k] += int(sv)
-                totals[k] += int(sv)
+                counts[k] += sv
+                totals[k] += sv
         return BLEUScore(score, counts, totals, list(precisions), bp, ints[0], ints[1])
 
     def sentence_scores(self, hypotheses: Sequence[str], references: Sequence[Sequence[str]]) -> List[float]:

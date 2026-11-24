@@ -2489,3 +2489,25 @@ unconditionally, which is why every all-zero-counts corpus disagreed and why fra
 right only where nothing was added. `docs/spec/` records `add-k` as a CLI flag only - the arithmetic
 is not specified there - so this notebook entry is the measurement record for the change.
 
+**Landed.** BLEU's `_score_from_row` now applies `add-k` to the reported counts and totals only when
+the corpus has at least one match at the first order, and adds the value untruncated.
+
+**Measured** (3.11.14, troy-1), before -> after:
+
+| suite | before | after |
+|---|---|---|
+| seven-file selection | 71 failed / 652 passed | **53 failed / 670 passed** |
+| `tests/test_differential.py` | 31 failed / 48 passed | **17 failed / 62 passed** |
+| `tests/test_deep.py` | 9 failed | **7 failed** |
+| `tests/test_coverage_gaps.py` | 5 failed | 3 failed (the previous entry's repr fix) |
+| `tests/test_frozen_oracle.py` | 1 failed | 1 failed (unchanged, `fuzz42:BLEU intl`) |
+| `tests/test_fuzz_unicode.py` | 3 failed | 3 failed (unchanged; a different cause) |
+
+No new failures: the only remaining failures in the oracle/parity/score-object/fallback/coverage
+group are the known `fuzz42` case and the three paired-bootstrap dtype ones. `tests/test_ter.py`
+reads 23 rather than 22 here, which is the hypothesis seed variance already recorded.
+
+**Next.** `tests/test_fuzz_unicode.py` still has three count mismatches of its own
+(`[[0, 2, 0, 0, ...]] == [[0, 1, 0, 0, ...]]`), and the differential's remaining 17 are now the
+chrF/paired/pairwise and tokenizer-exactness families rather than BLEU counts.
+
