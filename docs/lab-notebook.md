@@ -2372,3 +2372,21 @@ of the oracle's candidate set, so the next attempt needs a different measurement
 the oracle with constructed inputs designed to expose single decisions, rather than re-reading the
 prose.
 
+**Landed.** `Result.__repr__` now interpolates with `str` instead of `repr`.
+`tests/test_coverage_gaps.py` moved from **5 failed, 63 passed** to **3 failed, 65 passed**. No
+regressions: the seven-file fast set plus the guards report **655 passed, 1 failed** (the known
+`fuzz42:BLEU intl`).
+
+**What the last three coverage-gap failures actually are.** Not formatting - precision. Ours carries
+a float64 render of a float32 quantity where the oracle keeps float32:
+
+    ours   mean=61.4719352722168   ci=2.8332080841064453
+    theirs mean=61.471935          ci=2.833208
+    ours   mean=33.235015869140625 ci=20.606060028076172
+    theirs mean=33.235016          ci=20.60606
+
+`str(np.float32(x))` prints about eight significant digits, `str` of the float64 that holds the same
+value prints all of them. So the paired-test resampling in those two paths produces float64 where the
+oracle produces float32 - a dtype difference in the bootstrap, not a repr difference. That belongs
+with the "chrF epsilon and tiny-value drift" cluster rather than here.
+

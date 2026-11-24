@@ -292,7 +292,10 @@ class Result:
         self.ci = ci
 
     def __repr__(self) -> str:
-        attrs = ",".join(f"{k}={v!r}" for k, v in vars(self).items())
+        # `str`, not `repr`: the oracle interpolates the fields directly, so a numpy scalar prints
+        # as its bare number (`mean=42.30...`) rather than as `np.float64(42.30...)` (measured
+        # 2026-11-24; docs/spec/significance.md pins the shape, not the primitive).
+        attrs = ",".join(f"{k}={v}" for k, v in vars(self).items())
         return attrs
 
 
