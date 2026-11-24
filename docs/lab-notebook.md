@@ -2682,3 +2682,41 @@ separately. The reference tool now measures both layers: 0 wrong on the tokenize
 corpus runs — 58,383 comparisons. The Rust change follows in the next commit.
 
 **Next step.** Remove the strip from `tok_intl`, rebuild, and re-run the seven-file selection.
+
+---
+
+## 2026-11-24 (continued) — intl implementation: the scanner is replaced by the three passes
+
+**Change.** `crates/swadesh-core/src/tokenize_intl_clean.rs` is now the three measured passes (pad
+symbols, split non-number+punct, split punct+non-number, join on whitespace). The state machine,
+the limb-1 clause, the lead-path trailing absorption, `SEP`, `splits_after_digit` and the emoji
+special case are all gone: 228 lines of branchy scanner become the model, which subsumes their
+measured cases. The tokenizer no longer strips trailing whitespace (the metric layer does).
+
+**Measured.**
+
+| check | before | after |
+|---|---|---|
+| model battery, `tools/intl_reference.py` (tokenizer + metric layers) | 224/14,376 on the corpus | **0/58,383** |
+| `swadesh.tokenize(_, "intl")` vs the raw oracle tokenizer, 14,376 corpus texts | 224 wrong | **0 wrong** |
+| `tests/test_frozen_oracle.py` (the fuzz `BLEU intl` case) | 1 failed | **0 failed** |
+| `test_tokenizers_string_exact[intl]` | 1 failed | **passes** |
+| `test_tokenizers_string_exact[13a]` / `[zh]` | failing | still failing (different tokenizers) |
+| seven-file selection | 53 failed / 670 passed at goal start | 47 failed / 676 passed |
+| `cargo test --release --workspace` | — | 13 suites, 0 failed |
+| intl unit tests in the crate | 8 | 8 pass |
+
+The selection delta is not all deterministic: `tests/test_ter.py` is Hypothesis-driven and its
+failing-case count moves between runs (observed 23, 22, 20, 47 on unchanged Rust). The deterministic
+movements are the two frozen-oracle and intl-string rows above.
+
+**Failures.** None in the model. The first model omitted the metric layer's strip; the string-exact
+test caught it and the spec was corrected in a separate commit before the code changed (see the
+entry above).
+
+**Decision.** The `..0`-shaped divergence in `13a` and `zh` is the same family (a run of `.` before a
+digit) but a different tokenizer with its own spec; it is left for its own slice rather than folded
+into intl.
+
+**Next step.** The remaining named tokenizer item is the `13a`/`zh` dot-run; the larger blocks are
+TER (shift search) and chrF epsilon.

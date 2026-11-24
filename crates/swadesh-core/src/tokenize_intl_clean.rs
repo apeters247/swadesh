@@ -6,26 +6,24 @@
 //!
 //! The model is three passes over the segment:
 //!
-//!   0. drop trailing Python whitespace;
 //!   1. pad every Unicode symbol (`\p{S}`) with a space on both sides;
 //!   2. split between a non-number and a following `\p{P}` character, consuming both;
 //!   3. split between a `\p{P}` character and a following non-number, consuming both;
 //!
-//! then split on Python whitespace. `\p{P}` includes `_` (category Pc). Punctuation glues to
+//! then join on Python whitespace. The tokenizer does **not** strip trailing whitespace: that is
+//! the metric layer's job (`_preprocess_segment`), and callers here already pass a `py_rstrip`ped
+//! line. Measured: `"7. "` tokenizes to `"7 ."` while the metric layer scores it as `"7."`. `\p{P}` includes `_` (category Pc). Punctuation glues to
 //! numbers (`3%4`, `3.5%`, `_1`) and symbols never do (`$5`, `\u{a5}6F`, `\u{2192}`); punctuation is
 //! separated from every non-number neighbour (`a%1`). The non-overlapping scan is why `\u{2018}\u{2019}/1`
 //! keeps `/1` glued while `./1` splits. No entity decoding happens (`a&amp;b` -> `a & amp ; b`).
 
-use crate::unicode::{is_number, is_punct, is_py_space, is_symbol, py_split};
+use crate::unicode::{is_number, is_punct, is_symbol, py_split};
 
 /// Tokenize `line` into `out`, tokens separated by single ASCII spaces.
 pub fn tok_intl(line: &str, out: &mut String) {
-    // Pass 0: trailing Python whitespace is dropped, so "7. " glues like "7.".
-    let trimmed = line.trim_end_matches(is_py_space);
-
     // Pass 1: symbols are always their own token.
-    let mut padded: Vec<char> = Vec::with_capacity(trimmed.len() + 8);
-    for c in trimmed.chars() {
+    let mut padded: Vec<char> = Vec::with_capacity(line.len() + 8);
+    for c in line.chars() {
         if is_symbol(c) {
             padded.push(' ');
             padded.push(c);
@@ -136,9 +134,11 @@ mod tests {
     }
 
     #[test]
-    fn trailing_space_is_dropped_first() {
-        assert_eq!(t("7. "), "7.");
+    fn tokenizer_does_not_strip_trailing_space() {
+        // The metric layer strips; the tokenizer does not. Both values are the oracle's.
+        assert_eq!(t("7. "), "7 .");
         assert_eq!(t("a. "), "a .");
+        assert_eq!(t("7  "), "7");
         assert_eq!(t("7. x"), "7 . x");
     }
 
