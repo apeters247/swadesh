@@ -3384,3 +3384,15 @@ of them is worse than the committed configuration. The difference is one edit un
 the first two shifts of a long unrelated-reference segment, and the two searches agree exactly from
 the third shift on — which is why single-axis changes cannot reach it: they perturb the whole path,
 not just the marginal decision.
+
+### 2026-11-24 (continued) — the TER residual documented (not papered over)
+
+Following the recommendation in the previous entry, the residual is now an explicit section in
+`TESTING.md` ("Known divergence: TER shift search on long unrelated references") rather than a line in
+a notebook only. It records: the 18 failing tests and their exact names; the three measured regimes
+(1/4,000 random, 0/80 block-moved references, 3/80 long unrelated references); the reproduction
+commands; the ten hypotheses already rejected with their numbers; and the structural next step. Criterion
+1's row now points at that section.
+
+No test was marked expected-to-fail and no threshold was loosened: the 18 tests still fail, which is
+the honest state.

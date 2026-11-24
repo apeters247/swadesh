@@ -32,7 +32,7 @@ a little between runs; an exact zero is what would be seed-independent.
 
 | # | Criterion | 2026-11-24 | Evidence |
 |---|---|---|---|
-| 1 | Differential exactness | **Not met, but nearly.** The seven-file selection reports **18 failing cases**, all in the TER shift search: `test_ter.py` 16, `test_deep.py` 2. The other five files are green: `test_frozen_oracle.py` 17 passed, `test_parity.py` 494 passed, `test_differential.py` 79 passed, `test_fuzz_unicode.py` 4 passed, `test_coverage_gaps.py` 68 passed (selection total 705 passed, 2 skipped). | re-run 2026-11-24, Python 3.11.14, troy-1 |
+| 1 | Differential exactness | **Not met, but nearly** (see `## Known divergence` at the end of this file). The seven-file selection reports **18 failing cases**, all in the TER shift search: `test_ter.py` 16, `test_deep.py` 2. The other five files are green: `test_frozen_oracle.py` 17 passed, `test_parity.py` 494 passed, `test_differential.py` 79 passed, `test_fuzz_unicode.py` 4 passed, `test_coverage_gaps.py` 68 passed (selection total 705 passed, 2 skipped). | re-run 2026-11-24, Python 3.11.14, troy-1 |
 | 2 | Mutation score | **Unverified.** `cargo-mutants` is not installed on troy-1; 94.6% is the 2026-11-19 run and has not been repeated. | `docs/mutation-report.md` |
 | 3 | Line coverage | **Unverified.** Neither `coverage` nor `cargo-llvm-cov` is installed on troy-1; 95.07% / 99.7% are the 2026-11-19 figures. | `docs/coverage-report.md` |
 | 4 | Crash safety | **Partly verified.** Both crash-fix regression tests pass (`swadesh-core` 2, `swadesh-cli` 1). The execution campaign has not been re-run, and its total is quoted inconsistently in this repo: the 2026-11-19 row said 336M while `docs/fuzz-report.md` sums to 365.8M. | `docs/fuzz-report.md`, `fuzz/` |
@@ -51,3 +51,44 @@ generation have been measured on a 4,000-sequence battery; all are worse than th
 (20/4000), so the oracle differs structurally. The battery, the minimal counterexample and the
 traced acceptance sequence are in the notebook. The CLI figure above is unverified on troy-1 for the
 reason in row 5.
+
+## Known divergence: TER shift search on long unrelated references
+
+**Status 2026-11-24.** 18 of the 706 selected tests fail, all in
+`test_ter.py::test_ter_long_sentences_shifts` (16) and `test_deep.py::test_ter_long_shifts` (2), and all
+from one cause: the TER shift search accepts a marginal move that the oracle rejects. It has not been
+fixed, and it is recorded here rather than hidden.
+
+**Where it shows, and where it does not** (measured against sacreBLEU 2.6.0, default options):
+
+| input regime | disagreement |
+|---|---|
+| random word sequences, 1-45 tokens, general battery | **1 / 4,000** |
+| references built from block moves (realistic MT-style), 20-60 tokens | **0 / 80** |
+| random *unrelated* references, 20-60 tokens | **3 / 80**, all at 51-59 tokens |
+
+So the divergence needs a long segment whose reference is unrelated to the hypothesis — in real
+evaluation data the reference is a translation of the same sentence, which is the `0/80` row. No
+corpus in `tests/corpus/` or `tests/oracle/` reproduces it.
+
+**What it is, exactly.** Replaying the failing case (57 vs 56 tokens, ours 42 edits, oracle 43) shows
+the two searches agree from the third shift onward; the whole difference is one edit unit created in
+the first two.
+
+**Reproduction.**
+`~/venv311/bin/python -m pytest "tests/test_ter.py::test_ter_long_sentences_shifts" -q`
+(the test is Hypothesis-driven, so which draw fails moves between runs), and the two batteries in the
+lab notebook for 2026-11-24 (independent vs perturbed references).
+
+**What has been ruled out**, each measured on the batteries above and each worse than the committed
+search: the tie-break key (6 variants, 27-34/80), the alignment tie-break order (only
+`substitute, insert, delete` works — that fix landed and is why the general battery is 1/4,000 rather
+than 20/4,000), the candidate set (aligned-pairs only, 224/400), the candidate collection order
+(ref-major, 7/600), the evaluation budget (250-10,000; 1,000 is optimal), the block-length cap (10,
+not 50), the move-distance cap (50), the gain metric (banded vs full matrix, identical) and the gain
+source (alignment error counts, 43/80).
+
+**Next step, if anyone takes it.** The remaining route is structural rather than a knob: re-derive the
+candidate generation and gain accounting of the reference's shift search as a two-stage routine from
+black-box probes. That is a multi-day job with no guarantee, and it is the reason this is documented
+instead of patched.
