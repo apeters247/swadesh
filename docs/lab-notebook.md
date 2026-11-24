@@ -3036,3 +3036,25 @@ blocks, not only from aligned pairs.
 
 **Next step.** Instrument one failing battery sequence to see which shift the oracle takes that we
 do not (and vice versa), then decide the generation rule from the trace rather than from the prose.
+
+### 2026-11-24 (continued) — paired dtype: the widening is between `estimate_ci` and the repr
+
+**Attempted.** Traced the failing `test_paired_tests_exact_variants[chrfpp-bs]` under pytest with a
+plugin that wraps the suspects, to find where `mean` widens to a Python float.
+
+**Measured (pytest, plugin traces).**
+
+* `swadesh.significance._native_bleu_scores` is called 6 times (300×24 float32 row sums); **every
+  entry it returns is `np.float32`** (`entry types={'float32'}`).
+* `_bootstrap_resample` returns `float32` entries too (seed 12345, n=300).
+* `estimate_ci` — both `swadesh`'s and `sacrebleu`'s — is called 3 times each, always with a
+  `float32` array, and **returns `(float32, float32)` every time**.
+* The test still fails, with the same diff: ours
+  `mean=20.83409309387207,ci=1.2847442626953125` against theirs `mean=20.834093,ci=1.2847443` — the
+  same numbers, a wider type — and the bare (unplugged) run reproduces it identically.
+
+So the widening is not in the native scorer, the resampler or `estimate_ci`; it happens after
+`estimate_ci` returns and before `Result.__repr__` formats. The standalone script with the same
+inputs renders `float32` on both sides, so the difference is introduced by something pytest's import
+set does. Next: wrap `significance.Result.__init__` (or `vars(result)`) inside the pytest run and
+print the types of the values it is given, which will name the exact conversion.
