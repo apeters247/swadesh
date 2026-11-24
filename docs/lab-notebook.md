@@ -2655,3 +2655,30 @@ extended. The implementation follows in the next commit; this entry and the spec
 
 **Next step.** Port the three passes to `tokenize_intl_clean.rs`, rebuild, and run the parity
 suites; the `fuzz42` counterexample should either disappear or move to a different shape.
+
+---
+
+## 2026-11-24 (continued) — intl: the tokenizer does not strip trailing whitespace
+
+**Attempted.** `test_tokenizers_string_exact[intl]` failed on `'0. '`: we produced `0.` and the
+oracle's tokenizer produced `0 .`. The model in the previous entry had folded the metric layer's
+trailing-whitespace strip into the tokenizer.
+
+**Measured.** Two layers, on `"7. "`, `"7."`, `"7  "`:
+
+| input | `TokenizerV14International` | `Metric._preprocess_segment` |
+|---|---|---|
+| `"7. "` | `7 .` | `7.` |
+| `"7."` | `7.` | `7.` |
+| `"7  "` | `7` | `7` |
+
+So the tokenizer runs the passes on the raw string, and pass 3 splits `.` from the following
+space; the metric layer strips trailing whitespace first. `swadesh.tokenize` must mirror the
+tokenizer, and `_preprocess_segment` the metric layer.
+
+**Decision.** The spec drops the strip from the tokenizer model and documents the two layers
+separately. The reference tool now measures both layers: 0 wrong on the tokenizer battery
+(70 fixed, 6,500 random, 25,683 scalar-matrix) and 0/13,065 on each of the tokenizer and metric
+corpus runs — 58,383 comparisons. The Rust change follows in the next commit.
+
+**Next step.** Remove the strip from `tok_intl`, rebuild, and re-run the seven-file selection.
