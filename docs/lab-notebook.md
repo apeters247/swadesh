@@ -2462,3 +2462,30 @@ kernel do the smoothing, as the oracle does. Verify against the frozen oracle, p
 and fallback suites, which pin the printed score (the `counts`/`totals` attributes are not in the
 fixtures, so the printed line is the check that the score itself does not move).
 
+**Correction to the entry above, from probes run before the change.** Removing the mutation outright
+is wrong: the parity suite failed on `add-k, smooth_value=2` and on a pickled BLEU, and the probes
+show the oracle *does* add the smoothing to `counts`/`totals` - but only when the corpus has at least
+one match at the first order, and it adds the value unchanged rather than truncating it.
+
+| hyp / ref | raw counts | raw totals | oracle counts | oracle totals |
+|---|---|---|---|---|
+| `''` / `''` | 0,0,0,0 | 0,0,0,0 | 0,0,0,0 | 0,0,0,0 |
+| `a b` / `c d` | 0,0,0,0 | 2,1,0,0 | 0,0,0,0 | 2,1,0,0 |
+| `a b c` / `x y z` | 0,0,0,0 | 3,2,1,0 | 0,0,0,0 | 3,2,1,0 |
+| `a` / `b` | 0,0,0,0 | 1,0,0,0 | 0,0,0,0 | 1,0,0,0 |
+| `a b c d` / `a b x y` | 2,1,0,0 | 4,3,2,1 | 2,3,2,2 | 4,5,4,3 |
+| `the cat sat` / same | 3,2,1,0 | 3,2,1,0 | 3,4,3,2 | 3,4,3,2 |
+| `a` / `a` | 1,0,0,0 | 1,0,0,0 | 1,2,2,2 | 1,2,2,2 |
+
+and with matches present, the value is added as given, so the blocks can become fractional:
+
+    smooth_value 2.0 -> counts [2, 3, 2, 2]      totals [4, 5, 4, 3]
+    smooth_value 0.5 -> counts [2, 1.5, 0.5, 0.5] totals [4, 3.5, 2.5, 1.5]
+    smooth_value 3.7 -> counts [2, 4.7, 3.7, 3.7] totals [4, 6.7, 5.7, 4.7]
+
+So the committed rule is: add `smooth_value` (untruncated, defaulting to 1) to orders 2..N of both
+blocks **iff** the corpus has at least one match at the first order. The old code added `int(sv)`
+unconditionally, which is why every all-zero-counts corpus disagreed and why fractional values looked
+right only where nothing was added. `docs/spec/` records `add-k` as a CLI flag only - the arithmetic
+is not specified there - so this notebook entry is the measurement record for the change.
+
