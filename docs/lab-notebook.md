@@ -2720,3 +2720,41 @@ into intl.
 
 **Next step.** The remaining named tokenizer item is the `13a`/`zh` dot-run; the larger blocks are
 TER (shift search) and chrF epsilon.
+
+---
+
+## 2026-11-24 (continued) — 13a: the `.`/`,` run rule, measured
+
+**Attempted.** `test_tokenizers_string_exact[13a]` fails on `..0`: the oracle gives `. .0`, we give
+`. . 0`. The spec's stage 3 states two `re.sub`-shaped substitutions and leaves the boundary
+interaction to the emulator; on a run of marks that interaction is the whole behaviour.
+
+**Measured.** Probed every run of `[.,]` of length 1–6 with prefixes `""`, `a`, `0`, space and
+suffixes digit / letter / end. The pattern is a parity rule: for a maximal run of `[.,]` of length
+`m`, with `p` the character before it and `f` after it, the run's last character glues to `f` iff `f`
+is a digit and `(m + [p is a digit])` is even, and the run's first character glues to `p` iff `p` is
+a digit, `m == 1`, and `f` is a digit.
+
+| input | oracle | committed |
+|---|---|---|
+| `.0` | `. 0` | `. 0` |
+| `..0` | `. .0` | `. . 0` |
+| `...0` | `. . . 0` | `. . . 0` |
+| `0...0` | `0 . . .0` | `0 . . . 0` |
+| `5.,6` | `5 . , 6` | `5 . , 6` |
+| `0.0` | `0.0` | `0.0` |
+| `0.a` | `0 . a` | `0 . a` |
+
+Also found: the metric layer rstrips before tokenizing, so `"a-\n"` scores as `a-` (the tokenizer
+keeps the `-`). Same two-layer split as `intl`.
+
+**Model.** `tools/13a_reference.py` implements the rule and reproduces the oracle with 0 wrong on
+37,279 cases: 10,701 battery cases (all strings length ≤4 over `., 0 a & ( - space`, plus 6,000
+random) and 13,289 corpus texts at each of the tokenizer and metric layers.
+
+**Decision.** Spec stage 3 gains the run rule and two corrections (parity rule; the rstrip split)
+before the code changes, per the clean-room rule. The Rust stage-3a/3b/3c passes and the
+`DOT_SENTINEL` hack are replaced by the run rule in the next commit.
+
+**Next step.** Port the run rule to `tokenize_13a_clean.rs`, rebuild, and re-check the 13a tests.
+`zh` shares the `.`/`,` family and likely the same rule; check it next.
