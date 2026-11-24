@@ -3519,3 +3519,32 @@ gain, or the first improvement, over a candidate set that (measured) is the full
 enumeration. The next step that could actually decide it is the published algorithm text, or a
 per-case inference of the oracle's move sequence — which needs the number of shifts taken, and that
 is not observable through the public API.
+
+### 2026-11-24 (continued) — TER: the divergence is long-input-only (1.69M tiny pairs, zero mismatches)
+
+**Attempted.** Two decisive measurements instead of more knob-guessing.
+
+**1. Exhaustive small-input hunt.** Sampled **1,685,127 random pairs** of length 3-12 over 2-4 word
+alphabets and compared our TER with the oracle on each. **Zero mismatches.** So the residual is not a
+small-scale rule at all — it exists only for long segments (the failing cases are 51-59 tokens). That
+rules out the whole class of "wrong local decision" explanations and explains why no local change
+helps.
+
+**2. The two remaining scale-dependent knobs**, both measured and rejected on the 80-case
+independent battery (committed = 3/80):
+
+| knob | values | wrong |
+|---|---|---|
+| band half-width | 10 / 15 / 20 / **25** / 30 | 9 / 6 / 4 / **3** / 3 |
+| candidates evaluated per iteration | 25 / 50 / 100 / 150 / 200 / unlimited | 62 / 44 / 23 / 7 / 4 / **3** |
+
+Both are already at their optimum: narrowing the band or capping a single iteration loses shifts the
+oracle takes. Twenty-two mechanisms have now been measured, every one worse than the committed search.
+
+**What the two results together say.** The search agrees with the oracle on every short case and is
+optimal on every measured knob, yet disagrees on 3 of 80 long unrelated-reference cases, where the
+oracle's first move is one our own candidate list contains (and is worse than 65 alternatives in it).
+That combination is only consistent with the oracle using a *different procedure* over long inputs —
+not a different parameter. Deriving it needs either the published algorithm text (every external
+source is unreachable from this host, recorded above) or source-level knowledge, which the clean-room
+rule forbids.
