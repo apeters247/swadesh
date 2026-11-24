@@ -73,7 +73,11 @@ corpus in `tests/corpus/` or `tests/oracle/` reproduces it.
 
 **What it is, exactly.** Replaying the failing case (57 vs 56 tokens, ours 42 edits, oracle 43) shows
 the two searches agree from the third shift onward; the whole difference is one edit unit created in
-the first two.
+the first two. Measured directly on that case (2026-11-24): the plain distance is 49 and the oracle
+reaches 43, and of our 161 first-iteration candidates, three would let the oracle reach 41, 65 would
+reach 42, 62 leave it at 43 — and the oracle's own move is one of the last group, a net-zero move.
+Neither maximising the distance gain, nor the match-count gain, nor first-improvement reproduces that
+choice, which is why the remaining route is structural rather than a knob.
 
 **Reproduction.**
 `~/venv311/bin/python -m pytest "tests/test_ter.py::test_ter_long_sentences_shifts" -q`
@@ -81,12 +85,15 @@ the first two.
 lab notebook for 2026-11-24 (independent vs perturbed references).
 
 **What has been ruled out**, each measured on the batteries above and each worse than the committed
-search: the tie-break key (6 variants, 27-34/80), the alignment tie-break order (only
-`substitute, insert, delete` works — that fix landed and is why the general battery is 1/4,000 rather
-than 20/4,000), the candidate set (aligned-pairs only, 224/400), the candidate collection order
-(ref-major, 7/600), the evaluation budget (250-10,000; 1,000 is optimal), the block-length cap (10,
-not 50), the move-distance cap (50), the gain metric (banded vs full matrix, identical) and the gain
-source (alignment error counts, 43/80).
+search: the tie-break key (6 shapes plus first-with-equal-gain-and-length, 27-34/80), the alignment
+tie-break order (only `substitute, insert, delete` works — that fix landed and is why the general
+battery is 1/4,000 rather than 20/4,000), the candidate set (aligned pairs only, 224/400),
+the candidate collection order (ref-major, 7/600), the evaluation budget (250-10,000; 1,000 is
+optimal), the block-length cap (10, not 50), the move-distance cap (25-200; 50 is optimal), the gain
+metric (banded vs full matrix, identical), the gain source (alignment error counts and match counts,
+43/80 and no better), the alignment orientation (reference-as-rows, 48/80), the error-filter position
+(at the block's start or boundary, 12-14/80), the full-matrix alignment for candidates (identical)
+and first-improvement hill climbing (71/80). Nineteen mechanisms in total.
 
 **Next step, if anyone takes it.** The remaining route is structural rather than a knob: re-derive the
 candidate generation and gain accounting of the reference's shift search as a two-stage routine from

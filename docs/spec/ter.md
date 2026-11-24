@@ -283,20 +283,33 @@ begins at position `target`. The block must be found in the reference at `target
 
 Constraints, all measured as the point where the oracle stops producing a better TER:
 
-* `1 <= len <= 50`. **Corrected at measurement time:** I first wrote the literature's `len <= 10`,
-  and the probe refuted it — a block of 50 words shifts as a single edit, 51 does not. So the length
-  cap is 50, the same number as the distance cap. (Moving the same block by 50 positions also
-  shifts; by 51 it costs 2 instead of 1.)
+* **The cost rule and the search cap are different numbers, and earlier readings of this section
+  conflated them (measured 2026-11-24).** A shift *costs* 1 for any block up to **50** words, and 2
+  above that (the probe: a 50-word block shifts as one edit, 51 costs 2; moving the same block by 50
+  positions also shifts, by 51 it costs 2). But the search only *proposes* blocks up to **10**:
+  raising the search cap to 50 changes no result on the general battery (1/4,000 either way) and
+  makes a shift-heavy battery worse (5/600 with 10, 14/600 with 50). Ten is what the committed
+  implementation uses and what the measurements prefer; §7 records the same reading.
+* **A shift costs 1 regardless of block length.**
 * The move distance `|target - start|` must be at most 50 and non-zero.
-* A shift costs **1**, regardless of block length.
 * A shift that does not reduce the edit distance is not taken: the search only accepts a shift whose
   resulting cost is strictly below the previous best.
-* The search is greedy and bounded: at most **25** candidate shifts are examined per iteration
-  (`BEAM_WIDTH`), and at most **1,000** candidate pairs are collected for one iteration
-  (`MAX_SHIFT_CANDIDATES`). When there are more candidates than the cap the oracle stops collecting
-  early, so *which* candidates are seen depends on iteration order — that order is part of the
-  behaviour and must be reproduced: the oracle walks the alignment left to right, pairing each
-  hypothesis position with the reference positions it aligns to.
+* The search is greedy and bounded: at most **1,000** candidate evaluations are made in total
+  across a segment (the counter is not reset between iterations, §7). `MAX_SHIFT_CANDIDATES` in an
+  earlier draft described the same budget.
+* **Candidate enumeration is over every matching block, not over alignment pairs (measured
+  2026-11-24).** The earlier sentence here said the oracle "walks the alignment left to right,
+  pairing each hypothesis position with the reference positions it aligns to"; implemented literally,
+  that restriction disagrees with the oracle on **224 of 400** random segments where the full
+  enumeration disagrees on **0 of 400**, and on **586 of 600** shift-heavy segments where the full
+  enumeration disagrees on **5 of 600**. The alignment is used to derive the *target* position of a
+  candidate, not to select which blocks are candidates.
+* **The candidate chosen is not the one that maximises the distance reduction over that set
+  (measured 2026-11-24, open anomaly).** On a failing case the oracle's first move leaves its total
+  at 43 while 65 cheaper candidates would reach 42 and three would reach 41; the chosen move is a
+  net-zero one. Maximising the distance gain, the match-count gain, or taking the first improving
+  candidate each produce a different first move. This is the residual divergence recorded in
+  `TESTING.md`.
 
 Each accepted shift adds 1 to the edit count and is applied to the hypothesis before the next
 iteration. Iteration ends when no shift reduces the cost, or when 1,000 candidate evaluations have
@@ -353,8 +366,10 @@ the single-pass reference token count exactly (measured 2026-11-24).
 
 ## 7. Findings recorded during fixture generation
 
-* The shift length cap is 50, not the literature's 10 (§4.2). Bisected: a 50-word block shifts as
-  one edit, 51 costs 6.
+* The shift *cost* rule reaches to length 50, not the literature's 10 (§4.2). Bisected: a 50-word
+  block shifts as one edit, 51 costs 6. This is a property of the cost, not of the search: the search
+  itself proposes blocks up to 10 (measured 2026-11-24, see §4.2), and raising it to 50 makes the
+  shift-heavy battery worse (14/600 against 5/600).
 * The two caps interact in a way worth stating: a 50-word block **and** a 50-position move are each
   individually permitted, so the limits are not a combined budget.
 * A cap of 10 per block still reaches the same total for the pure-shift case, because the search

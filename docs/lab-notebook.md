@@ -3458,3 +3458,33 @@ candidates we and it both "should" have. Either its candidate set is missing exa
 its gain is not a function of the segment's alignment at all. Nineteen candidate mechanisms have now
 been measured, and each is worse than the committed search. The measured dump, the probe scripts and
 this table are the handover for the next attempt.
+
+### 2026-11-24 (continued) — documentation review after the measurements
+
+**Attempted.** A pass over the docs against what the last measurements actually show.
+
+**Corrections made.**
+
+* `docs/spec/ter.md` §4.2 conflated the *cost* rule with the *search* cap ("`1 <= len <= 50`") and
+  claimed that candidate enumeration walks the alignment ("pairing each hypothesis position with the
+  reference positions it aligns to"). Both are now stated as measured: the cost rule reaches 50 while
+  the search proposes ≤ 10 (10 → 5/600, 50 → 14/600 on the shift-heavy battery), and the alignment
+  enumeration restriction is refuted (224/400 against 0/400 for the full enumeration). A third bullet
+  records the open anomaly: the oracle's chosen candidate is not the one that maximises the distance
+  or match-count gain.
+* `docs/spec/ter.md` §7's first bullet still said "the shift length cap is 50, not 10 (§4.2)", which
+  contradicted §4.2 *and* §7's own third bullet; it now says the same thing as §4.2.
+* `TESTING.md`'s known-divergence section gains the direct first-move measurement (41/42/43
+  distribution over our 161 candidates) and the full list of nineteen rejected mechanisms.
+
+**Checked and left alone.** `README.md`'s performance table (historical `bench/results/final4-*.json`
+runs; every referenced file exists, and the figures are not contradicted by the new measurements —
+they are the same order at different corpus sizes). `docs/parity-report.md`, `docs/fuzz-report.md`
+and `docs/stress-report.md` already carry their re-measured figures from this session. No document
+claims a green suite.
+
+**External review.** Attempted and blocked: the ACL Anthology PDF returns no extractable text, and
+DuckDuckGo, Bing and PyPI all serve bot challenges from this host, so no outside commentary on TER's
+shift search could be read. GitHub's issue search for `ter` in sacreBLEU returns 18 issues but the
+page extraction drops their titles, and the one TER-adjacent hit retrieved was an unrelated WER
+feature request. Recording this rather than pretending the review happened.
