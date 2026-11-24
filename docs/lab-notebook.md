@@ -2758,3 +2758,29 @@ before the code changes, per the clean-room rule. The Rust stage-3a/3b/3c passes
 
 **Next step.** Port the run rule to `tokenize_13a_clean.rs`, rebuild, and re-check the 13a tests.
 `zh` shares the `.`/`,` family and likely the same rule; check it next.
+
+---
+
+## 2026-11-24 (continued) — 13a implementation: the run rule replaces the three passes
+
+**Change.** `crates/swadesh-core/src/tokenize_13a_clean.rs`: stages 3a/3b/3c and the `DOT_SENTINEL`
+hack are replaced by `dots_run_rule`, the measured parity rule; the crate gains a unit test for it.
+Stage 2 (class padding) and stage 4 (hyphen) are unchanged.
+
+**Measured.**
+
+| check | before | after |
+|---|---|---|
+| `swadesh.tokenize(_, "13a")` vs the raw oracle tokenizer, 13,289 corpus texts | failing on `..0` | **0 wrong** |
+| `tools/13a_reference.py` (battery + corpus, both layers) | — | **0/37,279** |
+| `cargo test --release -p swadesh-core --lib tokenize_13a` | 3 tests | 4 tests, all pass |
+| `test_tokenizers_string_exact[13a]` | failed | passes |
+
+**Failures.** The first patch deleted the stage-2 class padding along with the dot passes (the
+region I excised spanned it); the crate's own unit tests caught it (`&quot;hi&quot;` stopped
+padding) and the block was restored.
+
+**Next step.** `zh` shows the same family. Measured it: it strips the line, then uses the `intl`
+pair-consuming rule with `[.,]` as the whole mark set (`..0` -> `. . 0`, `...0` -> `. . .0`,
+`a..0` -> `a . .0`), the range table decides neither `.` nor `,`, and a `-` splits after a digit.
+`tools/zh_reference.py` gets 0/22,985. Spec first, then the port.

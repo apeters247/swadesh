@@ -83,6 +83,48 @@ where
     out
 }
 
+/// Stage 3: the measured `.`/`,` run rule (docs/spec/13a-algorithm.md).
+///
+/// For each maximal run of `.`/`,` of length `m`, with `p` the character before the run and `f`
+/// the character after it: the run is spaced on both sides, except that its last character glues
+/// to `f` iff `f` is a digit and `(m + [p is a digit])` is even, and its first character glues to
+/// `p` iff `p` is a digit, `m == 1` and `f` is a digit. Measured 2026-11-24 over every run of
+/// length 1-6 with letter, digit, space and empty prefixes: `..0` -> `. .0`, `...0` -> `. . . 0`,
+/// `0...0` -> `0 . . .0`, `0.0` -> `0.0`, `5.,6` -> `5 . , 6`.
+fn dots_run_rule(s: &str) -> String {
+    let c: Vec<char> = s.chars().collect();
+    let n = c.len();
+    let mut out = String::with_capacity(s.len() + s.len() / 4 + 8);
+    let mut i = 0;
+    while i < n {
+        if c[i] == '.' || c[i] == ',' {
+            let mut j = i;
+            while j < n && (c[j] == '.' || c[j] == ',') {
+                j += 1;
+            }
+            let m = j - i;
+            let p_digit = i > 0 && is_attach_digit(c[i - 1]);
+            let f_digit = j < n && is_attach_digit(c[j]);
+            let left_glue = p_digit && m == 1 && f_digit;
+            let right_glue = f_digit && (m + usize::from(p_digit)) % 2 == 0;
+            if !left_glue {
+                out.push(' ');
+            }
+            for k in i..j {
+                out.push(c[k]);
+                if k + 1 < j || !right_glue {
+                    out.push(' ');
+                }
+            }
+            i = j;
+        } else {
+            out.push(c[i]);
+            i += 1;
+        }
+    }
+    out
+}
+
 /// Stage 1: normalise the line.
 fn normalise(line: &str) -> String {
     let mut s = line.replace("<skipped>", "");
@@ -101,29 +143,8 @@ fn normalise(line: &str) -> String {
 pub fn tok_13a(line: &str, out: &mut String) {
     let s = normalise(line);
 
-    // Stage 2-pre: a "." directly after a "," and before a digit belongs to the digit
-    // (measured: "&,.0" -> "& , .0", while ".0" alone -> ". 0"). Mark it with a sentinel so
-    // the padding pass and the attachment passes cannot separate it from its digit.
-    const DOT_SENTINEL: char = '\u{E000}';
-    let s: String = {
-        let c: Vec<char> = s.chars().collect();
-        let mut out = String::with_capacity(s.len());
-        for (i, &ch) in c.iter().enumerate() {
-            if ch == '.'
-                && i >= 1
-                && c[i - 1] == ','
-                && i + 1 < c.len()
-                && is_attach_digit(c[i + 1])
-            {
-                out.push(DOT_SENTINEL);
-            } else {
-                out.push(ch);
-            }
-        }
-        out
-    };
-
-    // Stage 2: pad class members.
+    // Stage 2: pad class members. `.`, `,` and `-` are not in the class; stage 3 owns `.`/`,`
+    // and stage 4 owns `-`.
     let s = insert_pass(
         &s,
         |chars, i| {
@@ -136,57 +157,8 @@ pub fn tok_13a(line: &str, out: &mut String) {
         |chars, i, end| chars[i..end].iter().collect(),
     );
 
-    // Stage 3a: detach a "." or "," followed by a non-digit.
-    let s = insert_pass(
-        &s,
-        |chars, i| match chars[i] {
-            '.' | ',' => match chars.get(i + 1) {
-                Some(&n) if !is_attach_digit(n) => Some(i + 1),
-                _ => None,
-            },
-            _ => None,
-        },
-        |chars, i, end| chars[i..end].iter().collect(),
-    );
-    // Stage 3b: attach a "." or "," to a preceding non-digit. The same ",.digit" exception
-    // applies here: the "." belongs to the digit, so this stage must skip it too.
-    let s = insert_pass(
-        &s,
-        |chars, i| match chars[i] {
-            '.' | ',' => {
-                if i == 0 || !is_attach_digit(chars[i - 1]) {
-                    Some(i + 1)
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        },
-        |chars, i, end| chars[i..end].iter().collect(),
-    );
-    // Stage 3c: a "." or "," at end of line detaches ("9," -> "9 ,"), EXCEPT when the text
-    // ends in `", ." + digit` with the comma and dot separated by exactly one space - the state
-    // stage 3a leaves for an original "&,.0". Then the "." stays with the digit: "& , .0".
-    //   "&,.0" -> after 3a ">& , .0"   => "& , .0"   (fused)
-    //   "&, .0" -> after 3a ">& ,  .0" => "& , . 0"  (two spaces: not fused)
-    let ends_fused = {
-        let c: Vec<char> = s.chars().collect();
-        let n = c.len();
-        n >= 4
-            && is_attach_digit(c[n - 1])
-            && c[n - 2] == '.'
-            && c[n - 3] == ' '
-            && c[n - 4] == ','
-    };
-    let s = insert_pass(
-        &s,
-        |chars, i| match chars[i] {
-            '.' if ends_fused && i + 1 == chars.len() => None,
-            '.' | ',' if i + 1 == chars.len() => Some(i + 1),
-            _ => None,
-        },
-        |chars, i, end| chars[i..end].iter().collect(),
-    );
+    // Stage 3: the measured `.`/`,` run rule.
+    let s = dots_run_rule(&s);
 
     // Stage 4: a "-" that follows a digit.
     let s = insert_pass(
@@ -197,9 +169,6 @@ pub fn tok_13a(line: &str, out: &mut String) {
         },
         |chars, i, end| chars[i..end].iter().collect(),
     );
-
-    // Restore the protected dot before joining.
-    let s: String = s.chars().map(|c| if c == DOT_SENTINEL { '.' } else { c }).collect();
 
     // Stage 5: join on Python whitespace.
     out.clear();
@@ -221,6 +190,21 @@ mod tests {
         let mut o = String::new();
         tok_13a(s, &mut o);
         o
+    }
+
+    #[test]
+    fn dot_runs_follow_the_parity_rule() {
+        // Measured 2026-11-24; see docs/spec/13a-algorithm.md stage 3.
+        assert_eq!(t(".0"), ". 0");
+        assert_eq!(t("..0"), ". .0");
+        assert_eq!(t("...0"), ". . . 0");
+        assert_eq!(t("....0"), ". . . .0");
+        assert_eq!(t("0...0"), "0 . . .0");
+        assert_eq!(t("0.0"), "0.0");
+        assert_eq!(t("0.a"), "0 . a");
+        assert_eq!(t("a..0"), "a . .0");
+        assert_eq!(t("..,0"), ". . , 0");
+        assert_eq!(t("0,,0"), "0 , , 0");
     }
 
     #[test]
