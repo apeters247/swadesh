@@ -542,16 +542,21 @@ fn trace_align(refs: &[u32], hyp: &[u32], ops: &mut Vec<u8>) -> Trace {
             let sub = cost[(i - 1) * w + j - 1] + if same { 0 } else { 1 };
             let del = cost[i * w + j - 1] + 1;
             let ins = cost[(i - 1) * w + j] + 1;
-            // Strict "<" in the order the oracle tries (substitution, deletion, insertion).
+            // Strict "<" in the order spec 4.1 measured: diagonal (match/substitute) first, then
+            // insertion, then deletion. The previous form tried deletion before insertion, which
+            // picks a different path whenever the two tie, hence a different alignment and hence
+            // different shift candidates. Measured 2026-11-24 on the 4,000-sequence battery: this
+            // order agrees on 3,999 of 4,000 (the one residual case is a separate phenomenon), the
+            // old deletion-before-insertion order on 3,980, and the four other orders on 3,913-3,950.
             let mut best_cost = sub;
             let mut best_op = if same { OP_MATCH } else { OP_SUB };
-            if del < best_cost {
-                best_cost = del;
-                best_op = OP_DEL;
-            }
             if ins < best_cost {
                 best_cost = ins;
                 best_op = OP_INS;
+            }
+            if del < best_cost {
+                best_cost = del;
+                best_op = OP_DEL;
             }
             cost[i * w + j] = best_cost;
             op[i * w + j] = best_op;

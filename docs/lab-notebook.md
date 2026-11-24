@@ -3184,3 +3184,52 @@ full matrix, since the band is documented as a scoring detail, not a generation 
 gain accounting (ours recomputes the banded distance; TERCOM's published loop derives the gain from
 the alignment's error counts). Both are larger changes than a bound, and both need their own
 measurement plan before code.
+---
+
+## 2026-11-24 (continued) — TER shift search: the alignment tie-break was wrong
+
+**Attempted.** With the goal now "match sacreBLEU exactly in all cases", I went back to the last 18
+TER failures with a different method: instead of perturbing the search, probe *where the oracle's
+search stops*. Feeding it the intermediate hypotheses our own search produces showed the oracle
+reporting **12 edits** from the state after our first shift while reporting **14** from the original —
+so it never takes that shift, which pointed at the alignment (which decides which candidates exist)
+rather than the caps.
+
+**Measured.** The traceback's tie-break is a six-way choice; spec 4.1 already records it as
+"diagonal (match/substitute) first, then insertion, then deletion", and the code had deletion before
+insertion. Sweeping all six orders over the first 400 sequences of the general battery:
+
+| order | mismatches |
+|---|---|
+| **sub, ins, del (spec 4.1)** | **0/400** |
+| sub, del, ins (the code) | 1/400 |
+| sub, ins, del variants of the remaining four orders | 50-87/400 |
+
+Full battery: **1/4000** with the spec's order (was 20/4000). The tie-break key inside `best_shift`
+was re-tested under the corrected alignment and is already right (default 0/400 vs pure-gain first
+50, last 82, shorter 66, nearer 79).
+
+**Also measured, and rejected:**
+
+* `MAX_SHIFT_SIZE` 10 -> 50: the general battery stays 1/4000 but a shift-heavy battery (references
+  built by block moves, like `test_ter_long_sentences_shifts`) goes 5/600 -> 14/600. The spec's
+  "len <= 50" is the *cost* rule (a 50-word block costs one edit); the *search* cap of 10 is the
+  efficiency parameter, exactly as spec 7 says. The code's 10 is right.
+* Candidate collection restricted to aligned pairs (spec 4.2's wording): 224/400 general, 586/600
+  shift-heavy, i.e. the oracle's candidate *set* is the full matching-block enumeration, not the
+  alignment pairs.
+* Reference-major candidate order: 0/400 general but 7/600 shift-heavy, worse than 5/600.
+* Evaluation budget sweep (the search exhausts the 1,000 budget: the traced case ran 6 iterations
+  and the last was cut at 47 of 179 candidates): 250 -> 108/600, 500 -> 50/600, **1000 -> 5/600**,
+  2000 -> 7/600. So 1,000 is the optimum the spec records, and the residual is not a budget count.
+
+**State.** General battery 1/4000, shift-heavy battery 5/600. `cargo test --release --workspace` is
+13 suites green. The seven-file selection is unchanged at **18 failed / 705 passed**: every one of
+those 18 is in the shift-heavy regime (20-60 tokens, references built from block moves or drawn with
+the test's punctuation-heavy vocabulary), where the residual is 5/600 rather than 1/4000. So this fix
+closes a whole regime that used to disagree 20 times in 4,000 and leaves the other one untouched.
+
+**Next step.** The residual is in the shift-heavy regime only and is one-sided (ours reduces more).
+The untried structural candidate is the gain accounting: ours recomputes the banded distance for
+every candidate, while the published loop derives the gain from the alignment's error counts, which
+would accept or reject a marginal candidate differently.
