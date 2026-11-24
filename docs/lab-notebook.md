@@ -2186,3 +2186,39 @@ generation as that alignment walk and re-measure both batteries.
 **State after revert.** Tree clean at `a39f551`; `MAX_SHIFT_SIZE` back to 10; the random battery is
 back to 20/4000 and the suite numbers to the previous session's (test_ter 20 failed / 32 passed).
 
+---
+
+## 2026-11-24 (continued) — item 5: the small gaps, measured
+
+**Attempted.** Ship-readiness item 5: NOTICE names the copyright holder, WMT22 fixture provenance
+recorded, a version-consistency test, and the MCP tests run or marked optional. The shift-search
+cluster is left where the previous entry put it.
+
+**Measured.**
+
+- *Copyright holder.* `NOTICE` opens "Copyright the swadesh contributors", but
+  `LICENSE.commercial` section "Copyright" says "the copyright holder is the author named in
+  `NOTICE`" — and no author is named there. The only party the tree names is in the
+  `LICENSE.commercial` contact block: "Kevin Peters · Catalytic AI · info@catalyticgpu.com".
+  `CLA.md` also defers to "the copyright holder" without naming one. So a dual-licence whose licensor
+  cannot be identified from `NOTICE` is a real gap.
+- *WMT22 provenance.* `tests/oracle/wmt22.*.jsonl` contain only expected outputs — zero lines carry
+  source or hypothesis text — while the corpus is fetched by `bench/get_data.sh` with
+  `sacrebleu -t wmt22 -l <lp> --echo ref|src` into `bench/data/`, which is gitignored.
+  `tests/corpus/model/*.jsonl` do embed `src` and `hyp` with the references in `ref-*.txt`.
+  `tests/oracle/MANIFEST.json` records only `sacrebleu: 2.6.0` and `python: 3.11.14`; no source or
+  terms for the WMT data appear in `NOTICE` or `docs/licensing.md`.
+- *Version consistency.* `Cargo.toml` `[workspace.package] version = "0.1.0"`,
+  `python/swadesh/__init__.py` `__version__ = "0.1.0"`, and the installed metadata all read `0.1.0`,
+  but nothing asserts that: `grep -rn "0.1.0\|__version__" tests/` finds no comparison, so a future
+  bump can drift silently.
+- *MCP.* `tests/test_mcp.py:8` is `pytest.importorskip("mcp")`, so with `mcp` absent the module
+  collects zero tests. That is already "marked optional", but it is unverified. `mcp` was installed
+  into `~/venv311` so the module can actually run.
+
+**Decision.** Name the holder in `NOTICE` as Kevin Peters (the only party the repository already
+names) and keep the contributors line for contributions assigned under `CLA.md` — this is the
+owner's legal call, flagged here rather than assumed final. Add a WMT22 provenance bullet to
+`NOTICE`. Add `tests/test_version.py` asserting the three version sources agree. Run the MCP module
+with `mcp` installed and record the result.
+
