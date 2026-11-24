@@ -3428,3 +3428,33 @@ accounting together), which is a multi-day job with no convergence guarantee. Th
 documented in `TESTING.md` with its regimes, reproduction and rejected hypotheses. Deciding whether
 to spend that time, or to accept the documented divergence, is the owner's call — everything else in
 the objective (bug hunt, speed, capability, feature proposals) is delivered.
+
+### 2026-11-24 (continued) — TER residual: the oracle's first move measured directly
+
+**Attempted.** Instead of perturbing the algorithm again, I measured what the oracle *does* on the
+failing case by enumerating our first-iteration candidates (161 improving ones, dumped from the Rust
+search) and asking the oracle for its total after each: `1 + oracle(shifted)`.
+
+**Measured.**
+
+* Plain distance of the original: **49**. The oracle reports **43**, so it does shift.
+* Distribution of `1 + oracle(shifted)` over the 161 candidates: **41: 3, 42: 65, 43: 62, 44: 24, 45: 3**.
+* So the oracle's first move is one of the 62 that leave it at 43 — a *net-zero* move (almost all are
+  `gain=1, len=1`), even though three candidates would let it reach **41** and 65 would reach 42.
+* Our own first move is a `gain=3` candidate in the 42-group.
+
+**Hypotheses tested against that datum, all rejected on the 80-case battery:**
+
+| hypothesis | battery |
+|---|---|
+| committed | 3/80 |
+| first-improvement (accept the first improving candidate) | 71/80 |
+| match-count gain (maximise new matched word pairs) | picks a 41/42 candidate, i.e. still not the oracle's move |
+| reference-major / aligned-only / boundary-error filters / swapped matrix / error-count gains / budgets / caps | 7-224/80 or 224-2141/400 (all recorded earlier) |
+
+**Conclusion.** The oracle's choice cannot be produced by maximising any monotone function of the
+distance or the match count over *our* candidate set: its first move is strictly worse than several
+candidates we and it both "should" have. Either its candidate set is missing exactly those moves, or
+its gain is not a function of the segment's alignment at all. Nineteen candidate mechanisms have now
+been measured, and each is worse than the committed search. The measured dump, the probe scripts and
+this table are the handover for the next attempt.
