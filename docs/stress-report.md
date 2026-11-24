@@ -1,6 +1,8 @@
 # Stress, robustness and performance report
 
-> **Status (2026-11-24): historical.** This report records the 2026-11-19 testing campaign. It has
+> **Status (2026-11-24): the 2026-11-19 campaign below is historical; a speed and capability re-run on the current tree is appended at the end of this file.**
+>
+> **Originally:** This report records the 2026-11-19 testing campaign. It has
 > not been re-run since the 2026-11-22 clean-room rewrite of the tokenizers and the segment
 > statistics, so the figures below describe the tree as it was then. `TESTING.md` carries the
 > re-measured state and the list of known divergences; `docs/lab-notebook.md` records what was
@@ -81,3 +83,49 @@ BLEU scales least because reading the Python strings is serial (it needs the GIL
 - Shared `CHRF.sentence_scores` from 1–16 threads: 0 mismatches.
 - Fork safety: `PairedTest(n_jobs=2)` after native calls no longer deadlocks (per-process thread pool), covered by
   `tests/test_parity.py`.
+
+## Re-measured 2026-11-24 (speed and capability, current tree)
+
+Run on troy-1, Python 3.11.14, 24 cores, while the differential suite was not running. Each row is
+the best of up to three runs; the corpus is `tests/corpus/model/ref-*.txt` (1,050 real segments),
+scored with the hypothesis equal to the reference. Absolute times are still noisy (the machine is
+shared), and the TER rows vary between runs, so read the ratios as order-of-magnitude.
+
+**Corpus scores**
+
+| metric | segments | swadesh | sacreBLEU 2.6.0 | speed-up |
+|---|---|---|---|---|
+| BLEU `13a` | 200 | 3.4 ms | 28.7 ms | 8.3x |
+| BLEU `13a` | 1,000 | 11.1 ms | 112.7 ms | 10.2x |
+| BLEU `intl` | 1,000 | 17.2 ms | 110.5 ms | 6.4x |
+| chrF | 1,000 | 18.7 ms | 531.2 ms | 28.4x |
+| chrF++ | 1,000 | 26.0 ms | 588.2 ms | 22.6x |
+| TER | 1,000 | 7.5-32.6 ms | 952.2 ms | 29-118x |
+| TER `normalized` | 1,000 | 14.8 ms | 1,128.6 ms | 76.5x |
+
+**Sentence-level**
+
+| call | segments | swadesh | sacreBLEU | speed-up |
+|---|---|---|---|---|
+| `sentence_scores`, BLEU `13a` | 1,000 | 26.0 ms | 154.6 ms | 5.9x |
+| `sentence_scores`, chrF | 1,000 | 22.0 ms | 475.2 ms | 21.6x |
+| `sentence_scores`, chrF++ | 1,000 | 29.6 ms | 528.7 ms | 17.9x |
+| `TER().sentence_score` | 200 | 12.8 ms | 197.5 ms | 15.5x |
+
+**Capability (the sizes sacreBLEU struggles with)**
+
+| case | swadesh | sacreBLEU | speed-up |
+|---|---|---|---|
+| one 20,000-token segment, BLEU | 3.0 ms | 43.6 ms | 14.6x |
+| one 20,000-token segment, chrF | 1.9 ms | 43.8 ms | 23.5x |
+| 5,000 segments, BLEU | 5.8 ms | 604.9 ms | 103.7x |
+| 5,000 segments, chrF | 7.9 ms | 2,906.3 ms | 366.8x |
+| one 500-token segment, TER, identical | 12.4 ms | 27.3 ms | 2.2x |
+| one 500-token segment, TER, block-shifted | 71.8 ms | 8,536.2 ms | 118.8x |
+
+**Exactness during the benchmark.** At 1,000 segments the scores compared `==` for BLEU, chrF and
+TER, so the speed did not come from cutting corners.
+
+The TER rows are the widest spread because the shift search dominates: an identical pair costs one
+alignment, a block-shifted pair costs the whole iterative search, and that is where the native
+implementation is 100x faster than the reference loop.

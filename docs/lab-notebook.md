@@ -3317,3 +3317,38 @@ parity fix).
 **Also noted for the speed phase.** `TER().corpus_score` on 40-80-token random segments takes
 seconds per corpus on both sides, so the benchmark script must use realistic (translation-like)
 text, not random word soup, or the numbers will be dominated by the shift search's worst case.
+
+### 2026-11-24 (continued) — speed and capability re-measured; feature proposals written
+
+**Attempted.** Criterion 6 had not been re-run since the clean-room rewrite. Ran a fresh speed and
+capability comparison against sacreBLEU 2.6.0 on troy-1 (Python 3.11.14, 24 cores) using the 1,050
+real segments in `tests/corpus/model/ref-*.txt`.
+
+**Measured (best of up to three runs; the machine is shared, so read ratios as order of magnitude).**
+
+| case | swadesh | sacreBLEU | speed-up |
+|---|---|---|---|
+| BLEU 13a, 1,000 segments | 11.1 ms | 112.7 ms | 10.2x |
+| chrF, 1,000 segments | 18.7 ms | 531.2 ms | 28.4x |
+| chrF++, 1,000 segments | 26.0 ms | 588.2 ms | 22.6x |
+| TER, 1,000 segments | 7.5-32.6 ms | 952.2 ms | 29-118x |
+| TER normalized, 1,000 segments | 14.8 ms | 1,128.6 ms | 76.5x |
+| BLEU sentence_scores, 1,000 | 26.0 ms | 154.6 ms | 5.9x |
+| chrF sentence_scores, 1,000 | 22.0 ms | 475.2 ms | 21.6x |
+| BLEU, one 20k-token segment | 3.0 ms | 43.6 ms | 14.6x |
+| 5,000 segments, BLEU | 5.8 ms | 604.9 ms | 103.7x |
+| 5,000 segments, chrF | 7.9 ms | 2,906.3 ms | 366.8x |
+| TER, one 500-token block-shifted segment | 71.8 ms | 8,536.2 ms | 118.8x |
+
+Scores compared `==` for BLEU, chrF and TER at 1,000 segments during the run, so the speed is not
+bought with approximation. The wide TER spread is the shift search: an identical pair is one
+alignment, a shifted pair is the whole iterative search.
+
+**Deliverables.** A dated section appended to `docs/stress-report.md` (and its historical banner
+updated), plus `docs/feature-ideas.md` with eight proposals grounded in what the tree already has:
+`TER.sentence_scores`/`pairwise`, one-pass multi-metric `evaluate()`, `TER.explain()`, a streaming
+accumulator, `n_jobs` on corpus calls, `compare()` with bootstrap clustering, `strict=True` input
+validation, and seeds in every signature.
+
+**Next step.** The TER shift-search residue (3/80 on long unrelated references) is the only known
+exactness gap; the feature list is independent of it.
