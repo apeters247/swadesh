@@ -2511,3 +2511,39 @@ reads 23 rather than 22 here, which is the hypothesis seed variance already reco
 (`[[0, 2, 0, 0, ...]] == [[0, 1, 0, 0, ...]]`), and the differential's remaining 17 are now the
 chrF/paired/pairwise and tokenizer-exactness families rather than BLEU counts.
 
+---
+
+## 2026-11-24 (continued) — intl limb 1: the position-0 mark absorption
+
+**Attempted.** The `test_fuzz_unicode.py` BLEU failure reproduced to `tokenize='intl'`, `hyps=['']`,
+`refs=[['.٣']]`, where the reference tokenises to 2 tokens here and 1 in the oracle. That is limb 1 of
+`docs/spec/intl-absorption.md`, which was already written and measured on 2026-11-22 but never
+implemented: at the very start of the segment every `\p{P}` mark glues a following digit run.
+
+**What the committed code had.** A narrow list instead - CJK comma anywhere, dash after dash, and
+dash / `(` / `[` / `（` / `“` / `«` / `@` at index 0 - so `/1`, `,1`, `;1`, `:1`, `。1`, `¿1`, `.٣`
+and `?1` all split on our side.
+
+**Change.** One guarded clause: `limb1 = i == 0 && (is_punct(c) || c == '_')`, keeping the outer
+"followed by a digit" test and the `\p{S}` exclusions, so marks followed by another mark rather than
+a digit (`./1`, `!/1`, `'?1`) still split as the oracle does. The spec's rules are unchanged; only its
+Status section was updated to say limb 1 is in and limbs 2/3 are not.
+
+**Measured** (tokenizer against `_preprocess_segment`, 3.11.14):
+
+| check | before | after |
+|---|---|---|
+| fixed probe set (29 probes) | 12 wrong | **3 wrong** |
+| random `\p{P}`/`\p{N}`/`\p{S}`/letter sweep, 3,000 cases | 611 wrong | **372 wrong** |
+| `tests/test_parity.py` | 494 passed | 494 passed |
+| `tests/test_frozen_oracle.py` | 1 failed | 1 failed (`fuzz42`, unchanged) |
+| `tests/test_differential.py` | 17 failed | 17 failed |
+| `tests/test_deep.py` | 7 failed | 7 failed |
+| `tests/test_fuzz_unicode.py` | 3 failed | 3 failed (same three tests) |
+
+**Why the suite counts do not move yet.** Each of those tests is one hypothesis test that reports its
+first counterexample, so closing the `.٣` case just advances `test_uni_bleu_corpus` to the next one.
+The three remaining fixed-probe mismatches name what is left: `‘’/1` (limb 3, the quote pairs),
+`?1%` (the trailing-punctuation rule is missing from the lead path - the oracle glues, we split), and
+`a./1` (limb 2, a mark after a word ending in a letter). Limb 2 is the bulk of the remaining 372.
+

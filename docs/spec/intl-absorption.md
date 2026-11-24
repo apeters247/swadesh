@@ -42,7 +42,19 @@ A mark joins a following digit run when the mark is not `\p{S}` **and** one of:
 
 Everything else splits.
 
-## Status: not implemented
+## Status: limb 1 implemented; limbs 2 and 3 pending
+
+Limb 1 shipped on 2026-11-24 as a single guarded clause in `tokenize_intl_clean.rs`:
+`i == 0 && (is_punct(c) || c == '_')`, under the existing `\p{S}` exclusions and the outer
+"followed by a digit" test. Measured: the fixed probe set went from 12 of 29 wrong to 3 of 29, and a
+3,000-case random sweep over `\p{P}`/`\p{N}`/`\p{S}`/letter characters from 611 to 372. The suite
+counts did not move, because each of those hypothesis tests reports its first counterexample and the
+BLEU one's counterexample simply moved on to limb 2.
+
+Still open: limb 2 (a mark after a word that ends in a letter), limb 3 (the quote pairs), and the
+trailing-punctuation rule in the lead path (`?1%` glues in the oracle, `?1` `%` here).
+
+The rest of this section is the original attempt record, kept because it names the blocker.
 
 I attempted this rule nine times on 2026-11-22. Attempts 1-5 are recorded in the lab notebook; each
 fixed the cases it was measured against and regressed others, and the final state was worse than the

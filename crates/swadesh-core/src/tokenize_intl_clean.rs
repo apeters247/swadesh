@@ -14,7 +14,9 @@
 //!   * A CJK comma or a dash glues a following digit run when it starts a token, and a run
 //!     continues into letters (`,２つのHDMI端子`).
 //!   * A dash that directly follows another dash glues digits anywhere (`——2300`).
-//!   * Brackets and opening quotes glue digits only at the very start of the line (`-22種類`).
+//!   * Brackets and opening quotes glue digits only at the very start of the line (`-22種類`);
+//!     the general rule there is limb 1 of `docs/spec/intl-absorption.md`: at index 0 every
+//!     `\p{P}` mark glues a following digit run, and `\p{S}` marks never do.
 //!   * A digit run may absorb one trailing punctuation at end of line (`1699?`), but never an emoji.
 
 use crate::unicode::{is_punct, is_symbol};
@@ -147,11 +149,15 @@ pub fn tok_intl(line: &str, out: &mut String) {
             let dash = c == '\u{2014}' || c == '\u{2013}' || c == '-';
             let dash_after_dash =
                 dash && i >= 1 && matches!(s[i - 1], '\u{2014}' | '\u{2013}' | '-');
-            let bracket_or_quote = matches!(c, '(' | '[' | '\u{FF08}' | '\u{201C}' | '\u{00AB}' | '@');
+            // spec `intl-absorption.md` limb 1: at the very start of the segment *every* `\p{P}`
+            // mark glues a following digit run, whatever the mark (`?1`, `.٣`, `/1`, `¿1`). The
+            // `\p{S}` marks never do, and a mark followed by another mark rather than a digit does
+            // not either, which is why `./1`, `!/1` and `'?1` still split.
+            let limb1 = i == 0 && (is_punct(c) || c == '_');
             let leads = i + 1 < n
                 && is_digit(s[i + 1])
                 && starts_token
-                && (cjk_comma || dash_after_dash || (dash && i == 0) || (bracket_or_quote && i == 0));
+                && (cjk_comma || dash_after_dash || limb1);
             if leads {
                 let mut j = i + 1;
                 while j < n && is_digit(s[j]) {
