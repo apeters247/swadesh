@@ -2993,3 +2993,46 @@ when `no_punct` is set; other marks keep being replaced by a space.
 +no_punct, +asian_support, default), and a 6,000-segment battery mixing CJK and fullwidth marks is
 0/6,000 in the four asian/no_punct combinations. `test_ter.py` is **16 failed / 36 passed** (was 28
 failed): every remaining failure is `test_ter_long_sentences_shifts`, the shift search.
+
+---
+
+## 2026-11-24 (continued) — TER shift search: the alignment-walk attempt, measured and reverted
+
+**Attempted.** The 16 `test_ter_long_sentences_shifts` failures plus 2 in `test_deep` are the last
+TER class. Ours reports *fewer* edits than the oracle (e.g. `ours=(21,24)` vs `oracle=(23,24)`), so
+our search reduces more, which points at candidate generation rather than the caps. Spec §4.2 says
+the oracle "walks the alignment left to right, pairing each hypothesis position with the reference
+positions it aligns to", so I restricted `shifted_pairs` to aligned `(s_h, s_r)` pairs (using
+`trace.align`) instead of enumerating every matching block.
+
+**Measured.** Baseline battery (`/home/kpeters/swarm-review/ter/shift_battery.py`, 4,000 random
+sequences, default mode): **20/4000** mismatches, all with ours < oracle. With alignment-restricted
+generation: **2141/4000** — much worse, and the failing example flips to ours > oracle
+(`ours=(26,33)` vs `oracle=(24,33)`), i.e. the restriction loses most of the shifts the oracle finds.
+This reproduces the outcome of an earlier attempt recorded in the handoff, so the reading of that
+spec sentence as a *restriction* is wrong: the oracle's candidate set must still be built from
+blocks, not only from aligned pairs.
+
+**Decision.** Reverted (`git checkout`); the binary is byte-identical to the pre-attempt build
+(md5 `ec1711…`). No code change. This is the fourth recorded attempt at this cluster (see the
+2026-11-22 entries and the handoff for the other three: `MAX_SHIFT_SIZE` 10→50 left the battery at
+20/4000 and worsened `test_deep`; a 25-candidate-per-iteration cap exploded the battery to
+670/4000; a literal alignment walk gave 2141/4000, now reproduced).
+
+**Concrete leads for the next attempt**, all measured, none yet tried together:
+
+1. **Spec/code mismatch on the block-length cap.** Spec §4.2 records `1 <= len <= 50` as *measured*
+   (a 50-word block shifts as one edit, 51 does not), but `ter_clean.rs` has
+   `MAX_SHIFT_SIZE: usize = 10`. Raising it alone changed nothing (the battery stayed 20/4000),
+   which is itself evidence that the candidate budget is exhausted before length is the binding
+   constraint.
+2. **The 25-per-iteration candidate cap of §4.2 is not implemented.** `best_shift` examines up to
+   the whole `MAX_CANDIDATES` budget per iteration; the spec says at most `BEAM_WIDTH` (25) per
+   iteration and at most 1,000 *collected* candidates, in alignment order. The naive 25-cap
+   regressed to 670/4000, which suggests the cap and the collection order must change together
+   (candidates must be collected in the oracle's order *before* capping).
+3. The observable target is exact: the battery prints ours and oracle for every mismatch, so any
+   change can be scored in one run (~110 s).
+
+**Next step.** Instrument one failing battery sequence to see which shift the oracle takes that we
+do not (and vice versa), then decide the generation rule from the trace rather than from the prose.
