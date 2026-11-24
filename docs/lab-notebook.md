@@ -3396,3 +3396,35 @@ commands; the ten hypotheses already rejected with their numbers; and the struct
 
 No test was marked expected-to-fail and no threshold was loosened: the 18 tests still fail, which is
 the honest state.
+
+### 2026-11-24 (continued) — TER residual: three final hypotheses, all rejected
+
+**Attempted.** After documenting the divergence in `TESTING.md`, three last structural candidates,
+each chosen because it could only bite in the long-segment regime:
+
+1. **candidate generation from a full-matrix alignment** instead of the banded one (the band is a
+   scoring detail; if the oracle generates candidates without it, long segments would differ);
+2. dropping the **hypothesis-error filter** on candidates;
+3. dropping the **reference-error filter** on candidates.
+
+**Measured (the 80-case independent battery).**
+
+| variant | wrong |
+|---|---|
+| committed | **3/80** |
+| full-matrix alignment for candidates | 3/80 (identical cases — the optimal path stays inside the band at these lengths) |
+| no reference-error filter | 16/80 |
+| no hypothesis-error filter | 11/80 |
+| neither filter | 23/80 |
+
+**Decision.** Reverted; binary byte-identical. Thirteen hypotheses have now been measured and every
+alternative is worse. The candidate filters, the band, the ties, the caps, the budget, the gain
+metric and the gain source are all individually confirmed, and the residual is one edit unit created
+in the first two shifts of a long unrelated-reference segment.
+
+**Conclusion.** This cluster is at the end of what black-box perturbation can reach. Closing it needs
+a structural re-derivation of the reference's shift routine (candidate generation *and* gain
+accounting together), which is a multi-day job with no convergence guarantee. The divergence is
+documented in `TESTING.md` with its regimes, reproduction and rejected hypotheses. Deciding whether
+to spend that time, or to accept the documented divergence, is the owner's call — everything else in
+the objective (bug hunt, speed, capability, feature proposals) is delivered.
