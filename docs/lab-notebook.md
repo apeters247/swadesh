@@ -3488,3 +3488,34 @@ DuckDuckGo, Bing and PyPI all serve bot challenges from this host, so no outside
 shift search could be read. GitHub's issue search for `ter` in sacreBLEU returns 18 issues but the
 page extraction drops their titles, and the one TER-adjacent hit retrieved was an unrelated WER
 feature request. Recording this rather than pretending the review happened.
+
+### 2026-11-24 (continued) — TER: shift-count cap and first-improvement rejected; external sources blocked
+
+**Measured.** Two more mechanisms, on the 80-case independent battery (committed = 3/80):
+
+| variant | wrong |
+|---|---|
+| hard cap of 2 shifts per segment | 44/80 |
+| cap of 3 | 35/80 |
+| cap of 4 | 19/80 |
+| cap of 5 | 11/80 |
+| first-improvement hill climbing (accept the first improving candidate) | 71/80 |
+| committed (unlimited shifts, best-improvement) | **3/80** |
+
+So the oracle does not cap the number of shifts at any small value, and it is not a
+first-improvement search. Twenty mechanisms have now been measured; every one is worse.
+
+**External sources, all blocked from this host.** The ACL Anthology PDF for the TER paper
+(`2006.amta-papers.25`) returns no extractable text; DuckDuckGo and Bing serve bot challenges;
+PyPI serves a client challenge; `cs.umd.edu/~snover/tercom/` is 404; GitHub's issue search for `ter`
+lists 18 sacreBLEU issues but the page extraction drops titles. No outside description of the shift
+search could be read, so the "review external comments" half of this session's brief could not be
+carried out on this machine — it needs either network access to those sites or the paper pasted in.
+
+**Where the cluster stands.** Twenty mechanisms rejected; the one datum that resists them all is the
+direct measurement: the oracle's chosen first move leaves its total at 43 while 65 candidates would
+reach 42 and three would reach 41. That is not the maximiser of the distance gain, the match-count
+gain, or the first improvement, over a candidate set that (measured) is the full matching-block
+enumeration. The next step that could actually decide it is the published algorithm text, or a
+per-case inference of the oracle's move sequence — which needs the number of shifts taken, and that
+is not observable through the public API.
