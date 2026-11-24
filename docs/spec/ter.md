@@ -99,7 +99,35 @@ section 3.2 matters: the `&` it produces survives `no_punct`.
    The class is exactly ASCII, code points `0x00`–`0x7F`. Measured: `0x7E` (`~`) separates, `0x7F`
    (DEL) and `0x80` do not.
 
-8. Collapse spaces again and split.
+8. **The possessive `'s` closes the preceding word.** Measured: `a's` -> `a 's` and `a's's` ->
+   `a's 's`, while `'s` alone stays `'s`. The split happens exactly when the character after the
+   `s` is
+
+   - the end of the segment,
+   - a space (U+0020) or a line feed (U+000A), or
+   - one of the separating ASCII marks of step 7: `!` `"` `#` `$` `%` `&` `(` `)` `*` `+` `/` `:`
+     `;` `<` `=` `>` `?` `@` `[` `\` `]` `^` `_` `` ` `` `{` `|` `}` `~`.
+
+   It does **not** happen when the next character is a letter or a digit, or `.`, `,`, `'`, `-`, or
+   any Python whitespace other than space and line feed. Measured (`_preprocess_segment`,
+   normalised):
+
+   | input | tokens | input | tokens |
+   |---|---|---|---|
+   | `a's` | `a 's` | `a's?b` | `a 's ? b` |
+   | `a's.` | `a's .` | `a's'b` | `a's'b` |
+   | `a's,` | `a's ,` | `a's-b` | `a's-b` |
+   | `a's\tb` | `a's b` | `a's\nb` | `a 's b` |
+   | `a's  b` | `a 's b` | `a's\t` | `a 's` |
+
+   Two consequences. The lookahead is **one character**, so a lone `.` or `,` that the piece scanner
+   cut into its own piece must still count as the character the `s` was followed by, not as the end
+   of a piece; and a tab does not trigger the split even though it ends the piece, while an
+   end-of-segment tab does (`a's\t` -> `a 's`). The earlier implementation got this backwards: it
+   split on exactly `.`, `,` and `'`, and did not split on the other marks, so `a's.` became
+   `a 's .` instead of `a's .` and `a's'` became three tokens instead of one (measured 2026-11-24).
+
+9. Collapse spaces again and split.
 
 With `no_punct = true`, the deletion set of section 3.1 runs first, but **in normalized mode a
 deleted mark is replaced by a space, not removed**, so it still separates tokens. The exception is
