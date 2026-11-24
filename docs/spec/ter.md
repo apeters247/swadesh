@@ -304,11 +304,14 @@ runs the tokenizer once when references are cached and once when they are extrac
 observable where the tokenizer is not idempotent. It is idempotent on the apostrophe-heavy inputs
 first probed (`dont''s`, `the 's`, `44 -0038' s`), but **not** on a possessive followed by a lone
 `.` or `,`: `a's.` → `a's .` → `a 's .`, and `a's,` → `a's ,` → `a 's ,`. The second pass splits the
-`'s` that the first pass left attached. So the double preprocessing is observable for that narrow
-class. The native kernel currently preprocesses once and therefore disagrees with the oracle on
-`a's.` and `a's,` (reference length 2 against the oracle's 3, measured 2026-11-22). That gap is
-recorded in the lab notebook and not yet closed; the fixtures (§6) enforce the outcome, so a
-double-pass implementation would be accepted without changing them.
+`'s` that the first pass left attached, so the double pass is observable for that class.
+
+**How it is reproduced.** The native path preprocesses each reference stream once in Python with the
+oracle's own `_preprocess_segment` and lets the kernel tokenize the result, which is the second pass;
+the hypothesis is still tokenized once, as in the oracle. With the possessive rule of step 8 in
+place, a 400-case randomized battery over an apostrophe/whitespace alphabet matches the oracle on
+every corpus statistic in both the default and the normalised mode, and a 600-case battery matches
+the single-pass reference token count exactly (measured 2026-11-24).
 
 ## 6. Verification plan
 

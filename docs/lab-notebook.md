@@ -2070,3 +2070,38 @@ and prune the stale worktrees (part of blocker 5), before starting on the correc
 - Pushing to the private `apeters247/swadesh` stays allowed; no `v*` tag, no PyPI, no crates.io.
 
 **Next.** Correctness cluster 1: TER numeric type, values, `normalized` mode and long-sentence shifts.
+
+
+---
+
+## 2026-11-24 (continued) — TER cluster: the possessive rule, and the reference double pass
+
+**Attempted.** Correctness cluster 1 (TER). Two defects were reproduced first, then fixed in order:
+the possessive `'s` tokenizer rule, and the reference double preprocessing.
+
+**Measured, defect 1 — the possessive rule.** The spec had no possessive rule at all; step 7 said the
+apostrophe never separates, yet the oracle splits `a's` into `a 's`. A one-character sweep of
+`_preprocess_segment("a's" + c + "b")` over `string.printable` plus a few Unicode spaces gives the
+rule: split exactly when the character after the `s` is the end of the segment, a space (U+0020), a
+line feed (U+000A), or one of the separating ASCII marks (`! " # $ % & ( ) * + / : ; < = > ? @ [ \ ]
+^ _ ` { | } ~`). No split for letters, digits, `.`, `,`, `'`, `-`, or any other Python whitespace
+(`a's\tb` -> `a's b` but `a's\t` -> `a 's`). The committed code had the condition roughly inverted:
+it split on `.`, `,` and `'` and not on the other marks, so `a's.` became `a 's .` and `a's'` became
+three tokens instead of one. Spec section 3.2 gains step 8 with the measured table; the Rust tokenizer
+now carries, per piece, what ended it (`TERM_END` / `TERM_SPACE` / `TERM_OTHER`) so the one-character
+lookahead survives the piece split.
+
+**Measured, defect 2 — the reference double pass.** The oracle preprocesses each reference twice
+(once in `_cache_references`, once in `_extract_reference_info`), observable on `a's.` because the
+tokenizer is not idempotent there. The native path preprocessed once.
+
+**Result of the tokenizer fix alone.** Single-pass reference token count: **0 mismatches in 600**
+random possessive-heavy references. Full corpus statistics, the comparison `test_ter.py` makes:
+normalized **96 -> 61** mismatches in 400 random cases; default mode 0. The 61 that remain are the
+double pass.
+
+**Result of the double pass (previewed before coding).** Feeding the kernel references preprocessed
+once in Python: **61 -> 0** mismatches over the same 800 comparisons. Section 5 of the spec is
+updated from "gap" to "reproduced this way".
+
+**Next.** Land the Python change, then rerun `tests/test_ter.py` for the cluster count.
