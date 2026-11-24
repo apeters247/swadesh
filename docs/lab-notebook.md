@@ -3082,3 +3082,44 @@ measurement first.
 
 **Measured after.** The four `test_paired_tests_exact_variants` and `test_paired_tests_exact` cases
 pass; see the session report for the selection count.
+
+### 2026-11-24 (continued) — TER shift search: six measured one-axis perturbations, all worse
+
+**Attempted.** With a minimal counterexample (hyp 17 / ref 14 words, ours 13 edits vs oracle 14) and
+a traced run of our own search, I established the shape exactly: ours accepts three shifts
+(gains 2, 1, 2; distances 15 -> 13 -> 12 -> 10, so 3 + 10 = 13), while the oracle's 14 is consistent
+with stopping after the gain-1 iteration (2 + 12 = 14). Caps are not the constraint: we collect only
+19-20 candidates per iteration and spend 37 of the 1,000 evaluation budget. So the difference is
+candidate generation.
+
+**Measured.** Five one-axis perturbations of `shifted_pairs`/`best_shift`, each scored on the
+4,000-sequence battery (`shift_battery.py`, default mode). All are worse than the committed search:
+
+| variant | battery mismatches |
+|---|---|
+| **committed** (every matching block, every prefix length) | **20/4000** |
+| only the maximal matching run, not its prefixes | 55/4000 |
+| accept a shift only when it nets more than the shift's cost (gain >= 2) | 514/4000 |
+| at most one shift per segment | 1351/4000 |
+| candidate generation restricted to aligned `(hyp, ref)` pairs (§4.2 read literally) | 2141/4000 |
+| 25-candidate-per-iteration cap (earlier session) | 670/4000 |
+| `MAX_SHIFT_SIZE` 10 -> 50 (earlier session) | 20/4000 unchanged, `test_deep` worse |
+
+Every restriction is monotone in the wrong direction, and in the committed configuration the
+residual mismatches are *all* one-way (ours < oracle: we reduce more). So the committed candidate
+set is a superset of the oracle's that no single-axis restriction trims correctly: the oracle must
+differ structurally (its alignment source, its gain accounting, or the tie-break), not by one
+bound.
+
+**Decision.** Reverted; the binary is byte-identical to the committed build (md5 `ec1711…`). This
+is the sixth recorded attempt at this cluster; the exhaustive table above is the deliverable of the
+session for it, together with the minimal counterexample and the traced acceptance sequence, so the
+next attempt can start from behaviour rather than prose.
+
+**Open question for the owner.** The objective's stop rule allows an unclosable cluster to become a
+documented divergence with an `xfail(strict=True)` regression test, while its boundaries say "never
+loosen, skip or xfail a test to get green". I have not applied `xfail`: the 18 remaining failures are
+real divergences, not test noise, and turning them into expected failures would report the item-1
+criterion as met while the TER shift search still disagrees with the oracle on 0.5% of random
+sequences. What is needed is a decision on which of the two rules governs, or a fresh approach to
+the generation rule.
