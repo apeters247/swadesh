@@ -2821,3 +2821,29 @@ Rust port follows in the next commit.
 
 **Next step.** Replace `dot_comma_splits` in `tokenize_zh_clean.rs` with the pair-consuming passes,
 rebuild, re-check `zh`.
+
+---
+
+## 2026-11-24 (continued) — zh implementation: pair-consuming passes replace the predicate
+
+**Change.** `crates/swadesh-core/src/tokenize_zh_clean.rs`: `dot_comma_splits` and the per-word
+`prev`/`next` handling are replaced by `dot_passes` (the two pair-consuming passes) over the
+stripped line; the range loop no longer decides `.`/`,`; the digit test is a named helper
+`is_zh_digit`. A unit test covers the run rule.
+
+**Measured.**
+
+| check | before | after |
+|---|---|---|
+| `swadesh.tokenize(_, "zh")` vs the raw oracle tokenizer, 13,289 corpus texts | failing on `...0` | **0 wrong** |
+| `tools/zh_reference.py` (battery + corpus) | — | **0/22,986** |
+| `cargo test --release -p swadesh-core --lib tokenize` | — | 26 pass, 0 fail |
+| `test_tokenizers_string_exact[zh]` | failed | passes |
+| seven-file selection | 47 failed / 676 passed (after 13a, before zh) | **44 failed / 679 passed** |
+| `cargo test --release --workspace` | — | 13 suites, 0 failed |
+
+**Failures.** None in the model; the first probe of `.0` showed the range table was still deciding
+`.` because it is in the table — the passes must own it.
+
+**Next step.** Tokenizer cluster with one known item left: nothing in `test_tokenizers_string_exact`
+now. The larger blocks are TER (shift search) and chrF epsilon.
