@@ -262,17 +262,41 @@ pub fn tokenize(cfg: &TerConfig, text: &str) -> Vec<String> {
             continue;
         }
         if cfg.normalized && (c == '.' || c == ',') {
-            let prev_digit = i > 0 && last_before.map_or(false, is_ascii_digit);
-            let next_digit = kept.get(i + 1).map_or(false, |&n| is_ascii_digit(n));
-            if !(prev_digit && next_digit) {
-                // A lone separator is its own piece (`a.b` -> `a` `.` `b`, `.,.,` -> four marks).
-                if !piece.is_empty() {
-                    pieces.push((std::mem::take(&mut piece), TERM_OTHER));
-                }
-                pieces.push((vec![c], TERM_OTHER));
-                i += 1;
+            // Measured 2026-11-24 (the same parity rule as 13a's dot run): for a maximal run of
+            // `.`/`,` of length `m` followed by `f`, with `b` set when the character before the
+            // run is an ASCII digit, the run's LAST mark joins `f` iff `f` is a digit and
+            // `(m + b)` is even; every other mark is its own piece. `0,9` and `1,000` stay one
+            // token (m=1, b=1); `.,9` -> `.` `,9` (m=2, b=0); `0.,9` -> `0` `.` `,` `9` (m=2,
+            // b=1); `...9` -> `.` `.` `.` `9` (m=3); `.,.,9` -> `.` `,` `.` `,9` (m=4).
+            let mut j = i;
+            while j < kept.len() && (kept[j] == '.' || kept[j] == ',') {
+                j += 1;
+            }
+            let m = j - i;
+            let b = i > 0 && is_ascii_digit(kept[i - 1]);
+            let f_digit = kept.get(j).map_or(false, |&n| is_ascii_digit(n));
+            let glue_last = f_digit && (m + usize::from(b)) % 2 == 0;
+            if glue_last && m == 1 {
+                // The mark belongs to the number around it (`0,9`, `1,000`, `9.9`): it stays in
+                // the current piece, so no cut happens at all.
+                piece.push(kept[i]);
+                last_char = Some(kept[i]);
+                i = j;
                 continue;
             }
+            if !piece.is_empty() {
+                pieces.push((std::mem::take(&mut piece), TERM_OTHER));
+            }
+            let cut = if glue_last { m - 1 } else { m };
+            for k in i..i + cut {
+                pieces.push((vec![kept[k]], TERM_OTHER));
+            }
+            if glue_last {
+                piece.push(kept[j - 1]);
+            }
+            last_char = Some(kept[j - 1]);
+            i = j;
+            continue;
         }
         piece.push(c);
         i += 1;
@@ -303,18 +327,13 @@ pub fn tokenize(cfg: &TerConfig, text: &str) -> Vec<String> {
             let c = p[k];
             let mut closes_word = false;
             let standalone = if c == '-' {
-                // Measured behaviour, which is asymmetric: sticky when the character before it is
-                // not a digit (`a-1`), or when nothing follows it but a mark or the end of the
-                // text (`Finanz-,`, `a-`). `5-a` and `12-13` split.
+                // Measured 2026-11-24: the whole rule is "split iff the character immediately
+                // before is an ASCII digit". `12-13`, `1-x`, `13-a` and `0-` split; `a-1`, `a-`,
+                // `Finanz-,`, `x-1`, `-0` and `--0` stay. The earlier form also made a trailing
+                // hyphen sticky whatever preceded it, which kept the digit cases `0-` and `9-;`
+                // joined (108 of 4,000 battery segments wrong).
                 let prev = if k == 0 { None } else { Some(p[k - 1]) };
-                let next = p.get(k + 1).copied();
-                let non_digit_before = prev.map_or(true, |q| !is_ascii_digit(q));
-                let followed_by_nothing = match next {
-                    None => true,
-                    Some(q) => separates(q) || q == '.' || q == ',',
-                };
-                let followed_by_nothing = followed_by_nothing && next.map_or(true, |q| !q.is_ascii_digit());
-                !(non_digit_before || followed_by_nothing)
+                prev.is_some_and(is_ascii_digit)
                         } else if c == '\'' {
                 // `'s` ends the piece: the apostrophe closes the current word and the `s` begins
                 // the next token. Any other apostrophe stays inside its word (`don't`, `x'y`),
