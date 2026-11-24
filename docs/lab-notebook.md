@@ -3256,3 +3256,36 @@ constants. The remaining candidate is the gain accounting: ours recomputes the b
 every candidate, while the published loop derives the gain from the alignment's error counts. That
 difference would only show up where a candidate's recomputed distance disagrees with the
 alignment-derived gain — i.e. exactly the long, many-iteration case.
+
+### 2026-11-24 (continued) — TER residual: the remaining hypotheses, measured and rejected
+
+**Attempted.** With the residue localised to long unrelated references, I replayed our accepted
+shifts on one failing case (57 vs 56 tokens, ours 42, oracle 43) and asked the oracle for its total
+from each intermediate state:
+
+| state | ours | oracle |
+|---|---|---|
+| original | 42 | 43 |
+| after our shift 0 (block (35,2) to 8) | 40 | 41 |
+| after our shift 1 | 39 | **39** |
+| after our shift 2 | 38 | **38** |
+| after our shift 3 | 37 | **37** |
+| after our shift 4 | 36 | **36** |
+
+So the two searches agree exactly from the third state on, and the whole difference is one unit,
+introduced in the first two steps. Three hypotheses for those steps were then measured:
+
+| hypothesis | result in the independent regime (80 cases) |
+|---|---|
+| committed | **3/80** |
+| gain computed from the unbanded matrix instead of the banded one | 3/80 (identical cases) |
+| tie-break: pure gain, first wins | 27/80 |
+| tie-break: pure gain, last wins | 34/80 |
+| tie-break: prefer shorter block | 32/80 |
+| tie-break: prefer later start / later target | 32/80 |
+
+**Decision.** Reverted; binary byte-identical. The banded-vs-unbanded gain makes no difference in this
+regime (the band is wide relative to these lengths), and the committed tie-break is again the best of
+the six. The one untried idea is a gain derived from the *alignment's error counts* rather than from
+a recomputed distance; it needs its own derivation from black-box probes (the formula is not
+observable directly), so it is a plan of its own rather than another one-line variant.
