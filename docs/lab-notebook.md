@@ -2248,3 +2248,34 @@ failing counts move between runs: `tests/test_ter.py` has been observed at both 
 the same commit and the same interpreter. The "before/after" numbers elsewhere in this notebook are
 single runs; only an exact zero is seed-independent, which is what the goal's proof needs.
 
+---
+
+## 2026-11-24 (continued) — item 4: the clean-room history gap, verified
+
+**Attempted.** Ship-readiness item 4: record in `docs/licensing.md` the areas that predate the
+specifications that now describe them, each with its measurement basis.
+
+**Measured** (`git log --diff-filter=A` per path, and `git log --since=<spec commit>` to see whether
+the code was later rewritten):
+
+| area | spec | implementation |
+|---|---|---|
+| tokenizers | `docs/spec/tokenizers.md` `0f77954` 11-22 00:34 | `tokenize_nonechar_clean.rs` `edfd940` 01:43, `13a` `3a420e4` 03:21, `zh` `515f3ba` 03:42, `intl` `87cbc03` 04:05 |
+| BLEU/chrF statistics | `docs/spec/stats.md` `c3e3445` 11-22 04:52 | `bleu_stats_clean.rs` `3d8df0c` 13:04, `chrf_stats_clean.rs` `34ecd83` 13:09 |
+| TER | `docs/spec/ter.md` `47539ec` 11-22 13:39 | `ter_clean.rs` `db8e08b` 14:17 |
+| **BLEU/chrF numeric core** | `docs/spec/stats.md` 11-22 04:52 | `score.rs`, `ngram.rs` `6b13050` **11-19 04:35** |
+| **significance kernels** | `docs/spec/significance.md` `478e2f1` 11-22 17:05 | `nprng.rs` `7f9b7da` and `resample.rs` `60bf8fa` **11-19 04:45**, `pairwise.rs` `5eb8843` 04:49 |
+| **CLI** | `docs/spec/cli-contract.md` `2b13911` 11-22 15:51 | `crates/swadesh-cli/src/main.rs` `943dcf0` **11-19 04:59** |
+
+The three bold rows are unchanged since their specification was committed: `git log --since` over
+those paths returns nothing. So the specification documents them after the fact, not before it.
+
+**A second finding.** The notebook has no entries dated 2026-11-19 at all (`grep "^## 2026-11-19"
+docs/lab-notebook.md` returns nothing), so the repository also holds no measurement record for how
+those three areas were derived. Their provenance is therefore not evidenced anywhere in the tree —
+which is exactly what item 4 asks to be written down rather than papered over.
+
+**Decision.** Add a section to `docs/licensing.md` that states what is spec-first and what is not,
+with the table above and the commit ids, and that says plainly which claim the repository does *not*
+support. No code or spec change: this is the documentation the objective asks for.
+
