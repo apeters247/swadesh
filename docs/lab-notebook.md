@@ -2588,3 +2588,40 @@ nine failed attempts the spec records. The next attempt should model the oracle 
 than looking for another local rule. The spec's Rule section gains a measured note that its limb-2
 wording does not match these probes.
 
+---
+
+## 2026-11-24 (continued) — intl: the lead path was missing the trailing absorption
+
+**Attempted.** The second of the three remaining fixed-probe mismatches: `?1%` glues in the oracle
+and split here. The tokenizer already has the rule - "a digit run may absorb one trailing punctuation
+at end of line, but never an emoji" - but only in the plain digit-run branch; the `leads` branch
+(which handles the mark-plus-digit-run shape introduced by limb 1) scanned digits and letters and
+then stopped.
+
+**Measured shape of the rule** before writing it (oracle, `_preprocess_segment`):
+
+| input | oracle |
+|---|---|
+| `?1%` | `?1%` glued |
+| `?12%` | `?12%` |
+| `?1%%` | `?1` `%` `%` |
+| `?1%x` | `?1` `%` `x` |
+| `?1a%` | `?1a` `%` (the character before the trailing mark is a letter, not a digit) |
+| `?1~`, `?1$` | split (the `\p{S}` set) |
+| `?1😀` | split (emoji) |
+| `?1.` `?1,` `?1)` `?1’` `?1。` `?1-` `?1/` | glued |
+
+**Change.** The same guarded clause the other branch already uses, added to the `leads` path: one
+class character at the very end glues when the character before it is a digit.
+
+**Measured** (tokenizer against the oracle):
+
+| check | before | after |
+|---|---|---|
+| fixed probe set (33 probes) | 3 wrong | **2 wrong** |
+| random `\p{P}`/`\p{N}`/`\p{S}`/letter sweep, 3,000 cases | 372 wrong | **343 wrong** |
+| `test_parity` / `test_frozen_oracle` / `test_fuzz_unicode` / `test_differential` / `test_deep` | 494 / 1 / 3 / 17 / 7 | unchanged |
+
+The two remaining fixed-probe mismatches are the two limbs still open: `a./1` (limb 2) and `‘’/1`
+(limb 3). The spec's Status note is updated to drop the trailing rule from its open list.
+

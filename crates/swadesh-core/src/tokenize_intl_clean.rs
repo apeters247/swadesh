@@ -166,6 +166,19 @@ pub fn tok_intl(line: &str, out: &mut String) {
                 while j < n && s[j].is_alphabetic() && !is_class(s[j]) && !is_emoji(s[j]) {
                     j += 1;
                 }
+                // The same trailing absorption the plain digit-run branch applies, which this path
+                // was missing: one class character at the very end glues, and only when the
+                // character before it is a digit (`?1%` glues, `?1a%` does not; measured
+                // 2026-11-24).
+                if j + 1 == n
+                    && j > 0
+                    && is_class(s[j])
+                    && !is_emoji(s[j])
+                    && !splits_after_digit(s[j])
+                    && is_digit(s[j - 1])
+                {
+                    j += 1;
+                }
                 let tok: String = s[i..j].iter().collect();
                 flush(&mut cur, &mut tokens);
                 tokens.push(tok);

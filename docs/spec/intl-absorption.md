@@ -59,8 +59,10 @@ Limb 1 shipped on 2026-11-24 as a single guarded clause in `tokenize_intl_clean.
 counts did not move, because each of those hypothesis tests reports its first counterexample and the
 BLEU one's counterexample simply moved on to limb 2.
 
-Still open: limb 2 (a mark after a word that ends in a letter), limb 3 (the quote pairs), and the
-trailing-punctuation rule in the lead path (`?1%` glues in the oracle, `?1` `%` here).
+Still open: limb 2 (a mark after a word that ends in a letter) and limb 3 (the quote pairs). The
+trailing-punctuation rule in the lead path was fixed on 2026-11-24: the rule already existed in the
+main digit-run branch and was simply missing from the lead path, so `?1%` glues as the oracle does
+while `?1a%`, `?1%%`, `?1~` and `?1😀` do not. Fixed probes 3 -> 2, random sweep 372 -> 343.
 
 The rest of this section is the original attempt record, kept because it names the blocker.
 
