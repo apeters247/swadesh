@@ -163,6 +163,14 @@ them joins the digits. Measured on `_preprocess_segment`:
 | `a (b) c` | `a b c` | `a b c` |
 | `a[b]c` | `a[b]c` | `a [ b ] c` |
 
+**Measured 2026-11-24: the space a deleted mark leaves keeps the mark's identity for step 9's
+one-character lookahead.** Deleting a `.` or `,` still leaves the `'s` lookahead seeing that mark,
+which is not a step-8 separator, so the word does not close: `a's.` and `a's,` stay one token
+(`a's`) where the segment would give two (`a 's`). A deleted `?` or `;` *is* a step-8 separator, so
+`a's?b` gives `a 's b`. A deleted `.` between digits still joins (`2.2` -> `22`). The whole
+no_punct behaviour therefore follows from "`.`,`,` are resolved by the rule-6 piece scanner, and a
+mark piece that survives is dropped under no_punct, while the other marks are replaced by a space".
+
 The default mode removes every mark outright, so `a?b` stays one token; the normalized mode leaves a
 separator, so it becomes two. `[` and `]` are never deleted in either mode. The same rule applies to
 the fullwidth forms when `asian_support` is on (section 3.3.2): `a。b` becomes `ab` in the default

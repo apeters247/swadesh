@@ -2954,3 +2954,20 @@ commit before the code.
 
 **Next step.** Pin the `no_punct` + `'s` boundary rule (the deleted mark seems to leave the piece
 with `TERM_OTHER`, not `TERM_END`), then the long-shift search.
+
+### 2026-11-24 (continued) — TER `no_punct`: the deleted `.`/`,` keeps its identity
+
+**Attempted.** `test_ter_adversarial[1110]` and `test_ter_sentence_score[1110]` (the `no_punct`
+option combo): the oracle keeps `"a's."` as one token where we give two. The keyword battery had
+83/4,000 wrong with `no_punct`.
+
+**Measured.** With `normalized, no_punct`: `a's.`, `a's,`, `0aa's,`, `a's. b` all keep the word
+unclosed (`a's`, `a's` `b`) because the `'s` lookahead must still see the deleted `.`/`,` (not a
+step-8 separator), while `a's?b` closes (`a 's b`, the deleted `?` *is* a separator) and `2.2` joins
+(`22`). So the deletion is not a plain space for lookahead purposes.
+
+**Decision.** The spec's `no_punct` paragraph records this and the implementation follows: in
+normalized mode `.`/`,` are left for the rule-6 piece scanner and a surviving mark piece is dropped
+when `no_punct` is set; other marks keep being replaced by a space.
+
+**Next step.** Implement, re-run the battery and `test_ter.py`, then the long-shift search.
