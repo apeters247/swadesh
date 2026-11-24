@@ -68,5 +68,6 @@ the regression tests pass, and the existing core and CLI test suites pass.
 
 Run on GX10 against the fixed tree, after `pip install .` (swadesh 0.1.0, sacrebleu 2.6.0):
 `pytest tests/test_differential.py tests/test_ter.py` gave **108 passed, 3 skipped, 0 failed**
+(re-measured 2026-11-24 after the tokenizer work: `test_differential.py` 79 passed, `test_ter.py` 16 failed, 36 passed, 2 skipped -- the 16 are the TER shift search, not the fuzz cases)
 (904 s) at the time. Re-measured on 2026-11-24 the same two files have failing cases; see
 `TESTING.md`. The skipped tests were not individually examined in this run.

@@ -12,7 +12,7 @@ specification and from black-box measurement of sacreBLEU's observable output, r
 * `docs/spec/tokenizers.md` — the tokenizers
 * `docs/spec/stats.md` — BLEU and chrF statistics
 * `docs/spec/ter.md` — TER, including the beam edit distance
-* `docs/spec/intl-absorption.md` — the number-absorption rule inside the international tokenizer
+* `docs/spec/intl-absorption.md` — the international tokenizer's measured model (the file keeps its old name; it supersedes the earlier number-absorption rule)
 * `docs/spec/cli-contract.md` — the command-line interface
 
 The differential tests compare against recorded sacreBLEU output. That is measurement, not

@@ -32,15 +32,22 @@ a little between runs; an exact zero is what would be seed-independent.
 
 | # | Criterion | 2026-11-24 | Evidence |
 |---|---|---|---|
-| 1 | Differential exactness | **Not met.** The seven-file selection reports **71 failing cases**: `test_differential.py` 31, `test_ter.py` 22, `test_deep.py` 9, `test_coverage_gaps.py` 5, `test_fuzz_unicode.py` 3, `test_frozen_oracle.py` 1 (`fuzz42:BLEU intl`). | re-run of the selection below, Python 3.11.14, troy-1 |
+| 1 | Differential exactness | **Not met, but nearly.** The seven-file selection reports **18 failing cases**, all in the TER shift search: `test_ter.py` 16, `test_deep.py` 2. The other five files are green: `test_frozen_oracle.py` 17 passed, `test_parity.py` 494 passed, `test_differential.py` 79 passed, `test_fuzz_unicode.py` 4 passed, `test_coverage_gaps.py` 68 passed (selection total 705 passed, 2 skipped). | re-run 2026-11-24, Python 3.11.14, troy-1 |
 | 2 | Mutation score | **Unverified.** `cargo-mutants` is not installed on troy-1; 94.6% is the 2026-11-19 run and has not been repeated. | `docs/mutation-report.md` |
 | 3 | Line coverage | **Unverified.** Neither `coverage` nor `cargo-llvm-cov` is installed on troy-1; 95.07% / 99.7% are the 2026-11-19 figures. | `docs/coverage-report.md` |
 | 4 | Crash safety | **Partly verified.** Both crash-fix regression tests pass (`swadesh-core` 2, `swadesh-cli` 1). The execution campaign has not been re-run, and its total is quoted inconsistently in this repo: the 2026-11-19 row said 336M while `docs/fuzz-report.md` sums to 365.8M. | `docs/fuzz-report.md`, `fuzz/` |
-| 5 | API and CLI parity | **Partly met.** `tests/test_parity.py` **494 passed**; `tests/test_cli.py` collects **448** and reports **43 failed, 405 passed**. | re-run 2026-11-24 |
+| 5 | API and CLI parity | **Partly met, CLI unverified on troy-1.** `tests/test_parity.py` **494 passed** (including the `-k cli` cases). `tests/test_cli.py` collects **448** and reports **13 failed, 107 passed, 328 errors**: every error is a setup error, because the CLI fixtures read `/var/www/llmeval/bench/data`, which exists on the VPS and not on troy-1. The earlier 43/405 figure came from a tree where that data was present and is not reproducible here. | re-run 2026-11-24, troy-1 |
 | 6 | Robustness and performance | **Unverified here.** The stress campaign has not been re-run. The README's speed-ups do still hold against `bench/results/final4-troy1-100k.json`, which records `exact: true` on every row. | `docs/stress-report.md`, `bench/results/` |
 | 7 | Platforms | **Unverified except troy-1**, where the differential suite currently fails (row 1). No other platform has been re-run since the clean-room rewrite. | `bench/results/` |
 
-**Known divergences being closed (2026-11-24).** The TER tokenizer and its shift search; the `intl`
-tokenizer's punctuation absorption (the `fuzz42` case); empty-hypothesis n-gram counts; chrF epsilon
-and tiny-value drift; the `PairedTest` repr when the mean is a numpy scalar; and CLI edge BLEU. Each
-has a dated entry in `docs/lab-notebook.md`, which is the running record of what was measured.
+**Divergences (2026-11-24).** Closed and pushed this session, each with a dated
+`docs/lab-notebook.md` entry: the `intl`, `13a` and `zh` tokenizer rules (measured from black-box
+probes), chrF's whitespace characters and reference selection, TER's normalized hyphen and
+`.`/`,`-run rules and its `no_punct` marker identity, BLEU `add-k`, and the `PairedTest` repr (an
+`f"{v}"` on a `np.float32` widens to double where the oracle uses `str`).
+
+**Still open: the TER shift search**, 18 failing cases. Six one-axis variants of its candidate
+generation have been measured on a 4,000-sequence battery; all are worse than the committed search
+(20/4000), so the oracle differs structurally. The battery, the minimal counterexample and the
+traced acceptance sequence are in the notebook. The CLI figure above is unverified on troy-1 for the
+reason in row 5.

@@ -67,11 +67,11 @@ Not covered: `--download` (needs network; it fetches a set and quits). `spm`, `f
 | `tests/test_parity.py` | 494 passed | **494 passed** |
 | `tests/test_mcp.py` (`mcp` extra installed) | 3 passed | **3 passed** |
 | of which the CLI cases (`-k cli`) | 77 passed | **77 passed** (inside the 494) |
-| `tests/test_cli.py` | counted in the "574 passed" row | **448 collected: 43 failed, 405 passed** |
-| `tests/test_differential.py` | 57 passed, 1 skipped | **31 failed, 48 passed** |
-| `tests/test_ter.py` | 53 passed | **22 failed, 30 passed, 2 skipped** |
-| `tests/test_fuzz_unicode.py` | 4 passed | **3 failed, 1 passed** |
-| `tests/test_coverage_gaps.py` | counted in the "574 passed" row | **5 failed, 63 passed** |
+| `tests/test_cli.py` | counted in the "574 passed" row | **448 collected: 13 failed, 107 passed, 328 setup errors** (the fixtures read `/var/www/llmeval/bench/data`, absent on troy-1: unverified here) |
+| `tests/test_differential.py` | 57 passed, 1 skipped | **0 failed, 79 passed** (re-measured 2026-11-24) |
+| `tests/test_ter.py` | 53 passed | **16 failed, 36 passed, 2 skipped** (all 16 are the shift search) |
+| `tests/test_fuzz_unicode.py` | 4 passed | **0 failed, 4 passed** |
+| `tests/test_coverage_gaps.py` | counted in the "574 passed" row | **0 failed, 68 passed** |
 | `tests/test_regressions.py` | counted in the "574 passed" row | **1 passed** |
 
 The "574 passed" row above is superseded by the last column: the same files re-measured on

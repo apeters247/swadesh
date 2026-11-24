@@ -3123,3 +3123,28 @@ real divergences, not test noise, and turning them into expected failures would 
 criterion as met while the TER shift search still disagrees with the oracle on 0.5% of random
 sequences. What is needed is a decision on which of the two rules governs, or a fresh approach to
 the generation rule.
+
+### 2026-11-24 (continued) — docs re-measured to the current tree
+
+**Attempted.** The objective's item 3 requires that no claim in `TESTING.md`'s criteria table,
+`README.md` or the six report docs is contradicted by the tree. Several of this session's fixes moved
+the suite counts, so the quoted numbers were stale.
+
+**Measured (re-run on troy-1, Python 3.11.14, HEAD with the repr fix).** Per file: `test_frozen_oracle`
+17 passed; `test_parity` 494 passed; `test_ter` 16 failed, 36 passed, 2 skipped; `test_differential`
+79 passed; `test_deep` 2 failed, 7 passed; `test_fuzz_unicode` 4 passed; `test_coverage_gaps` 68
+passed; `test_mcp` 3 passed; `test_regressions` 1 passed; the seven-file selection 705 passed, 18
+failed, 2 skipped. `test_cli.py`: 448 collected, 13 failed, 107 passed, **328 setup errors** — every
+error is `FileNotFoundError` for `/var/www/llmeval/bench/data`, which exists on the VPS and not on
+troy-1, so the earlier "43 failed, 405 passed" is not reproducible here and is now marked unverified
+rather than repeated.
+
+**Change.** `TESTING.md` rows 1 and 5 and the divergences paragraph; the per-file rows in
+`docs/parity-report.md`; the stale `pytest ... 108 passed, 0 failed` line in `docs/fuzz-report.md`;
+and one `NOTICE` line that still described `intl-absorption.md` as the number-absorption rule. Every
+changed figure is now a re-measurement, and the CLI row says why it cannot be verified on troy-1.
+
+**Verified.** Item 2 still holds: `rg -n "pypi-publish|cargo publish|publish_github" .github tools`
+has no hits, `tools/publish_github.sh` is gone and `LAUNCH.md` is the private-only note. `git worktree
+list` shows only the main tree; `tests/test_version.py` exists; `NOTICE` names the holder (Kevin
+Peters).
