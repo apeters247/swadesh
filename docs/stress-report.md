@@ -1,5 +1,11 @@
 # Stress, robustness and performance report
 
+> **Status (2026-11-24): historical.** This report records the 2026-11-19 testing campaign. It has
+> not been re-run since the 2026-11-22 clean-room rewrite of the tokenizers and the segment
+> statistics, so the figures below describe the tree as it was then. `TESTING.md` carries the
+> re-measured state and the list of known divergences; `docs/lab-notebook.md` records what was
+> measured and when.
+
 Criterion 6 of [TESTING.md](../TESTING.md). The raw data is in `bench/stress/results/` (`scaling.jsonl`,
 `pathological.jsonl`, `chain-troy1.log`); the scripts are in `bench/stress/`.
 

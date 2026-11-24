@@ -1,5 +1,11 @@
 # swadesh parity report (criterion 5: API and CLI parity with sacreBLEU 2.6.0)
 
+> **Status (2026-11-24): historical.** This report records the 2026-11-19 to 2026-11-21 testing campaign. It has
+> not been re-run since the 2026-11-22 clean-room rewrite of the tokenizers and the segment
+> statistics, so the figures below describe the tree as it was then. `TESTING.md` carries the
+> re-measured state and the list of known divergences; `docs/lab-notebook.md` records what was
+> measured and when.
+
 Track: `parity`, branch `test/parity`. Reference: sacreBLEU 2.6.0 (`/var/www/llmeval/.venv`
 sources, same version in the track venv). Python 3.11.14, numpy 2.4.6, rustc 1.100.0, Linux x86-64 (VPS).
 

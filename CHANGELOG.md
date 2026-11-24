@@ -33,8 +33,9 @@ First release.
 
 ### Known limitations
 
-- TER is not native. `swadesh.TER` and `swadesh.corpus_ter` are sacreBLEU's
-  implementation, and the Rust binary rejects `-m ter`.
+- TER is native: `swadesh.TER` and `swadesh.corpus_ter` run the Rust tercom implementation, and
+  the Rust binary accepts `-m ter`. Byte-exactness is not complete on every case yet; see
+  `TESTING.md` for the divergences being closed.
 - Exactness holds on one interpreter at a time. sacreBLEU's own corpus scores
   differ in the last bits between CPython 3.11 and 3.12. See
   [docs/python-version-drift.md](docs/python-version-drift.md).

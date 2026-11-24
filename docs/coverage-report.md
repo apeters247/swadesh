@@ -1,5 +1,11 @@
 # swadesh coverage report (testing criterion 3)
 
+> **Status (2026-11-24): historical.** This report records the 2026-11-19 testing campaign. It has
+> not been re-run since the 2026-11-22 clean-room rewrite of the tokenizers and the segment
+> statistics, so the figures below describe the tree as it was then. `TESTING.md` carries the
+> re-measured state and the list of known divergences; `docs/lab-notebook.md` records what was
+> measured and when.
+
 Target (TESTING.md, criterion 3): at least 95% line coverage for `crates/swadesh-core` (llvm-cov)
 and `python/swadesh` (coverage.py), with every uncovered line listed and justified.
 

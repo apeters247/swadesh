@@ -1,5 +1,11 @@
 # Fuzz report (criterion 4, `fuzz` track)
 
+> **Status (2026-11-24): historical.** This report records the 2026-11-19 testing campaign. It has
+> not been re-run since the 2026-11-22 clean-room rewrite of the tokenizers and the segment
+> statistics, so the figures below describe the tree as it was then. `TESTING.md` carries the
+> re-measured state and the list of known divergences; `docs/lab-notebook.md` records what was
+> measured and when.
+
 Machine: GX10 (aarch64, 20 cores, CPU only). Build: `cargo +nightly fuzz build`
 (cargo-fuzz 0.13.2, libFuzzer via libfuzzer-sys 0.4.13, AddressSanitizer, release
 profile with overflow checks). Harnesses live in `fuzz/fuzz_targets/`.
@@ -62,4 +68,5 @@ the regression tests pass, and the existing core and CLI test suites pass.
 
 Run on GX10 against the fixed tree, after `pip install .` (swadesh 0.1.0, sacrebleu 2.6.0):
 `pytest tests/test_differential.py tests/test_ter.py` gave **108 passed, 3 skipped, 0 failed**
-(904 s). The skipped tests were not individually examined in this run.
+(904 s) at the time. Re-measured on 2026-11-24 the same two files have failing cases; see
+`TESTING.md`. The skipped tests were not individually examined in this run.

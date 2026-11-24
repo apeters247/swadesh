@@ -1,5 +1,11 @@
 # swadesh differential report (diff track, criterion 1)
 
+> **Status (2026-11-24): historical.** This report records the 2026-11-19 testing campaign. It has
+> not been re-run since the 2026-11-22 clean-room rewrite of the tokenizers and the segment
+> statistics, so the figures below describe the tree as it was then. `TESTING.md` carries the
+> re-measured state and the list of known divergences; `docs/lab-notebook.md` records what was
+> measured and when.
+
 Date: 2026-11-19. Oracle: sacreBLEU 2.6.0 on CPython 3.12.3, aarch64 (GX10).
 Branch `test/diff`. Machine: GX10 only (shared; see "Environment").
 

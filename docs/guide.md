@@ -399,8 +399,9 @@ bootstrap on the Mac mini. Measure on your own data with
 
 ## Limits
 
-- `swadesh.TER` is native (tercom shifts and beam edit distance, bit-exact). The
-  standalone Rust CLI does not support `-m ter` yet; the Python `swadesh` CLI does.
+- `swadesh.TER` is native (tercom shifts and beam edit distance). The standalone Rust CLI accepts
+  `-m ter` too, but neither path is byte-identical to sacreBLEU on every case yet - `TESTING.md`
+  lists what is open.
 - Corpus scores are computed by sacreBLEU's Python code on the interpreter that
   runs them. So swadesh's corpus scores equal sacreBLEU's on any one
   interpreter, and they can differ in the last bits between CPython versions.

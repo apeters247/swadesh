@@ -306,7 +306,9 @@ chrF's `lowercase` option goes through the same `text` function, because
 - Bootstrap and significance draws come from NumPy (section 3.6), so a future
   NumPy change to `default_rng` would change swadesh's results and sacreBLEU's
   together.
-- TER is sacreBLEU's Python code. Python-tokenized BLEU tokenizers (`ja-mecab`,
+- TER is native (tercom shifts and the banded beam edit distance in `_swadesh.ter_stats`), though
+  its tokenizer and shift search still have known divergences (see `TESTING.md`).
+  Python-tokenized BLEU tokenizers (`ja-mecab`,
   `ko-mecab`, `spm`, `flores101`, `flores200`, `spBLEU-1K`) run sacreBLEU's
   tokenizer in Python, and the examples did not exercise them.
 - The standalone binary's `sum()` mode is set by a flag, not by the interpreter.

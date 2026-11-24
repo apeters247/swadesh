@@ -1,5 +1,11 @@
 # Mutation report: swadesh-core (criterion 2)
 
+> **Status (2026-11-24): historical.** This report records the 2026-11-19 testing campaign. It has
+> not been re-run since the 2026-11-22 clean-room rewrite of the tokenizers and the segment
+> statistics, so the figures below describe the tree as it was then. `TESTING.md` carries the
+> re-measured state and the list of known divergences; `docs/lab-notebook.md` records what was
+> measured and when.
+
 **Status: 94.6% caught on the captured mutant set (target 90%), 99.8% with equivalent mutants excluded.
 The full-crate score is not yet measured: 198 of the 1,477 mutants have no outcome (see "Not yet measured").**
 
