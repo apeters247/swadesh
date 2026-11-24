@@ -3289,3 +3289,31 @@ regime (the band is wide relative to these lengths), and the committed tie-break
 the six. The one untried idea is a gain derived from the *alignment's error counts* rather than from
 a recomputed distance; it needs its own derivation from black-box probes (the formula is not
 observable directly), so it is a plan of its own rather than another one-line variant.
+
+### 2026-11-24 (continued) — differential bug hunt: no new divergences, one API gap
+
+**Attempted.** With the shift-search residue localised, I hunted for *other* divergences the suites
+do not reach, comparing swadesh and sacreBLEU on ~3,000 combinations: BLEU over five tokenizers ×
+four smoothing methods × five n-gram orders × lowercase × two seeds × two alphabets (word-like and
+an adversarial Unicode one: zero-width, combining marks, astral emoji, RTL override, Han/Hangul);
+chrF over char order 1/2/6/9 × word order 0/2/5 × beta 0/1/2/10 × whitespace × eps; TER over all 16
+flag combinations at three length bands (0-10, 20-60, 40-80); statistics rows for all five
+tokenizers and three chrF configurations; three reference streams with `None` entries; bootstrap at
+0/10/300 resamples; signature and `str()` forms; and sentence paths.
+
+**Measured.** 24 differences, all accounted for:
+
+* **22 are the known TER shift-search residue** — all in the 40-80-token band with *unrelated*
+  references (seed 107). No TER difference appeared at 0-10 or 20-60 tokens, and nothing anywhere
+  else.
+* **2 were a harness artifact**: `swadesh.TER` has no `sentence_scores` (plural) while our BLEU and
+  chrF do, so my comparison compared a list against `None`. sacreBLEU's `TER` has no plural either,
+  so this is **not** a parity difference — but it is an inconsistency in *our own* extension API.
+
+**Decision.** No code change. Two follow-ups recorded: (1) the TER residue, unchanged; (2) add
+`TER.sentence_scores` so our extension API is consistent across the three metrics (a feature, not a
+parity fix).
+
+**Also noted for the speed phase.** `TER().corpus_score` on 40-80-token random segments takes
+seconds per corpus on both sides, so the benchmark script must use realistic (translation-like)
+text, not random word soup, or the numbers will be dominated by the shift search's worst case.
