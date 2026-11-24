@@ -2847,3 +2847,42 @@ stripped line; the range loop no longer decides `.`/`,`; the digit test is a nam
 
 **Next step.** Tokenizer cluster with one known item left: nothing in `test_tokenizers_string_exact`
 now. The larger blocks are TER (shift search) and chrF epsilon.
+
+---
+
+## 2026-11-24 (continued) — chrF: whitespace characters, and the reference-selection f-score
+
+**Attempted.** Two chrF clusters, both named in the objective. `test_chrf_corpus` /
+`test_uni_chrf_corpus`: a reference `"-\n"` had two characters in the oracle and one here.
+`test_chrf_sentence_scores`: hyp `''` against `['a', '']` scored `8.333e-15` here and `1e-14`
+there.
+
+**Measured.**
+
+1. **`whitespace=True` keeps the characters, unstripped.** `char_seq` called `py_strip`
+   unconditionally, so `"-\n"` lost its newline. The oracle's row for `hyp='a' ref='-\n'` is
+   `[1, 2, 0]` and for `ref='  '` is `[1, 2, 0]` — both whitespace characters count. With
+   `whitespace=False` all Python whitespace is removed (the filter was also using Rust
+   `is_whitespace`, not `is_py_space`).
+2. **The reference chosen is the one the scoring f-score prefers.** The Rust selection used its own
+   precision/recall harmonic mean; the oracle uses `_compute_f_score`, the eps-aware scoring
+   function. Measured: `char_order=6, eps=True, hyp='' refs=['a','']` → the oracle keeps the empty
+   reference (all-zero row, score `1e-14` > `8.333e-15`); `char_order=1, eps=True, hyp='b'
+   refs=['','a']` → both rows score `1e-14` and the first is kept. The Python path already used the
+   scoring function, so the Rust corpus path disagreed with the Python single path before this fix —
+   the internal inconsistency was the tell.
+
+**Change.** `chrf_stats_clean.rs`: `char_seq` no longer strips when keeping whitespace and uses
+`is_py_space`; `chrf_stats_segment` selects with `score::chrf_f_score`, deleting the local
+`f_score`.
+
+**Measured after.** `pytest test_differential.py -k chrf`, `test_deep.py -k chrf`,
+`test_fuzz_unicode.py` → all pass (the fuzz file on three seeds). The four remaining
+`test_paired_tests_exact_variants[chrf*]` failures are the paired-bootstrap dtype cluster, not this
+one.
+
+**Decision.** `docs/spec/stats.md` section 3.4 is clarified to name the scoring f-score, with the two
+measurements above, before the code commit.
+
+**Next step.** The paired-bootstrap dtype: the oracle renders those means as float32
+(`20.94088`) where we render float64 (`20.940879821777344`).

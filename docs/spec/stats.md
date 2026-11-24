@@ -100,10 +100,19 @@ For a hypothesis string and reference strings:
    Two earlier readings of this triple in this session were wrong because the test strings happened
    to have the lengths I expected; measure with a segment whose lengths plainly differ.
 4. **Matching count.** For chrF the per-order match count is `min(count_H, count_r)` summed over
-   n-grams, per reference. **With several references the row kept is the one whose f-score is
-   highest** (the first strictly better), NOT a merge of counts across references. Measured: a
-   hypothesis matching one of two references perfectly scores 100.0 against `[good, bad]` and
-   against `[bad, good]` alike.
+   n-grams, per reference. **With several references the row kept is the one whose scoring
+   f-score is highest** -- the same `_compute_f_score` the metric uses to score, including its
+   `eps_smoothing` behaviour -- ties keeping the **first** reference, and NOT a merge of counts
+   across references. Measured: a hypothesis matching one of two references perfectly scores
+   100.0 against `[good, bad]` and against `[bad, good]` alike.
+
+   **Measured 2026-11-24: which f-score matters, and it is the scoring one.** With
+   `char_order=6, eps_smoothing=True, hyp='' refs=['a','']` the oracle's row is the empty
+   reference's (all-zero), whose eps score is `1e-14` against `8.333e-15` for the non-empty
+   reference, so the empty reference wins on the score and the row is all-zero. With
+   `char_order=1, eps_smoothing=True, hyp='b' refs=['','a']` both rows score `1e-14` and the
+   oracle keeps the first (all-zero). A selection formula that is not the scoring f-score (for
+   example a plain precision/recall harmonic mean) picks the wrong row in both cases.
 
 ## 4. What the scoring stage does with these (for orientation, not implemented here)
 
