@@ -2152,3 +2152,37 @@ shows divergences outside the alphabet the fixed cases cover: 2/500 in plain `no
 
 **Next.** The shift search, then the `no_punct`/CJK residue.
 
+**Attempted: the shift search (16 `test_ter_long_sentences_shifts` failures).** Diagnosis only this
+session; two experiments were run and both reverted.
+
+**Harness.** `/home/kpeters/swarm-review/ter/shift_battery.py` compares the whole per-segment
+computation (`_swadesh.ter_stats` on a one-segment corpus) against the oracle's own
+`translation_edit_rate` on 4,000 random word sequences of length 1-45 over a 12-word vocabulary.
+Baseline: **20/4000** mismatches, and they are bidirectional (one minimised case has ours 10 against
+the oracle's 9), so the search is structurally different, not merely capped differently.
+
+**What the 16 suite failures actually say.** Every one has *ours strictly below* the oracle on edits
+with the reference length identical: 47 vs 48, 34 vs 35, 38 vs 39, 16 vs 20, 46 vs 47, and
+`test_deep_ter_long_shifts` 64 vs 75. So on the structured long-sentence data our search accepts
+shifts the oracle rejects; it is more permissive, not weaker.
+
+**Experiment A - set the block-length cap to the spec's 50** (the code uses 10). Random battery
+unchanged at 20/4000; `test_deep_ter_long_shifts` moved 64 -> 42, i.e. *further* from the oracle's
+75. Reverted: the block cap is not the driver.
+
+**Experiment B - add the spec's 25-candidate-per-iteration cap** (spec 4.2 `BEAM_WIDTH`; our code has
+no per-iteration cap, only a 1,000-evaluation budget for the whole segment). Random mismatches
+exploded **20 -> 670/4000**, while `test_deep_ter_long_shifts` moved 64 -> 71, *closer* to 75.
+Reverted: directionally right for structured data, but truncating to 25 only helps if the candidate
+*ordering* matches the oracle's, and ours does not.
+
+**Conclusion.** The divergence is in candidate generation, not in the caps. Spec 4.2 says the oracle
+"walks the alignment left to right, pairing each hypothesis position with the reference positions it
+aligns to"; our `shifted_pairs` instead enumerates every matching `(hyp, ref, len)` block
+brute-force and then filters by alignment-error heuristics. No spec change is needed - 4.2 already
+records the oracle's caps and its ordering - so the next attempt is to reimplement candidate
+generation as that alignment walk and re-measure both batteries.
+
+**State after revert.** Tree clean at `a39f551`; `MAX_SHIFT_SIZE` back to 10; the random battery is
+back to 20/4000 and the suite numbers to the previous session's (test_ter 20 failed / 32 passed).
+
