@@ -2784,3 +2784,40 @@ padding) and the block was restored.
 pair-consuming rule with `[.,]` as the whole mark set (`..0` -> `. . 0`, `...0` -> `. . .0`,
 `a..0` -> `a . .0`), the range table decides neither `.` nor `,`, and a `-` splits after a digit.
 `tools/zh_reference.py` gets 0/22,985. Spec first, then the port.
+
+---
+
+## 2026-11-24 (continued) — zh: the dot/comma rule, measured (intl-shaped)
+
+**Attempted.** `test_tokenizers_string_exact[zh]` fails on `...0`: the oracle gives `. . .0`, we give
+`. . . 0`. The committed `dot_comma_splits` is a local predicate over `prev`/`next`, which cannot
+express the boundary interaction on a run.
+
+**Measured.** `zh` behaves exactly like the `intl` pair-consuming rule with `[.,]` as the whole mark
+set, after stripping the line: a `.`/`,` that does not follow a digit is spaced on both sides
+consuming the pair, then a `.`/`,` that does not precede a digit the same way.
+
+| input | oracle | committed |
+|---|---|---|
+| `..0` | `. . 0` | `. . 0` |
+| `...0` | `. . .0` | `. . . 0` |
+| `a..0` | `a . .0` | `a . . 0` |
+| `0...0` | `0 . . .0` | `0 . . . 0` |
+| `.0` | `.0` | `.0` |
+| `0.` | `0.` | `0.` |
+| `0. ` (trailing space) | `0.` | `0.` |
+| `5.,6` | `5 . , 6` | `5 . , 6` |
+
+Also measured: the line is stripped first (`.0` glues, but ` .0` and `1. x` behave per the stripped
+line), the range table must not decide `.`/`,` (both are in it, but their behaviour is contextual),
+and a `-` splits after a digit only.
+
+**Model.** `tools/zh_reference.py` gets 0 wrong on 22,985 cases: 9,697 battery cases (all strings
+length ≤4 over `., 0 a 中 - space %`, plus 5,000 random) and 13,289 corpus texts.
+
+**Decision.** `docs/spec/tokenizers.md` section 5 is rewritten from this measurement, with the two
+corrected claims (digits do not split individually; `.`/`,` and `-` are contextual) recorded. The
+Rust port follows in the next commit.
+
+**Next step.** Replace `dot_comma_splits` in `tokenize_zh_clean.rs` with the pair-consuming passes,
+rebuild, re-check `zh`.

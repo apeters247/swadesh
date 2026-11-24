@@ -125,13 +125,25 @@ passes (so `"7. "` glues like `"7."`).
 
 ## 5. `zh`
 
-Character-level segmentation for Chinese, with alphanumeric runs kept whole:
+Measured 2026-11-24 (`tools/zh_reference.py`). The line is stripped of leading and trailing Python
+whitespace **first**, and then:
 
-1. Split the line into runs separated by Python whitespace.
-2. Within a run, every character in the **CJK ranges** below starts and ends its own token.
-3. Every character in `\p{N}` likewise.
-4. Everything else (Latin letters, punctuation, and arrows such as `→`) accumulates into a token:
-   `"你 好 abc 世 界"` tokenizes to `你 好 abc 世 界`. No entity decoding, no `<skipped>` removal.
+1. A `.` or `,` that does **not** follow a digit is spaced on both sides, and the match consumes both
+   characters (so a run of `.`/`,` interacts at its boundaries: `..0` -> `. . 0`, `...0` -> `. . .0`,
+   `a..0` -> `a . .0`). This is the `intl` pair-consuming rule with `[.,]` as the whole mark set.
+2. Then a `.` or `,` that does **not** precede a digit is spaced on both sides, same consumption.
+3. The range table below splits its characters off as single-character tokens, but it must **not**
+   decide `.` or `,`: their behaviour is contextual and rules 1-2 are authoritative.
+4. A `-` splits when the character before it is a digit (`1-2` -> `1 - 2`, `1-` -> `1 -`) but not
+   otherwise (`a-b`, `a-1`, `-1` stay whole).
+5. Everything else accumulates into a run: Latin letters, digits, and arrows such as `→` do not
+   split, so `"café 12"` -> `café 12` and `3.5` -> `3.5`.
+
+**Corrections to this section.** The earlier statement said "every character in `\p{N}` starts and
+ends its own token" and "everything else ... accumulates": both are contradicted by the oracle.
+`3.5` stays `3.5` and `1,000` stays `1,000` (so digits do not split individually), while `.`/`,` and
+`-` are contextual, not plain accumulators. Measured: 0 wrong on 9,696 battery cases and 13,289
+corpus texts.
 
 **CJK ranges** (inclusive, code points), which the implementation must treat as data:
 
