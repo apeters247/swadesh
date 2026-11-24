@@ -3352,3 +3352,35 @@ validation, and seeds in every signature.
 
 **Next step.** The TER shift-search residue (3/80 on long unrelated references) is the only known
 exactness gap; the feature list is independent of it.
+
+### 2026-11-24 (continued) — TER residual: two more hypotheses, both worse
+
+**Attempted.** With every constant and tie-break already at its measured optimum, the two remaining
+structural candidates for the 3/80 long-unrelated-reference residue:
+
+1. the move-distance cap (50): a useful block might sit further away in a long segment;
+2. ranking shift candidates by the alignment's *error count* instead of the recomputed distance,
+   which is what the published loop is generally described as doing.
+
+**Measured (the same 80-case independent battery).**
+
+| variant | wrong |
+|---|---|
+| committed | **3/80** |
+| move distance 25 | 27/80 |
+| move distance 50 (committed) | 3/80 |
+| move distance 100 / 200 | 3/80 (identical cases) |
+| gain = change in alignment error count | 43/80 |
+
+**Decision.** Reverted; binary byte-identical. The distance cap is confirmed at 50 (25 is worse, 100
+and 200 change nothing), and the error-count gain is decisively wrong — so the residual is not in
+the gain *source* either.
+
+**Where that leaves the cluster.** Ten hypotheses have now been measured and rejected: tie-break key
+(6 variants), alignment tie-break order (6), candidate set (full vs aligned), candidate order (hyp-
+vs ref-major), evaluation budget (250-10,000), block-length cap (10 vs 50), move-distance cap
+(25-200), gain metric (banded vs full matrix), and gain source (distance vs error counts). Every one
+of them is worse than the committed configuration. The difference is one edit unit, introduced in
+the first two shifts of a long unrelated-reference segment, and the two searches agree exactly from
+the third shift on — which is why single-axis changes cannot reach it: they perturb the whole path,
+not just the marginal decision.
