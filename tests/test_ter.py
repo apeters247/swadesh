@@ -86,6 +86,24 @@ def test_ter_adversarial(options, data, hyps):
     assert str(ours.get_signature()) == str(theirs.get_signature())
 
 
+def test_ter_possessive_and_reference_double_pass():
+    """Spec ter.md step 8 and section 5: the possessive rule, and the reference preprocessed
+    twice (once in Python, once by the kernel). Pinned on the measured cases."""
+    cases = [
+        ("a's.", "a's."),
+        ("a's,", "a's,"),
+        ("a's", "a's"),
+        ("", "'s'"),
+        ("dont''s", "dont''s"),
+        ("a's?", "a's?"),
+    ]
+    for options in [(True, False, False, False), (False, False, False, False)]:
+        ours, theirs = _make(options)
+        for hyp, ref in cases:
+            assert_same_stats(ours, theirs, [hyp], [[ref]])
+            assert_same(ours.corpus_score([hyp], [[ref]]), theirs.corpus_score([hyp], [[ref]]))
+
+
 @pytest.mark.parametrize("options", OPTION_COMBOS, ids=lambda o: "".join("1" if x else "0" for x in o))
 @FAST
 @given(data=st.data(), hyp=segment, n_refs=st.integers(1, 3))

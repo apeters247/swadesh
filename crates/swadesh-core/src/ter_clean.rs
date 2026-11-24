@@ -151,6 +151,11 @@ fn strip_punct(raw: &[char], asian: bool, normalized: bool) -> Vec<char> {
     out
 }
 
+/// What ended a piece, for the possessive lookahead of spec 3.2 step 8.
+const TERM_END: u8 = 0; // end of the segment
+const TERM_SPACE: u8 = 1; // a space or a line feed
+const TERM_OTHER: u8 = 2; // any other cut: other whitespace, a lone mark, an Asian character
+
 /// Split `text` into TER words (spec section 3).
 ///
 /// Structure, which the measurements forced: the segment is first cut into *pieces* on
@@ -196,8 +201,9 @@ pub fn tokenize(cfg: &TerConfig, text: &str) -> Vec<String> {
         raw.clone()
     };
 
-    // ---- pass 1: cut into pieces
-    let mut pieces: Vec<Vec<char>> = Vec::new();
+    // ---- pass 1: cut into pieces. Each piece carries what ended it, for the possessive
+    // lookahead of spec 3.2 step 8: `TERM_END`, `TERM_SPACE` or `TERM_OTHER`.
+    let mut pieces: Vec<(Vec<char>, u8)> = Vec::new();
     let mut piece: Vec<char> = Vec::new();
     let mut i = 0usize;
     // Character just consumed, and the one before it, for the digit lookaround: a lone separator
@@ -211,15 +217,28 @@ pub fn tokenize(cfg: &TerConfig, text: &str) -> Vec<String> {
         if asian && is_asian(c) {
             // An Asian character is its own piece and also ends the one before.
             if !piece.is_empty() {
-                pieces.push(std::mem::take(&mut piece));
+                pieces.push((std::mem::take(&mut piece), TERM_OTHER));
             }
-            pieces.push(vec![c]);
+            pieces.push((vec![c], TERM_OTHER));
             i += 1;
             continue;
         }
         if crate::unicode::is_py_space(c) && !(asian && is_asian(c)) {
             if !piece.is_empty() {
-                pieces.push(std::mem::take(&mut piece));
+                // The lookahead sees the first character of the whitespace run, or the end of the
+                // segment when the run reaches it: measured `a's\t` splits but `a's\tb` does not.
+                let mut j = i + 1;
+                while j < kept.len() && crate::unicode::is_py_space(kept[j]) {
+                    j += 1;
+                }
+                let term = if j >= kept.len() {
+                    TERM_END
+                } else if c == ' ' || c == '\n' {
+                    TERM_SPACE
+                } else {
+                    TERM_OTHER
+                };
+                pieces.push((std::mem::take(&mut piece), term));
             }
             i += 1;
             continue;
@@ -230,9 +249,9 @@ pub fn tokenize(cfg: &TerConfig, text: &str) -> Vec<String> {
             if !(prev_digit && next_digit) {
                 // A lone separator is its own piece (`a.b` -> `a` `.` `b`, `.,.,` -> four marks).
                 if !piece.is_empty() {
-                    pieces.push(std::mem::take(&mut piece));
+                    pieces.push((std::mem::take(&mut piece), TERM_OTHER));
                 }
-                pieces.push(vec![c]);
+                pieces.push((vec![c], TERM_OTHER));
                 i += 1;
                 continue;
             }
@@ -241,11 +260,11 @@ pub fn tokenize(cfg: &TerConfig, text: &str) -> Vec<String> {
         i += 1;
     }
     if !piece.is_empty() {
-        pieces.push(piece);
+        pieces.push((piece, TERM_END));
     }
 
     // ---- pass 2: resolve marks inside each piece
-    for p in &pieces {
+    for (p, term) in &pieces {
         if !cfg.normalized {
             let mut w = String::new();
             for &c in p {
@@ -283,12 +302,14 @@ pub fn tokenize(cfg: &TerConfig, text: &str) -> Vec<String> {
                 // the next token. Any other apostrophe stays inside its word (`don't`, `x'y`),
                 // and a lone `'` prefix is its own piece already.
                 let s_next = k + 1 < p.len() && p[k + 1] == 's';
-                closes_word = s_next && {
-                    let after = k + 2;
-                    after == p.len()
-                        || matches!(p[after], '.' | ',' | '\'')
-                        || separates(p[after])
-                };
+                // spec 3.2 step 8: `'s` closes the word when the next character is a separating
+                // mark, or when the `s` is followed by a space, a line feed or the end of the
+                // segment. `.` `,` `'` `-`, letters, digits and the other whitespace do not.
+                closes_word = s_next
+                    && match p.get(k + 2) {
+                        Some(&q) => separates(q),
+                        None => *term == TERM_END || *term == TERM_SPACE,
+                    };
                 false
             } else if c == '.' || c == ',' {
                 // Pass 1 already cut every lone separator out, so one surviving here is inside a
@@ -800,6 +821,36 @@ mod tests {
         // The default tokenizer does not unescape entities at all.
         let plain = TerConfig::default();
         assert_eq!(words(&plain, "&amp;"), vec!["&amp;"]);
+    }
+
+    #[test]
+    fn possessive_s_closes_before_end_space_or_separating_mark() {
+        // spec 3.2 step 8, measured 2026-11-24.
+        let cfg = TerConfig { normalized: true, ..TerConfig::default() };
+        // splits: end of segment, space, line feed, separating mark
+        assert_eq!(words(&cfg, "a's"), vec!["a", "'s"]);
+        assert_eq!(words(&cfg, "a's b"), vec!["a", "'s", "b"]);
+        assert_eq!(words(&cfg, "a's\nb"), vec!["a", "'s", "b"]);
+        assert_eq!(words(&cfg, "a's?b"), vec!["a", "'s", "?", "b"]);
+        assert_eq!(words(&cfg, "a's&b"), vec!["a", "'s", "&", "b"]);
+        assert_eq!(words(&cfg, "a's's"), vec!["a's", "'s"]);
+        assert_eq!(words(&cfg, "'s"), vec!["'s"]);
+        assert_eq!(words(&cfg, "dont''s"), vec!["dont'", "'s"]);
+        // does not split: dot, comma, apostrophe, hyphen, letter, digit, other whitespace
+        assert_eq!(words(&cfg, "a's."), vec!["a's", "."]);
+        assert_eq!(words(&cfg, "a's,b"), vec!["a's", ",", "b"]);
+        assert_eq!(words(&cfg, "a's'"), vec!["a's'"]);
+        assert_eq!(words(&cfg, "a's'b"), vec!["a's'b"]);
+        assert_eq!(words(&cfg, "a's-b"), vec!["a's-b"]);
+        assert_eq!(words(&cfg, "a'sa"), vec!["a'sa"]);
+        assert_eq!(words(&cfg, "a's1"), vec!["a's1"]);
+        assert_eq!(words(&cfg, "a's\tb"), vec!["a's", "b"]);
+        // a trailing whitespace run reaches the end of the segment, so it does split
+        assert_eq!(words(&cfg, "a's\t"), vec!["a", "'s"]);
+        assert_eq!(words(&cfg, "a's\u{3000}"), vec!["a", "'s"]);
+        assert_eq!(words(&cfg, "a's  b"), vec!["a", "'s", "b"]);
+        assert_eq!(words(&cfg, "a's\t b"), vec!["a's", "b"]);
+        assert_eq!(words(&cfg, "a's \tb"), vec!["a", "'s", "b"]);
     }
 
     #[test]

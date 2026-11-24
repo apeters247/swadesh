@@ -745,6 +745,11 @@ class TER(_FastMixin, _SacreTER):
             return self._py_statistics(hypotheses, references)
         try:
             hyps, streams = _truncate(hypotheses, cache.streams)
+            # The oracle preprocesses each reference twice: once when the references are cached and
+            # once when they are extracted (docs/spec/ter.md section 5). The kernel tokenizes the
+            # text it is handed, so giving it already-preprocessed references is the second pass.
+            streams = [[None if x is None else self._preprocess_segment(x) for x in s]
+                       for s in streams]
             buf, n, width = _swadesh.ter_stats(
                 hyps, streams, bool(self.normalized), bool(self.no_punct),
                 bool(self.asian_support), bool(self.case_sensitive),

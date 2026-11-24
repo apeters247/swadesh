@@ -2105,3 +2105,25 @@ once in Python: **61 -> 0** mismatches over the same 800 comparisons. Section 5 
 updated from "gap" to "reproduced this way".
 
 **Next.** Land the Python change, then rerun `tests/test_ter.py` for the cluster count.
+
+**Landed.** The Python change preprocesses the reference streams once with the oracle's own
+`_preprocess_segment` before the kernel tokenizes them; `test_ter.py` gains a regression test pinning
+the measured possessive and double-pass cases in both modes. Measured after both fixes, on 3.11.14:
+
+| suite / battery | before | after |
+|---|---|---|
+| possessive alphabet, single-pass reference token count | 24/600 bad | **0/600** |
+| possessive alphabet, full corpus statistics (800 comparisons) | 96+ bad | **0** |
+| `tests/test_ter.py` | 32 failed, 19 passed | **31 failed, 20 passed** |
+| `tests/test_frozen_oracle.py` + `test_parity.py` + provenance + score objects + metrics fallback | 648 / 1 | 648 / 1 (unchanged) |
+| `tests/test_deep.py` + `tests/test_differential.py` | 40 failed, 48 passed | 40 failed, 48 passed (unchanged) |
+
+**What the suite still shows, and why the batteries looked better.** The hypothesis alphabet is far
+richer than the battery's. The one remaining adversarial failure class is the **newline-hyphen** rule:
+hypothesis `"\n-"` against an empty reference gives oracle `[[0, 0.0]]` (the hypothesis tokenizes to
+zero tokens) but ours `[[1.0, 0.0]]`; `-\n` keeps a token while `\n-` does not. The 16
+`test_ter_long_sentences_shifts` failures are the **shift search**: reference lengths agree, the edit
+count is one short (ours 47 against the oracle's 48; `test_deep_ter_long_shifts` 64 against 75).
+
+**Next.** The newline-hyphen rule (spec + Rust), then the shift-search difference.
+
