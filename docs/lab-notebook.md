@@ -3058,3 +3058,27 @@ So the widening is not in the native scorer, the resampler or `estimate_ci`; it 
 inputs renders `float32` on both sides, so the difference is introduced by something pytest's import
 set does. Next: wrap `significance.Result.__init__` (or `vars(result)`) inside the pytest run and
 print the types of the values it is given, which will name the exact conversion.
+
+### 2026-11-24 (continued) — paired dtype: it was never the dtype, it was `f"{v}"` on a float32
+
+**Root cause found.** Plugin traces inside the failing pytest run showed every native score, every
+bootstrap entry and both `estimate_ci` paths returning `np.float32`, and the `Result` objects holding
+`np.float32` means on *both* sides — yet the reprs differed. The difference is the formatting
+primitive:
+
+| expression | `np.float32(20.834093)` | `np.float64(2.5)` |
+|---|---|---|
+| `str(v)` | `20.834093` | `2.5` |
+| `f"{v}"` | `20.83409309387207` | `2.5` |
+| `repr(v)` | `np.float32(20.834093)` | `np.float64(2.5)` |
+
+`__format__` widens a float32 to double, so `f"{k}={v}"` prints the float64 rendering while the
+oracle prints the shortest float32 form. For `np.float64` the two agree, which is why the earlier
+"PairedTest repr" fix (16b5f56, `{v!r}` → `{v}`) looked complete and closed only the `np.float64`
+cases. The 9 remaining paired failures were all this one line.
+
+**Change.** `Result.__repr__` interpolates with `{v!s}`. Spec `docs/spec/significance.md` records the
+measurement first.
+
+**Measured after.** The four `test_paired_tests_exact_variants` and `test_paired_tests_exact` cases
+pass; see the session report for the selection count.

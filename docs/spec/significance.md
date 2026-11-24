@@ -36,6 +36,13 @@ for a two-sided 95% interval, expressed as an index rather than a quantile inter
 A small value object carrying the p-value, the mean and the confidence interval, with the same
 `__repr__` shape, because the CLI prints it.
 
+**Measured 2026-11-24: each field is interpolated with `str`, not with an f-string.** The
+distinction only shows on a `np.float32`, whose two renderings differ in NumPy 2: for
+`v = np.float32(20.834093)`, `str(v)` is `20.834093` but `f"{v}"` is `20.83409309387207` (the f-string
+goes through `__format__`, which widens to double). The oracle prints `mean=20.834093`, so the
+record's fields must be formatted with `str`. For a `np.float64` the two agree (`str(np.float64(2.5))`
+= `f"{np.float64(2.5)}"` = `2.5`), which is why the earlier repr change looked complete.
+
 ## The base class
 
 `PairedTest` takes named systems (each a list of hypothesis segments), a list of reference streams,
