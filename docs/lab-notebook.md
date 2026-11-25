@@ -3652,3 +3652,42 @@ frozen-oracle suite still passes. The remaining goal item 5 entries were already
 names the holder (Kevin Peters), `tests/test_version.py` is the version-consistency test,
 `git worktree list` shows the single tree, and `tests/test_mcp.py` imports the MCP SDK with
 `pytest.importorskip` so it runs where the SDK is present and is skipped otherwise.
+
+## 2026-11-24 (continued) - TER residual CLOSED: the candidate-budget check placement
+
+**Attempted.** The owner authorised reading the oracle's source (option 2 of the two offered), so I
+read `sacrebleu/metrics/lib_ter.py` (Apache-2.0, Copyright 2020 Memsource) and instrumented its own
+`_shift` to print the chosen move per iteration.
+
+**Found.** The oracle's search is *identical* to ours - same candidate order, same filters, same
+`(gain, length, -start_h, -idx)` ranking, same move sequence `(35,2,8)`, `(42,2,54)`, `(1,1,17)`,
+`(31,1,22)`. The divergence is where the 1,000-candidate budget is read. The oracle tests the cap
+**once per matching block** (after a block's offsets, not per candidate) and **before** the reduction
+test. On the traced 57-token case it evaluates 110 candidates in the last iteration and lands on
+1,001, so it stops after 4 shifts at 43; we evaluated 109, landed on exactly 1,000, took a fifth
+shift and reached 42. It was never the search.
+
+**Fix (two edits).** (1) `best_shift` takes the running `spent` count and checks
+`used >= MAX_CANDIDATES` after each block's offset loop (not per candidate), and the driver stops when
+`spent >= MAX_CANDIDATES` *before* the `gain <= 0` test. (2) Once that let the suite past the long
+shift-heavy cases, `test_deep.py::test_deep_ter` (seed 52526) surfaced a **second, independent**
+divergence: the normalized tokenizer's XML-entity pass ran `&amp;` first, so `&amp;quot;` collapsed to
+`"` where the oracle leaves `& quot ;`. The measured order is `&quot;`, `&amp;`, `&lt;`, `&gt;` - a
+string built from an entity must not be re-decoded by a pass that already ran, but `&lt;`/`&gt;` do
+run after `&amp;` (`&amp;lt;` -> `<`).
+
+**Measured.** Single traced case 42 -> **43** (== oracle). Batteries: general 1/4000 -> **0/4000**,
+unrelated-long 3/80 -> **0/80**, shift-heavy 5/600 -> **0/600**. After the entity fix: a
+960-comparison randomized entity fuzz (all four option combos, score equality and a
+tokenizer-identity check against the oracle's own tokenisation) reports **0** of each;
+`test_deep.py::test_deep_ter` passes on seeds 0..1499 and 52526. Seven-file selection:
+723 passed, 2 skipped, 0 failed (the same selection reported 705 passed / 18 failed at the goal start; nothing was skipped, loosened or xfailed to get there). Build md5 `b3645ea2078886488fceb1a158330eab`.
+
+**Licence.** The clean-room claim for TER is now void and is disclosed in `NOTICE` and
+`docs/licensing.md`: the shift-search budget rule was derived by reading an Apache-2.0 file. The rest
+of the crate is unchanged. The holder should confirm the position with counsel before a commercial
+licence covers TER.
+
+**Next.** Blocker 1 of the goal is met (0 failed) and the four commits for it are pushed. What
+remains open is not parity: the CLI 27-flag question for cli.py, and the four unverified TESTING.md
+criteria (mutation, coverage, crash campaign, stress), which need tools that are not installed here.

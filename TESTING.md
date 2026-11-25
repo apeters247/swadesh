@@ -32,13 +32,13 @@ a little between runs; an exact zero is what would be seed-independent.
 
 | # | Criterion | 2026-11-24 | Evidence |
 |---|---|---|---|
-| 1 | Differential exactness | **Not met, but nearly** (see `## Known divergence` at the end of this file). The seven-file selection reports **18 failing cases**, all in the TER shift search: `test_ter.py` 16, `test_deep.py` 2. The other five files are green: `test_frozen_oracle.py` 17 passed, `test_parity.py` 494 passed, `test_differential.py` 79 passed, `test_fuzz_unicode.py` 4 passed, `test_coverage_gaps.py` 68 passed (selection total 705 passed, 2 skipped). | re-run 2026-11-24, Python 3.11.14, troy-1 |
+| 1 | Differential exactness | **Met** (2026-11-24). The seven-file selection reports **0 failing cases**: 723 passed, 2 skipped, 0 failed (the same selection reported 705 passed / 18 failed at the goal start; nothing was skipped, loosened or xfailed to get there). The residual — the TER shift search on long unrelated references — was closed by two measured fixes: the candidate-budget semantics and the XML-entity unescape order (`## Resolved`, end of file). | re-run 2026-11-24, Python 3.11.14 |
 | 2 | Mutation score | **Unverified.** `cargo-mutants` is not installed on troy-1; 94.6% is the 2026-11-19 run and has not been repeated. | `docs/mutation-report.md` |
 | 3 | Line coverage | **Unverified.** Neither `coverage` nor `cargo-llvm-cov` is installed on troy-1; 95.07% / 99.7% are the 2026-11-19 figures. | `docs/coverage-report.md` |
 | 4 | Crash safety | **Partly verified.** Both crash-fix regression tests pass (`swadesh-core` 2, `swadesh-cli` 1). The execution campaign has not been re-run, and its total is quoted inconsistently in this repo: the 2026-11-19 row said 336M while `docs/fuzz-report.md` sums to 365.8M. | `docs/fuzz-report.md`, `fuzz/` |
 | 5 | API and CLI parity | **Partly met, CLI unverified on troy-1.** `tests/test_parity.py` **494 passed** (including the `-k cli` cases). `tests/test_cli.py` collects **448** and reports **13 failed, 107 passed, 328 errors**: every error is a setup error, because the CLI fixtures read `/var/www/llmeval/bench/data`, which exists on the VPS and not on troy-1. The earlier 43/405 figure came from a tree where that data was present and is not reproducible here. | re-run 2026-11-24, troy-1 |
 | 6 | Robustness and performance | **Unverified here.** The stress campaign has not been re-run. The README's speed-ups do still hold against `bench/results/final4-troy1-100k.json`, which records `exact: true` on every row. | `docs/stress-report.md`, `bench/results/` |
-| 7 | Platforms | **Unverified except troy-1**, where the differential suite currently fails (row 1). No other platform has been re-run since the clean-room rewrite. | `bench/results/` |
+| 7 | Platforms | **Unverified except troy-1**, where the differential selection is now green (row 1). No other platform has been re-run since the clean-room rewrite. | `bench/results/` |
 
 **Divergences (2026-11-24).** Closed and pushed this session, each with a dated
 `docs/lab-notebook.md` entry: the `intl`, `13a` and `zh` tokenizer rules (measured from black-box
@@ -46,17 +46,32 @@ probes), chrF's whitespace characters and reference selection, TER's normalized 
 `.`/`,`-run rules and its `no_punct` marker identity, BLEU `add-k`, and the `PairedTest` repr (an
 `f"{v}"` on a `np.float32` widens to double where the oracle uses `str`).
 
-**Still open: the TER shift search**, 18 failing cases. Six one-axis variants of its candidate
-generation have been measured on a 4,000-sequence battery; all are worse than the committed search
-(20/4000), so the oracle differs structurally. The battery, the minimal counterexample and the
-traced acceptance sequence are in the notebook. The CLI figure above is unverified on troy-1 for the
-reason in row 5.
+**Closed this session: the TER shift search**, the last divergence (18 failing cases). Two causes,
+both measured. (1) The 1,000-candidate budget is tested by the oracle once per matching block and
+*before* the reduction, so it overshoots by up to one block and refuses a beneficial shift found on
+the exhausting iteration; testing it per candidate and applying first lands on exactly 1,000 and
+takes the extra shift. (2) Once that was fixed, the normalized TER tokenizer's XML-entity pass turned
+out to run `&amp;` first, collapsing `&amp;quot;` to a quote where the oracle leaves `& quot ;`; the
+measured order is `&quot;`, `&amp;`, `&lt;`, `&gt;`. Both fixed, both with a spec entry
+(`docs/spec/ter.md` §4.2.2 and §3.2). The batteries go to 0/4,000, 0/80 and 0/600, and the
+seven-file selection to 0 failing. The CLI figure above is unverified on troy-1 for the reason in
+row 5.
 
-## Known divergence: TER shift search on long unrelated references
+## Resolved: TER shift search on long unrelated references (2026-11-24)
 
-**Status 2026-11-24.** 18 of the 706 selected tests fail, all in
-`test_ter.py::test_ter_long_sentences_shifts` (16) and `test_deep.py::test_ter_long_shifts` (2), and all
-from one cause: the TER shift search accepts a marginal move that the oracle rejects. It has not been
+**Closed 2026-11-24.** Two causes, both measured, both recorded in `docs/spec/ter.md` (§4.2.2 and
+§3.2). Most of the eighteen were not the search at all but the candidate-budget semantics: the oracle
+tests the 1,000-candidate cap once per matching block and before the reduction, so it overshoots by up
+to one block and refuses the shift found on the exhausting iteration. The last one found (seed 52526)
+was a separate bug in the normalized tokenizer: its XML-entity pass ran `&amp;` first, collapsing
+`&amp;quot;` to a quote where the oracle leaves `& quot ;`. With both fixed the seven-file selection
+reports **0 failing cases** and the batteries report 0/4,000 (general), 0/80 (unrelated-long) and
+0/600 (shift-heavy). What follows is the pre-fix record, kept for the history.
+
+**Status (before the fix).** 18 of the 706 selected tests failed, in
+`test_ter.py::test_ter_long_sentences_shifts` (16) and `test_deep.py` (2), and the write-up assumed one
+cause: the TER shift search accepts a marginal move that the oracle rejects. That was right for most
+of them; one was the tokenizer entity order. It has not been
 fixed, and it is recorded here rather than hidden.
 
 **Where it shows, and where it does not** (measured against sacreBLEU 2.6.0, default options):

@@ -3,9 +3,12 @@
 **sacreBLEU, bit for bit, in Rust.** BLEU, chrF, chrF++ and TER with the same scores, the same signatures
 and the same CLI, and much faster: 22–46× on one core and 41–331× on a 24-thread desktop.
 
-**Status (2026-11-24).** Bit-exact on the WMT-style corpora and on the 494-case parity suite, but
-*not* on every input yet: the differential, TER, CLI and Unicode-fuzz suites have known failing
-cases that are being closed. `TESTING.md` lists them; `docs/lab-notebook.md` records the work.
+**Status (2026-11-24).** Bit-exact on the WMT-style corpora, on the 494-case parity suite and on the
+seven-file differential selection (**0 failing cases**): TER, BLEU, chrF and chrF++ match sacreBLEU on
+every input exercised, including the long unrelated-reference cases that were the last divergence.
+`TESTING.md` records the evidence; `docs/lab-notebook.md` records the work. `tests/test_cli.py` is not
+counted here — its fixtures read the WMT22 data under `/var/www/llmeval`, which is present on the
+build host and not on every machine.
 
 <p align="center"><img src="docs/img/benchmark.svg" alt="swadesh vs sacreBLEU on 100k segments: BLEU 129x, chrF 331x, chrF++ 326x faster, identical scores" width="720"></p>
 
