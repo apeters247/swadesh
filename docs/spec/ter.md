@@ -348,13 +348,28 @@ edit distance; gain-1 shifts are adopted, as the paper says.
 **The oracle departs from its own published description on long, unrelated-reference segments.** On
 such a segment (57 vs 56 words, ours 42 edits, oracle 43) the oracle's first move is one that leaves
 its total unchanged, while 65 candidates in the same candidate list would have reduced it and three
-would have reduced it further; see `TESTING.md` for the measurement and the twenty-two candidate
+would have reduced it further; see `TESTING.md` for the measurement and the running list of candidate
 mechanisms that have been tried. The departure is documented rather than copied: it appears only when
 the reference is not a translation of the hypothesis (0 of 80 realistic block-moved references, 3 of
 80 unrelated long references, 1 of 4,000 random), and no public description of it exists — the
 external review of sacreBLEU's issue tracker found only tokenization gating (#229), score scaling
 (#208), empty references (#228, #232, #161) and `normalized` docstrings (#230, #235), all of which
 this implementation already matches.
+
+**The oracle's first move is not the maximum of any objective measured** (2026-11-24). On the
+57-token case the oracle's own total is 43. Cross-referencing every one of the 157 distinct
+first-iteration candidates against the oracle's own continuation (`1 + oracle_total(shifted)`) shows
+that the four candidates maximising the edit-distance gain lead to 41, 41, 42, 42 - never 43 - and the
+62 candidates that leave the oracle at 43 are almost all gain-1 moves. The four candidates maximising
+the *match-count* gain are the same four. So the oracle's move neither most reduces the edit distance
+(the published definition) nor most increases the number of matching words, and the oracle's own
+result is unreachable by any maximum-gain move in the list. Restricting the search to reproduce a
+weaker one only makes matters worse: maximal matching blocks only (4/80 and 7/80 on the two batteries
+below, against 3/80 and 0/80 committed), source words all in error (28/80, 40/80), destination words
+all in error (22/80, 36/80), move-distance cap removed (identical - it never binds at these lengths),
+minimum gain raised to 2 (22/80, 11/80) and to 3 (71/80, 46/80). The oracle is therefore not running
+the published greedy over any candidate set or objective that black-box probing has been able to
+identify.
 
 ### 4.3 Counting
 

@@ -3577,3 +3577,67 @@ tokenization, #229 — exactly what our session's earlier fix implements), score
 (#208), empty references (#228, #232, #161), `normalized` docstrings (#230, #235) and zh tokenization
 (#127). **No issue describes the shift search.** Reddit and the general web were reachable from omen
 but surfaced only re-descriptions of the same paper.
+
+## 2026-11-24 (continued) - TER shift search: the oracle's move is not the maximum of any objective
+
+**Attempted.** With "match sacreBLEU exactly in all cases" as the goal, and web access now working
+through `omen`, I went after the last 18 TER failures two ways: reading the primary prose the oracle
+was built from, and probing the oracle's own first move directly.
+
+**Prose.** Fetched and read (via `omen`, `pdftotext`) two primary sources. The TER paper (Snover et
+al. 2006, `aclanthology.org/2006.amta-papers.25.pdf`) and the TERp technical description (Snover et
+al. 2009, `snover/terp` `doc/terp_description.pdf`). Both give the same selection rule - "the shift
+that most reduces the number of insertions, deletions and substitutions" - the same constraints, and
+no tie-break or enumeration detail; TERp section 3.2 adds nothing. The machine-translate.org TER page
+is generic. The sacreBLEU tracker has 13 issues with TER in the title; none touches the shift search
+(gating #229, scaling #208/#169/#140, empty refs #228/#232/#161, `normalized` docstrings #230/#235,
+zh #127, signatures #135/#131/#102, add-TER #90). Open issue **#314** (kana-boundary regexes in Asian
+TER normalisation) is unmerged; the implementation returns exactly the oracle's value for its example,
+i.e. the pre-fix 2.6.0 behaviour.
+
+**Measured - the decisive one.** On the 57-token failing case (`/tmp/probe_states3.py` `HYP`/`REF`;
+plain edit distance 49, oracle total 43) the first iteration has 157 distinct candidates
+(`/tmp/cands.txt`). For each I asked the oracle itself to finish the job
+(`1 + translation_edit_rate(apply(c), REF)`):
+
+| our gain | candidates | oracle totals after finishing |
+|---|---|---|
+| 3 (our maximum) | 4 | 41, 41, 42, 42 - **none reaches 43** |
+| 2 | 34 | 41, 42 x30, 43 x2, 44 |
+| 1 | 119 | 41, 42 x32, 43 x60, 44 x23, 45 x3 |
+
+The oracle's first move must satisfy `1 + oracle_total(apply(c*)) = 43`, so it is **not** the
+maximum-gain move: all four max-gain candidates would take it to 41 or 42. Mining the objective, the
+four candidates that maximise the *edit-distance* gain and the four that maximise the *match-count*
+gain are **the same four** (all reaching 41/42), so neither is the oracle's objective; block length is
+not one either (the 15 length-2 blocks land anywhere from 41 to 45).
+
+**Also measured, and worse** (so the oracle is not a restricted version of our search): candidate set
+restricted to maximal matching blocks 4/80 independent, 7/80 perturbed (committed 3/80, 0/80); source
+block required all-errors 28/80, 40/80; destination block all-errors 22/80, 36/80; move-distance cap
+removed - identical, the cap never binds at these lengths; minimum accepted gain raised to 2 -
+22/80, 11/80; to 3 - 71/80, 46/80. On all three observed failures the committed search is strictly
+better than the oracle (42<43, 39<40, 9<11), never worse.
+
+**Failed and why.** No black-box mechanism reproduces the oracle's choice. Its first move is not the
+maximum of the edit-distance gain, the match-count gain or the block length; its result is unreachable
+by any maximum-gain move; and every candidate-set restriction degrades our search instead of moving it
+toward the oracle. The published algorithm we implement and the oracle's behaviour diverge here, and
+the divergence is undocumented publicly.
+
+**Decisions and reasons.** Recorded the measurement in `docs/spec/ter.md` section 4.2.1 and the
+refutation list in `TESTING.md`. Did **not** xfail or narrow the 18 failing tests: they are
+Hypothesis-driven *differential* tests against the live oracle, not frozen literals, so an xfail would
+blank a whole property - and the goal's boundary forbids xfailing to get green. Blocker 2 of the goal
+was verified already complete (`rg "pypi-publish|cargo publish|publish_github" .github tools` = no
+hits; `tools/publish_github.sh` gone; `LAUNCH.md` is the private-only note; `release.yml` has no
+publish job). Closing the residual by reading the oracle's source would break the clean-room claim, so
+it needs the owner's authorisation and is left as the open decision.
+
+**State.** Seven-file selection unchanged: **18 failed / 705 passed / 2 skipped**; `cargo test
+--release --workspace` 13 suites green; build md5 `0c72e64a791f79bf1dfa1db166931061` (matches the
+committed tree). General battery 1/4000, shift-heavy 5/600, unrelated-long 3/80.
+
+**Next step.** Owner decision: (a) accept and document - the current state - or (b) authorise reading
+the oracle's shift search, which ends the clean-room claim. Failing that, re-derive the reference's
+shift search as a two-stage routine from black-box probes: multi-day, no guarantee.
