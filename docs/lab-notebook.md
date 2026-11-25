@@ -3879,3 +3879,34 @@ restore sacreBLEU's `significance._bootstrap_resample`.
 **Next.** Slice 5: `cli.py` (delegates to sacreBLEU's CLI -- a documented adapter or a port) and
 `verify.py`; then slice 6, dropping `sacrebleu` from `pyproject.toml`'s runtime dependencies while
 keeping it as the test oracle.
+
+## 2026-11-25 (continued) - drop the sacreBLEU dependency, slice 5: `import swadesh` needs nothing
+
+**Attempted.** The last module-level sacreBLEU import was `__init__.py` -- and it was doing two
+things at import: `import sacrebleu` / `import sacrebleu.compat`, and building the seven
+module-level wrappers (`corpus_bleu`, `raw_corpus_bleu`, `sentence_bleu`, `corpus_chrf`,
+`sentence_chrf`, `corpus_ter`, `sentence_ter`) with `_rebind(...)`.
+
+**Done.** `import swadesh` now imports **no** sacreBLEU -- verified directly (`"sacrebleu" in
+sys.modules` is False after import). The wrappers are built on first use: `__getattr__` (already
+there for `PairedTest`) answers the seven names, `_compat_function` builds the real rebound function
+and caches it into the module globals, so later lookups are plain attributes and
+`inspect.signature` still sees sacreBLEU's own function. `SACREBLEU_COMPAT_VERSION` is now the
+`COMPAT_VERSION` literal instead of a live `sacrebleu.__version__` read.
+
+**Two things fell out on the way.** `_rebind` never copied `__annotations__`, so
+`inspect.signature(swadesh.corpus_bleu)` was missing every type hint and the return type -- a
+pre-existing drop-in gap that the new probe caught, now fixed. And `cli.py`, which is 19 lines that
+call `patch()` and then run sacreBLEU's own CLI, now turns a missing sacreBLEU into a clean
+`SystemExit` with a message instead of a traceback; its docstring says plainly that it is an adapter
+rather than an independent CLI, and names the Rust binary as the separate, smaller-flag-set
+alternative.
+
+**Measured.** A 15-case probe over the wrapper surface -- plain calls, keyword arguments, a bad
+tokenizer name, empty input, all-`None` references, `raw_corpus_bleu` with and without the
+threshold, `sentence_bleu`/`sentence_chrf`/`sentence_ter` -- reports no differences from sacreBLEU,
+including for the exception cases; the eight signature and docstring comparisons match; and
+`patch()`/`unpatch()` still round-trip.
+
+**Next.** Slice 6: `pyproject.toml` -- `dependencies = ["numpy>=1.24"]`, with `sacrebleu==2.6.0`
+moved to an extra for the CLI, `patch()`, `verify.py` and the exotic tokenizers. Then one final gate.

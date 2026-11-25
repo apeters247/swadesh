@@ -42,10 +42,12 @@ one route open for organisations that cannot take the AGPL.
 
 ## What is Apache-2.0, and why
 
-Five Python modules still import sacreBLEU and are therefore under sacreBLEU's Apache-2.0 notice as
-well as this project's: `__init__.py` (the `patch()` adapter), `verify.py`, `metrics.py`,
-`significance.py` and `cli.py`. `LICENSE-Apache-2.0` retains that text. `NOTICE` names them. Replacing
-them with standalone implementations is planned.
+The Python metric classes are this project's own now, and `import swadesh` imports no sacreBLEU. The
+parts that still touch it do so on use, and are under sacreBLEU's Apache-2.0 notice as well as this
+project's: the `patch()` adapter and the module-level `corpus_*`/`sentence_*` wrappers in
+`__init__.py`, `verify.py`, `cli.py`, `significance.py`'s `install()`/`uninstall()`, and the six
+tokenizers that need mecab or sentencepiece. `LICENSE-Apache-2.0` retains that text and `NOTICE`
+names them.
 
 Everything in `crates/` is original to this project and carries only AGPL-3.0-or-later, with one
 disclosed exception below.

@@ -46,20 +46,21 @@ the argument-check errors are diffed against the real classes.
 sacreBLEU (https://github.com/mjpost/sacreBLEU), copyright Matt Post and contributors, is licensed
 under the Apache License, Version 2.0 (retained in `LICENSE-Apache-2.0`).
 
-The Python package imports sacreBLEU in five modules, and this is the part of the tree that is not
-yet standalone:
+The Python package no longer needs sacreBLEU for its library API. `import swadesh` imports none of
+it, and BLEU, chrF, chrF++, TER and the paired significance tests all run without it. What still
+touches sacreBLEU, and therefore falls under the Apache-2.0 notice above, does so **on use**, not at
+import:
 
-| module | what it does |
+| what | why it needs sacreBLEU |
 |---|---|
-| `__init__.py` | the `patch()` adapter, which redirects `import sacrebleu` users to swadesh |
-| `verify.py` | the benchmark harness |
-| `metrics.py` | subclasses sacreBLEU's metric classes to reuse their score formatting |
-| `significance.py` | wraps sacreBLEU's paired-test machinery |
-| `cli.py` | delegates to sacreBLEU's command-line entry point |
+| `patch()` and the module-level wrappers (`corpus_bleu`, `sentence_chrf`, ...) in `__init__.py` | their job is to intercept sacreBLEU users; the wrappers are built on first call |
+| `verify.py` | it compares swadesh against sacreBLEU on the user's data |
+| `cli.py` | the command line *is* sacreBLEU's CLI with swadesh's metrics installed |
+| `significance.py` | `install()`/`uninstall()` swap sacreBLEU's resamplers for ours |
+| the six exotic tokenizers (`ja-mecab`, `ko-mecab`, `spm`, `flores101`, `flores200`, `spBLEU-1K`) | they need mecab or sentencepiece, which sacreBLEU wires up |
 
-Those five modules, and only those, fall under the Apache License 2.0 notice above. Replacing them
-with standalone implementations is planned; until then sacreBLEU 2.6.0 is a runtime dependency of
-the Python package.
+The five native tokenizers (`none`, `13a`, `intl`, `zh`, `char`) and everything in `crates/` are
+unaffected.
 
 ## Third-party data and behaviour reproduced
 
