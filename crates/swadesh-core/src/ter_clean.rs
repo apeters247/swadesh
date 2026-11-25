@@ -194,16 +194,17 @@ fn remove_lf_hyphen(raw: &[char]) -> Vec<char> {
 pub fn tokenize(cfg: &TerConfig, text: &str) -> Vec<String> {
     // spec 3.2 step 2: in normalized mode the XML entities are unescaped after lowercasing, so
     // uppercase forms are covered only when `case_sensitive` is false. Four sequential global
-    // passes in this order: "&amp;lt;" collapses to "<" because "&amp;" runs first, and
-    // "&amp;amp;" leaves "&amp;" because the second "amp;" has no "&". The pre-lowercase only
-    // runs when an entity can be present, so segments without "&" keep the original code path.
+    // passes in the measured order quot, amp, lt, gt: "&amp;lt;" collapses to "<" because "&lt;"
+    // runs after "&amp;", while "&amp;quot;" leaves "& quot ;" because "&quot;" has already run.
+    // The pre-lowercase only runs when an entity can be present, so segments without "&" keep the
+    // original code path.
     let unescaped: String;
     let text: &str = if cfg.normalized && text.contains('&') {
         let mut s = String::with_capacity(text.len());
         for c in text.chars() {
             push_lower(&mut s, c, cfg.case_sensitive);
         }
-        for (from, to) in [("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"), ("&quot;", "\"")] {
+        for (from, to) in [("&quot;", "\""), ("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">")] {
             if s.contains(from) {
                 s = s.replace(from, to);
             }
@@ -869,8 +870,9 @@ mod tests {
 
     #[test]
     fn normalized_unescapes_xml_entities() {
-        // spec 3.2 step 2: four sequential global replacements after lowercasing. "&amp;" runs
-        // first, so "&amp;lt;" collapses to "<" while "&amp;amp;" leaves "&amp;" for the splitter.
+        // spec 3.2 step 2: four sequential global replacements after lowercasing, in the measured
+        // order quot, amp, lt, gt. "&amp;lt;" collapses to "<" (lt runs after amp) while
+        // "&amp;quot;" leaves "& quot ;" (quot has already run).
         let cfg = TerConfig { normalized: true, ..TerConfig::default() };
         assert_eq!(words(&cfg, "&amp;"), vec!["&"]);
         assert_eq!(words(&cfg, "&lt;"), vec!["<"]);
@@ -879,6 +881,7 @@ mod tests {
         assert_eq!(words(&cfg, "&amp;lt;"), vec!["<"]);
         assert_eq!(words(&cfg, "&amp;gt;"), vec![">"]);
         assert_eq!(words(&cfg, "&amp;amp;"), vec!["&", "amp", ";"]);
+        assert_eq!(words(&cfg, "&amp;quot;"), vec!["&", "quot", ";"]);
         assert_eq!(words(&cfg, "a&amp;b"), vec!["a", "&", "b"]);
         // Lowercasing runs first, so uppercase spellings are covered when case_sensitive is off.
         assert_eq!(words(&cfg, "&AMP;"), vec!["&"]);
