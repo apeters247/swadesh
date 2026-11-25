@@ -46,6 +46,14 @@ The corpus score is `sum(num_edits) / sum(avg_ref_len)`, which is TER weighted b
 
 Two tokenizers, selected by `normalized`.
 
+The tokenizer is reachable as `metric.tokenizer`, a callable returning the tokenized string, and is
+what `metric._preprocess_segment` delegates to; sacreBLEU stores a `TercomTokenizer` there and
+downstream code may call it (measured 2026-11-25: an instance of sacreBLEU's TER has exactly the
+attributes `_force`, `_ref_cache`, `n_bootstrap`, `seed`, `no_punct`, `normalized`, `asian_support`,
+`case_sensitive`, `tokenizer`, `tokenizer_signature`, and `tests/test_parity.py` requires ours to
+match). A non-string segment fails inside `" ".join(tokens)`, which is where sacreBLEU's tokenizer
+fails too.
+
 ### 3.1 `normalized = false` (the default; TERCOM-style)
 
 1. Lowercase unless `case_sensitive`, with **CPython's `str.lower()` semantics**, which include the

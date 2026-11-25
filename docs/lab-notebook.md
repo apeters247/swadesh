@@ -3768,3 +3768,46 @@ module no longer imports `sacrebleu.metrics.ter` at all. The patch-compatibility
 in `tests/test_parity.py` mean the sacreBLEU-subclass tie has to be handled deliberately: the plan is
 for `swadesh.TER` to stand alone and for `patch()` to build the sacreBLEU-compatible subclass when
 sacreBLEU is importable.
+
+## 2026-11-25 (continued) - drop the sacreBLEU dependency, slice 2b: TER stands alone
+
+**Attempted.** With the TER tokenizer native (slice 2a), the metric itself was next: `TER`,
+`TERScore` and `TERSignature` all came from `sacrebleu.metrics.ter`. `swadesh/base.py` already
+carried the ported `Metric`, `Score` and `Signature` they need.
+
+**Done.** `metrics.py` no longer imports `sacrebleu.metrics.ter` at all. `TER` derives from the
+ported `base.Metric`; `TERSignature` is a port of sacreBLEU's (the base fields plus `case`, `tok`,
+`norm`, `punct`, `asian`); `TERScore` was already ours. `__init__.py` imports `TERScore` from us.
+Because `swadesh.TER` is now *not* a subclass of sacreBLEU's TER, `patch()` builds the installed
+class at patch time as `class _TerCompatible(TER, mt.TER)`, so the drop-in promises still hold:
+`sacrebleu.TER is swadesh.TER`, `isinstance(sacrebleu.TER(), sacrebleu.metrics.ter.TER)` and
+`METRICS["TER"] is swadesh.TER` after `patch()`, all restored by `unpatch()`.
+
+**Three regressions, all found by running the suites rather than by the reasoning.** Slice 2a's own
+verification missed the first of them; the broad regression run over seven TER-related files caught
+it at 1 failed / 710 passed, and the other two appeared once 2b was wired:
+
+1. **Non-string input.** `_preprocess_segment` handed bytes straight to the extension, which raised
+   pyo3's `TypeError: 'bytes' object is not an instance of 'str'` where sacreBLEU raises
+   `TypeError: sequence item 0: expected str instance, bytes found` from `" ".join(tokens)`.
+   Reproduced sacreBLEU's failure by doing that join when the segment is not a `str`.
+2. **Dtype of `_compute_score_from_stats`.** I first implemented it as
+   `self._score_from_row(list(stats))`, and `_score_from_row` coerces with `float()`. The
+   significance paths call this method with numpy rows, and sacreBLEU keeps the row's dtype, so
+   `PairedTest` reported `np.float64` where sacreBLEU reports `np.float32` for TER confidence
+   intervals. Now mirrors sacreBLEU's TER method exactly: no coercion, dtype carried through.
+3. **The `tokenizer` attribute.** `tests/test_parity.py::test_instance_attribute_names_match` compares
+   `sorted(vars(instance))` with sacreBLEU's, and sacreBLEU keeps its `TercomTokenizer` on the
+   metric. Rather than park a dummy there, the native tokenizer is now a small
+   `_NativeTerTokenizer` object exposed as `metric.tokenizer`, and `_preprocess_segment` delegates to
+   it; `signature()` returns the measured constant `"tercom"`.
+
+**Measured.** Focused set (`test_parity`, `test_score_objects`, `test_provenance`,
+`test_metrics_fallback`, `test_ter_preprocess`, `test_base_port`): **693 passed, 0 failed**. Scores,
+signatures, `repr`, the JSON form and sentence scores match sacreBLEU for six option combinations;
+after `patch()` the compat class satisfies the identity and `isinstance` checks and still scores
+correctly; `unpatch()` restores both sides.
+
+**Next.** Slice 3: BLEU and chrF onto the ported base, dropping `sacrebleu.metrics.bleu` and
+`sacrebleu.metrics.chrf` (they also use `MAX_NGRAM_ORDER` and chrF's `BETA`/`CHAR_ORDER`/`WORD_ORDER`
+class attributes).
