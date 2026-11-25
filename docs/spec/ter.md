@@ -48,7 +48,11 @@ Two tokenizers, selected by `normalized`.
 
 ### 3.1 `normalized = false` (the default; TERCOM-style)
 
-1. Lowercase unless `case_sensitive`.
+1. Lowercase unless `case_sensitive`, with **CPython's `str.lower()` semantics**, which include the
+   final-sigma rule: word-final `Σ` becomes `ς`, not `σ` (measured 2026-11-25: `"ΣΊΣΥΦΟΣ".lower()`
+   is `σίσυφος`). Rust's `char::to_lowercase` does *not* apply that rule, so a native port has to
+   route the lowering through Python, as the corpus path already does; otherwise the tokenizer
+   conflates `σ` and `ς`.
 2. Replace every Python whitespace character with a single space, collapse runs, strip the ends.
 3. Split on spaces. **No punctuation is separated.**
 

@@ -3729,3 +3729,42 @@ so the note says so and offers the alternative.
 **Next.** Slice 2: give TER its own `TERScore`, `TERSignature` and `TER` on top of this base, so the
 TER path stops importing `sacrebleu.metrics.ter` at all. Then BLEU and chrF, then `significance.py`,
 `cli.py`, `verify.py` and the `pyproject.toml` dependency itself.
+
+## 2026-11-25 (continued) - drop the sacreBLEU dependency, slice 2a: the TER tokenizer goes native
+
+**Attempted.** With `lib_ter.py` already replaced by `ter_clean.rs` on the scoring path, the next
+thing tying TER to the package was its tokenizer: `TER._preprocess_segment` came from sacreBLEU's
+`TercomTokenizer`. This slice moves it into the extension.
+
+**Done.** A new `_swadesh.ter_preprocess(text, normalized, no_punct, asian_support, case_sensitive)`
+in `crates/swadesh-py/src/lib.rs`, and `TER._preprocess_segment` now calls it. Both the native corpus
+path, the empty-reference fallback (`_py_statistics`) and the cached-references path therefore
+tokenize in Rust.
+
+**Measured.** `ter_preprocess` vs `TercomTokenizer(cfg)(text.rstrip())`: **8064 comparisons**
+(504 inputs x 16 flag combinations), **0 differences**. The inputs include 450 real WMT22 sentences
+(en-de, en-zh, en-ja), the entity alphabet, all Unicode whitespace, CJK, dotted/dashed numbers and
+astral characters. Permanent as `tests/test_ter_preprocess.py` (33 tests).
+
+**Failed, and why.** The first version disagreed on exactly one input, `ΣΊΣΥΦΟΣ`: ours gave
+`σίσυφοσ`, the oracle `σίσυφος`. Rust's `char::to_lowercase` does not implement the final-sigma rule
+that CPython's `str.lower()` does, so word-final `Σ` became `σ` instead of `ς`. The corpus path never
+noticed because `ter_load` already lowercases through CPython before `ter_segment` tokenizes; the new
+preprocess function bypassed that step. Fixed by routing the lowering through CPython's `.lower()`,
+the same way `ter_text` does. Recorded in `docs/spec/ter.md` section 3.2 step 1.
+
+**Also verified, twice, by disabling the dependency.** With `TercomTokenizer.__call__` replaced by a
+raising stub, our TER returns identical results on 16 cases covering the native path, the
+empty-reference fallback and `references=` caching; with `lib_ter.translation_edit_rate` stubbed out
+it is identical on 360 configurations while sacreBLEU's own TER raises. Two-score fuzzes after the
+wiring (entity alphabet 960 comparisons, final-sigma vocabulary 1200) report **0** differences.
+
+**Decisions and reasons.** `ter_preprocess` takes `case_sensitive` and does the lowering in Python
+rather than Rust on purpose: reproducing CPython's Unicode lowering rules in Rust is a much larger
+surface than calling `.lower()` once per segment. The docstring says so, so the trap is not re-laid.
+
+**Next.** Slice 2b: `TERScore`, `TERSignature` and `TER` on the ported `swadesh/base.py`, so the TER
+module no longer imports `sacrebleu.metrics.ter` at all. The patch-compatibility `isinstance` checks
+in `tests/test_parity.py` mean the sacreBLEU-subclass tie has to be handled deliberately: the plan is
+for `swadesh.TER` to stand alone and for `patch()` to build the sacreBLEU-compatible subclass when
+sacreBLEU is importable.
