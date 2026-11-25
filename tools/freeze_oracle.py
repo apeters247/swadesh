@@ -167,6 +167,13 @@ def main() -> None:
 
     (out / "MANIFEST.json").write_text(json.dumps({
         "sacrebleu": sacrebleu.__version__, "python": sys.version.split()[0],
+        "provenance": {
+            "wmt22": "sacreBLEU 2.6.0 test set 'wmt22' (https://github.com/mjpost/sacreBLEU), "
+                     "fetched with sacreBLEU's own downloader as `sacrebleu --echo wmt22 <pair>`; "
+                     "src and ref tokenized as TOK says ('char' for en-ja, 'zh' for en-zh)",
+            "fuzz": "the adversarial ALPHABET below, drawn at the fixed seeds in this file",
+            "model": "tests/corpus/model/real-*.jsonl output against tests/corpus/model/ref-*.txt",
+        },
         "cases": manifest}, indent=1) + "\n", encoding="utf-8")
     print("wrote manifest with", len(manifest), "files", flush=True)
 

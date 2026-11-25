@@ -1,6 +1,20 @@
 {
  "sacrebleu": "2.6.0",
  "python": "3.11.14",
+ "provenance": {
+  "wmt22": "sacreBLEU 2.6.0 test set 'wmt22' (https://github.com/mjpost/sacreBLEU), fetched with sacreBLEU's own downloader as `sacrebleu --echo wmt22 <pair>`; src and ref tokenized as the case record says ('char' for en-ja, 'zh' for en-zh)",
+  "fuzz": "the adversarial alphabet in tools/freeze_oracle.py, drawn at the fixed seeds",
+  "model": "tests/corpus/model/real-*.jsonl output against tests/corpus/model/ref-*.txt",
+  "wmt22_sha256": {
+    "wmt22.cs-en.jsonl": "3d2168784d33e8d7749413b07b3aea1e73b2ebb395b5d9e00e6c46c68cd3d051",
+    "wmt22.de-en.jsonl": "5967d93ca13e3a74b18c4249b8545974c3bba48a7616e04f4692a89745a1efd0",
+    "wmt22.en-de.jsonl": "7ad5fab9cf5ca0ac6f34b01dbdd3e336b2fb46665167d721c1e91c01964b32cf",
+    "wmt22.en-ja.jsonl": "07bbe67551afa5972a1343e08b3012f53b82e3c2fc292151a0e7c4232076e47f",
+    "wmt22.en-ru.jsonl": "33fee137f6ee6723d8c61ee2c3518f0cddaa9273fb818bfb40048d65b01c464f",
+    "wmt22.en-zh.jsonl": "0074159d3bfa594b6899fd0457740e1694bb47222a78fc9bfbdc21261be5abf3",
+    "wmt22.zh-en.jsonl": "5333a8c6894f4c90aea915c5e75a48b7454f1f84cf269670a4d9543863361fe2"
+  }
+ },
  "cases": [
   {
    "case": "wmt22.cs-en",

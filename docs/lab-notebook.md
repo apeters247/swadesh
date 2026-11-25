@@ -3641,3 +3641,14 @@ committed tree). General battery 1/4000, shift-heavy 5/600, unrelated-long 3/80.
 **Next step.** Owner decision: (a) accept and document - the current state - or (b) authorise reading
 the oracle's shift search, which ends the clean-room claim. Failing that, re-derive the reference's
 shift search as a two-stage routine from black-box probes: multi-day, no guarantee.
+
+**Also this session - WMT22 fixture provenance (goal item 5).** `tests/oracle/MANIFEST.json`
+recorded only the sacreBLEU and Python versions; the seven `wmt22.*.jsonl` fixtures had no recorded
+source. Both `tools/freeze_oracle.py` and the frozen manifest now carry a `provenance` block: the
+cases come from sacreBLEU 2.6.0's own `wmt22` test set (mjpost/sacreBLEU), fetched with sacreBLEU's
+downloader as `sacrebleu --echo wmt22 <pair>`, tokenized per pair (`char` for en-ja, `zh` for en-zh),
+plus the sha256 of each fixture file so a re-freeze can be checked. No expectation changed; the
+frozen-oracle suite still passes. The remaining goal item 5 entries were already in place: `NOTICE`
+names the holder (Kevin Peters), `tests/test_version.py` is the version-consistency test,
+`git worktree list` shows the single tree, and `tests/test_mcp.py` imports the MCP SDK with
+`pytest.importorskip` so it runs where the SDK is present and is skipped otherwise.
