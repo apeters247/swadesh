@@ -6,9 +6,10 @@ in this module from `docs/spec/significance.md`, written before the code.
 
 One sacreBLEU import remains and will not go away: `install()`/`uninstall()` is the adapter that
 `patch()` calls to redirect sacreBLEU users to these functions, so it must touch sacreBLEU to
-redirect it. The native scoring helpers used to import `sacrebleu.metrics` classes as well; they now
-classify a metric by the attributes the kernels read (`_metric_kind`), so swadesh's own metric
-classes qualify exactly as sacreBLEU's do.
+redirect it. That import is **lazy**, inside those functions, so nothing else in this module needs
+sacreBLEU installed and `swadesh.PairedTest` works without it. The native scoring helpers used to
+import `sacrebleu.metrics` classes as well; they now classify a metric by the attributes the kernels
+read (`_metric_kind`), so swadesh's own metric classes qualify exactly as sacreBLEU's do.
 """
 
 from __future__ import annotations
@@ -23,7 +24,6 @@ import platform
 import sys
 
 import numpy as np
-import sacrebleu.significance as _sig
 
 from . import _swadesh
 
@@ -252,22 +252,38 @@ _FAST = {
 }
 
 
+def _sacrebleu_significance():
+    """sacreBLEU's significance module, imported on demand.
+
+    Only `install`/`uninstall` need it, and they exist to redirect sacreBLEU to these functions.
+    Keeping the import here rather than at module level is what lets `swadesh.PairedTest` -- and
+    the rest of the significance surface -- work with sacreBLEU absent.
+    """
+    import sacrebleu.significance as _sig
+
+    return _sig
+
+
 def install():
     """Replace sacreBLEU's significance functions globally; returns the originals."""
-    old = {k: getattr(_sig, k) for k in _FAST}
+    sig = _sacrebleu_significance()
+    old = {k: getattr(sig, k) for k in _FAST}
     for k, v in _FAST.items():
-        setattr(_sig, k, v)
+        setattr(sig, k, v)
     return old
 
 
 def uninstall(old):
+    if not old:
+        return
+    sig = _sacrebleu_significance()
     for k, v in old.items():
-        setattr(_sig, k, v)
+        setattr(sig, k, v)
 
 
 @contextlib.contextmanager
 def _installed():
-    if getattr(_sig, "_bootstrap_resample") is _bootstrap_resample:
+    if getattr(_sacrebleu_significance(), "_bootstrap_resample") is _bootstrap_resample:
         yield
         return
     old = install()
