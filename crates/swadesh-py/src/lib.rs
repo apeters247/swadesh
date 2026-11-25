@@ -237,6 +237,34 @@ fn ter_stats<'py>(
     Ok((f64_bytes(py, &stats), hs.len(), 2))
 }
 
+/// `sacrebleu`'s `TER._preprocess_segment`: the TER tokenizer applied to `sent.rstrip()`, with the
+/// tokens joined by single spaces. Byte-identical to `TercomTokenizer(...)(sent.rstrip())`, and it
+/// is what lets the Python TER class run without sacreBLEU's tokenizer module.
+///
+/// The lowercasing is CPython's `str.lower()`, exactly as `ter_text` does it for the corpus path,
+/// because Rust's own `to_lowercase` misses the final-sigma rule: `"ΣΊΣΥΦΟΣ".lower()` ends in `ς`,
+/// Rust's ends in `σ`.
+#[pyfunction]
+#[pyo3(signature = (text, normalized, no_punct, asian_support, case_sensitive))]
+fn ter_preprocess<'py>(
+    py: Python<'py>,
+    text: &str,
+    normalized: bool,
+    no_punct: bool,
+    asian_support: bool,
+    case_sensitive: bool,
+) -> PyResult<String> {
+    let cfg = TerConfig { normalized, no_punct, asian_support, case_sensitive };
+    let stripped = py_rstrip(text);
+    let lowered: Cow<'_, str> = if case_sensitive {
+        Cow::Borrowed(stripped)
+    } else {
+        let l = PyString::new(py, stripped).call_method0("lower")?;
+        Cow::Owned(l.cast::<PyString>()?.to_str()?.to_owned())
+    };
+    Ok(swadesh_core::ter_clean::tokenize(&cfg, &lowered).join(" "))
+}
+
 /// Segment-level BLEU for many (hyp, refs) pairs at once. Bit-identical to
 /// calling `BLEU(...).sentence_score(h, refs).score` in a Python loop.
 #[pyfunction]
@@ -702,6 +730,7 @@ fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(bleu_stats, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_stats, m)?)?;
     m.add_function(wrap_pyfunction!(ter_stats, m)?)?;
+    m.add_function(wrap_pyfunction!(ter_preprocess, m)?)?;
     m.add_function(wrap_pyfunction!(bleu_sentence_scores, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_sentence_scores, m)?)?;
     m.add_function(wrap_pyfunction!(bootstrap_sums_f32, m)?)?;

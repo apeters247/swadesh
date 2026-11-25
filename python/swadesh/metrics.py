@@ -731,9 +731,10 @@ def mbr(candidates: Sequence[str], metric=None, exclude_self: bool = True):
 class TER(_FastMixin, _SacreTER):
     """Bit-exact, accelerated ``sacrebleu.metrics.TER``.
 
-    Same constructor and API. Only the segment statistics (tercom shifts and the
-    beam edit distance) are native. Aggregation and scoring use sacreBLEU's own
-    ``sum_of_lists`` and score code on the same floats, so the results are identical.
+    Same constructor and API. The tokenizer and the segment statistics (tercom shifts and the beam
+    edit distance) are native, so this class no longer uses sacreBLEU's tokenizer module. What it
+    still takes from the class it subclasses is the constructor, the score-object machinery and the
+    signature printing.
     """
 
     def __init__(self, normalized: bool = False, no_punct: bool = False, asian_support: bool = False,
@@ -742,6 +743,21 @@ class TER(_FastMixin, _SacreTER):
                          case_sensitive=case_sensitive, references=None)
         if references is not None:
             self._ref_cache = self._cache_references(references)
+
+    def _preprocess_segment(self, sent: str) -> str:
+        """sacreBLEU's `TercomTokenizer(sent.rstrip())`, natively.
+
+        The rstrip and CPython's `lower()` (final-sigma rule included) happen here; the tokenizing
+        and the normalized-mode entity unescaping are the Rust kernel's. Verified byte-identical to
+        `TercomTokenizer(...)` for all sixteen flag combinations by `tests/test_ter_preprocess.py`.
+        """
+        stripped = sent.rstrip()
+        if not self.case_sensitive:
+            stripped = stripped.lower()
+        return _swadesh.ter_preprocess(
+            stripped, bool(self.normalized), bool(self.no_punct),
+            bool(self.asian_support), bool(self.case_sensitive),
+        )
 
     def _extract_corpus_statistics(self, hypotheses: Sequence[str], references) -> Any:
         cache = self._resolve_refs(references)
