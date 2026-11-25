@@ -15,6 +15,7 @@ exception is sacreBLEU's, not an artefact of the Rust layer.
 """
 
 import json as _json
+import math
 import logging
 import statistics as _statistics
 from typing import Any, List, Optional, Sequence
@@ -33,13 +34,83 @@ class _LazyNumpy:
 
 
 np = _LazyNumpy()
-from sacrebleu.metrics.bleu import BLEU as _SacreBLEU
-from sacrebleu.metrics.bleu import MAX_NGRAM_ORDER
-from sacrebleu.metrics.chrf import CHRF as _SacreCHRF
-
 from . import _swadesh
 from .base import Metric as _NativeMetric
 from .base import Signature as _NativeSignature
+
+#: BLEU's default maximum n-gram order (sacreBLEU's `BLEU.MAX_NGRAM_ORDER`).
+MAX_NGRAM_ORDER = 4
+
+
+def _my_log(num: float) -> float:
+    """sacreBLEU's `my_log`: `log`, floored so a zero precision does not give `-inf`."""
+    if num == 0.0:
+        return -9999999999
+    return math.log(num)
+
+
+def _compute_bleu(correct, total, sys_len: int, ref_len: int, smooth_method: str = "none",
+                  smooth_value=None, effective_order: bool = False,
+                  max_ngram_order: int = MAX_NGRAM_ORDER):
+    """BLEU's score from its sufficient statistics, with smoothing.
+
+    A port of sacreBLEU's `BLEU.compute_bleu`. The native scorer in `_score_from_row` covers the
+    ordinary integer rows; this is the fallback it delegates to for the cases the native scorer
+    refuses -- a degenerate n-gram order and a fractional (float32 bootstrap) row -- where
+    sacreBLEU's own arithmetic is what has to be reproduced, quirks included. Smoothing per Boxing
+    Chen and Colin Cherry, WMT 2014: `none`, `floor`, `add-k`, `exp` (NIST).
+    """
+    assert smooth_method in BLEU.SMOOTH_DEFAULTS.keys(), \
+        "Unknown smooth_method {smooth_method!r}"
+
+    # Fetch the default value for floor and add-k
+    if smooth_value is None:
+        smooth_value = BLEU.SMOOTH_DEFAULTS[smooth_method]
+
+    # Compute brevity penalty
+    bp = 1.0
+    if sys_len < ref_len:
+        bp = math.exp(1 - ref_len / sys_len) if sys_len > 0 else 0.0
+
+    # n-gram precisions
+    precisions = [0.0] * max_ngram_order
+
+    # Early stop if there are no matches (#141)
+    if not any(correct):
+        return BLEUScore(0.0, correct, total, precisions, bp, sys_len, ref_len)
+
+    smooth_mteval = 1.
+    eff_order = max_ngram_order
+    for n in range(1, len(precisions) + 1):
+        if smooth_method == 'add-k' and n > 1:
+            correct[n - 1] += smooth_value
+            total[n - 1] += smooth_value
+
+        if total[n - 1] == 0:
+            break
+
+        # If the system guesses no i-grams, 1 <= i <= max_ngram_order, the BLEU score is 0
+        # (technically undefined). This is a problem for sentence-level BLEU or a corpus of short
+        # sentences, where systems will get no credit if sentence lengths fall under the
+        # max_ngram_order threshold. `effective_order` scales max_ngram_order to the observed
+        # maximum order; it is off by default.
+        if effective_order:
+            eff_order = n
+
+        if correct[n - 1] == 0:
+            if smooth_method == 'exp':
+                smooth_mteval *= 2
+                precisions[n - 1] = 100. / (smooth_mteval * total[n - 1])
+            elif smooth_method == 'floor':
+                precisions[n - 1] = 100. * smooth_value / total[n - 1]
+        else:
+            precisions[n - 1] = 100. * correct[n - 1] / total[n - 1]
+
+    # Compute BLEU score
+    score = bp * math.exp(
+        sum([_my_log(p) for p in precisions[:eff_order]]) / eff_order)
+
+    return BLEUScore(score, correct, total, precisions, bp, sys_len, ref_len)
 
 sacrelogger = logging.getLogger("sacrebleu")
 
@@ -375,22 +446,159 @@ class TERSignature(_NativeSignature):
         })
 
 
-class BLEU(_FastMixin, _SacreBLEU):
+class BLEUSignature(_NativeSignature):
+    """BLEU's signature: the base fields plus case, effective order, tokenizer and smoothing.
+
+    A port of sacreBLEU's `BLEUSignature`.
+    """
+
+    def __init__(self, args: dict):
+        super().__init__(args)
+        self._abbr.update({
+            "case": "c",
+            "eff": "e",
+            "tok": "tok",
+            "smooth": "s",
+        })
+        smooth_str = args["smooth_method"]
+        smooth_def = BLEU.SMOOTH_DEFAULTS[smooth_str]
+        if smooth_def is not None:
+            smooth_val = args["smooth_value"]
+            if smooth_val is None:
+                smooth_val = smooth_def
+            smooth_str += f"[{smooth_val:.2f}]"
+        self.info.update({
+            "case": "lc" if args["lowercase"] else "mixed",
+            "eff": "yes" if args["effective_order"] else "no",
+            "tok": args["tokenizer_signature"],
+            "smooth": smooth_str,
+        })
+
+
+class CHRFSignature(_NativeSignature):
+    """chrF's signature: the base fields plus case, effective order and the orders.
+
+    A port of sacreBLEU's `CHRFSignature`.
+    """
+
+    def __init__(self, args: dict):
+        super().__init__(args)
+        self._abbr.update({
+            "case": "c",
+            "eff": "e",
+            "nc": "nc",
+            "nw": "nw",
+            "space": "s",
+        })
+        self.info.update({
+            "case": "lc" if args["lowercase"] else "mixed",
+            "eff": "yes" if not args["eps_smoothing"] else "no",
+            "nc": args["char_order"],
+            "nw": args["word_order"],
+            "space": "yes" if args["whitespace"] else "no",
+        })
+
+
+class _NativeBleuTokenizer:
+    """BLEU's per-name tokenizer object, natively, for the five native names.
+
+    sacreBLEU builds a tokenizer class per name, keeps it on the metric as `tokenizer` and its
+    `signature()` is the tokenizer name; `_preprocess_segment` calls it. The native path covers
+    `none`, `13a`, `intl`, `zh` and `char`. The exotic names (`ja-mecab`, `ko-mecab`, `spm`,
+    `flores101`, `flores200`, `spBLEU-1K`) need extra libraries (mecab, sentencepiece) and are
+    supplied by sacreBLEU when it is installed -- imported lazily, so the native path never needs
+    it.
+    """
+
+    def __init__(self, name: str):
+        self.name = name
+
+    def __call__(self, sent: str) -> str:
+        return _swadesh.tokenize(self.name, sent)
+
+    def signature(self) -> str:
+        return self.name
+
+
+def _make_bleu_tokenizer(name: str):
+    if name in NATIVE_TOKENIZERS:
+        return _NativeBleuTokenizer(name)
+    from sacrebleu.metrics.bleu import _get_tokenizer  # lazy: exotic tokenizers only
+
+    return _get_tokenizer(name)()
+
+
+#: The tokenizer names BLEU accepts, in sacreBLEU's order. Five of them build natively; the rest
+#: need mecab or sentencepiece and are built by sacreBLEU when it is installed. sacreBLEU exposes
+#: this same set as a key view (`BLEU.TOKENIZERS`), which is what `tests/test_parity.py` compares.
+_BLEU_TOKENIZERS = {
+    name: (lambda n=name: _make_bleu_tokenizer(n))
+    for name in ("none", "zh", "13a", "intl", "char", "ja-mecab", "ko-mecab", "spm",
+                 "flores101", "flores200", "spBLEU-1K")
+}
+
+
+class BLEU(_FastMixin, _NativeMetric):
     """Bit-exact, accelerated ``sacrebleu.metrics.BLEU``.
 
     Same constructor and API. Additional method: :meth:`sentence_scores`.
     """
 
+    SMOOTH_DEFAULTS = {'none': None, 'floor': 0.1, 'add-k': 1, 'exp': None}
+    TOKENIZER_DEFAULT = '13a'
+    _TOKENIZER_MAP = {'zh': 'zh', 'ja': 'ja-mecab', 'ko': 'ko-mecab'}
+
+    # A key view, as in sacreBLEU: the names BLEU accepts, not a lookup table.
+    TOKENIZERS = _BLEU_TOKENIZERS.keys()
+
+    _SIGNATURE_TYPE = BLEUSignature
+
     def __init__(self, lowercase: bool = False, force: bool = False, tokenize: Optional[str] = None,
                  smooth_method: str = 'exp', smooth_value: Optional[float] = None,
                  max_ngram_order: int = MAX_NGRAM_ORDER, effective_order: bool = False,
                  trg_lang: str = '', references: Optional[Sequence[Sequence[str]]] = None):
-        super().__init__(lowercase=lowercase, force=force, tokenize=tokenize,
-                         smooth_method=smooth_method, smooth_value=smooth_value,
-                         max_ngram_order=max_ngram_order, effective_order=effective_order,
-                         trg_lang=trg_lang, references=None)
+        _NativeMetric.__init__(self)
+        self._force = force
+        self.trg_lang = trg_lang
+        self.lowercase = lowercase
+        self.smooth_value = smooth_value
+        self.smooth_method = smooth_method
+        self.max_ngram_order = max_ngram_order
+        self.effective_order = effective_order
+
+        # Sanity check
+        assert self.smooth_method in self.SMOOTH_DEFAULTS.keys(), \
+            "Unknown smooth_method {self.smooth_method!r}"
+
+        # Without an explicit tokenizer, the default is 13a except for ZH/JA/KO target languages.
+        if tokenize is None:
+            best_tokenizer = self.TOKENIZER_DEFAULT
+            if self.trg_lang in self._TOKENIZER_MAP:
+                best_tokenizer = self._TOKENIZER_MAP[self.trg_lang]
+        else:
+            best_tokenizer = tokenize
+            if self.trg_lang == 'zh' and best_tokenizer != 'zh':
+                sacrelogger.warning(
+                    "Consider using the 'zh' or 'spm' tokenizer for Chinese.")
+            if self.trg_lang == 'ja' and best_tokenizer != 'ja-mecab':
+                sacrelogger.warning(
+                    "Consider using the 'ja-mecab' or 'spm' tokenizer for Japanese.")
+            if self.trg_lang == 'ko' and best_tokenizer != 'ko-mecab':
+                sacrelogger.warning(
+                    "Consider using the 'ko-mecab' or 'spm' tokenizer for Korean.")
+
+        self.tokenizer = _make_bleu_tokenizer(best_tokenizer)
+        self.tokenizer_signature = self.tokenizer.signature()
+
         if references is not None:
+            # Pre-compute reference ngrams and lengths
             self._ref_cache = self._cache_references(references)
+
+    def _preprocess_segment(self, sent: str) -> str:
+        """sacreBLEU's BLEU pre-processing: optional lowercasing, then the tokenizer."""
+        if self.lowercase:
+            sent = sent.lower()
+        return self.tokenizer(sent.rstrip())
 
     def _native_ok(self) -> bool:
         return _is_int(self.max_ngram_order) and self.max_ngram_order >= 1
@@ -499,6 +707,21 @@ class BLEU(_FastMixin, _SacreBLEU):
             return self._sentence_score(hypothesis, references)
         return self._compute_score_from_stats(stats)
 
+    def _compute_score_from_stats(self, stats) -> Any:
+        """sacreBLEU's BLEU scorer, from `[sys_len, ref_len, correct_1..N, total_1..N]`.
+
+        The significant thing it does that the native scorer does not is keep numpy dtypes and
+        reproduce the smoothing arithmetic exactly, which the fallbacks in `_score_from_row` need.
+        """
+        return _compute_bleu(
+            correct=stats[2:2 + self.max_ngram_order],
+            total=stats[2 + self.max_ngram_order:],
+            sys_len=int(stats[0]), ref_len=int(stats[1]),
+            smooth_method=self.smooth_method, smooth_value=self.smooth_value,
+            effective_order=self.effective_order,
+            max_ngram_order=self.max_ngram_order,
+        )
+
     def _score_from_row(self, row):
         """BLEU score object from `[sys_len, ref_len, correct_1..N, total_1..N]`."""
         n = self.max_ngram_order
@@ -574,19 +797,66 @@ def _as_matrix(buf, n, m):
     return np.frombuffer(buf, dtype=np.float64).reshape(n, m).copy()
 
 
-class CHRF(_FastMixin, _SacreCHRF):
+class CHRF(_FastMixin, _NativeMetric):
     """Bit-exact, accelerated ``sacrebleu.metrics.CHRF`` (chrF and chrF++).
 
     Same constructor and API. Additional method: :meth:`sentence_scores`.
     """
 
-    def __init__(self, char_order: int = _SacreCHRF.CHAR_ORDER, word_order: int = _SacreCHRF.WORD_ORDER,
-                 beta: int = _SacreCHRF.BETA, lowercase: bool = False, whitespace: bool = False,
+    # Maximum character n-gram order to take into account
+    CHAR_ORDER = 6
+
+    # chrF+ additionally takes into account some of the word n-grams
+    WORD_ORDER = 0
+
+    # Defaults to 2 (per http://www.aclweb.org/anthology/W16-2341)
+    BETA = 2
+
+    # Cache string.punctuation for chrF+' punctuation stripper
+    _PUNCTS = set('!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~')
+
+    _SIGNATURE_TYPE = CHRFSignature
+
+    def __init__(self, char_order: int = CHAR_ORDER, word_order: int = WORD_ORDER,
+                 beta: int = BETA, lowercase: bool = False, whitespace: bool = False,
                  eps_smoothing: bool = False, references: Optional[Sequence[Sequence[str]]] = None):
-        super().__init__(char_order=char_order, word_order=word_order, beta=beta, lowercase=lowercase,
-                         whitespace=whitespace, eps_smoothing=eps_smoothing, references=None)
+        _NativeMetric.__init__(self)
+        self.beta = beta
+        self.char_order = char_order
+        self.word_order = word_order
+        self.order = self.char_order + self.word_order
+        self.lowercase = lowercase
+        self.whitespace = whitespace
+        self.eps_smoothing = eps_smoothing
+
         if references is not None:
+            # Pre-compute reference ngrams
             self._ref_cache = self._cache_references(references)
+
+    def _remove_punctuation(self, sent: str) -> List[str]:
+        """Separates out punctuations from beginning and end of words for chrF.
+
+        A port of sacreBLEU's method, itself adapted from m-popovic/chrF: a word longer than one
+        character that ends in a punctuation mark is split before it, otherwise one that starts
+        with a punctuation mark is split after it.
+        """
+        tokenized = []
+        for w in sent.split():
+            if len(w) == 1:
+                tokenized.append(w)
+            else:
+                # NOTE: This splits '(hi)' to '(hi' and ')' (issue #124)
+                if w[-1] in self._PUNCTS:
+                    tokenized += [w[:-1], w[-1]]
+                elif w[0] in self._PUNCTS:
+                    tokenized += [w[0], w[1:]]
+                else:
+                    tokenized.append(w)
+        return tokenized
+
+    def _preprocess_segment(self, sent: str) -> str:
+        """sacreBLEU's chrF pre-processing: optional lowercasing only."""
+        return sent.lower() if self.lowercase else sent
 
     def _native_ok(self) -> bool:
         return (_is_int(self.char_order) and self.char_order >= 1
@@ -700,6 +970,55 @@ class CHRF(_FastMixin, _SacreCHRF):
         except _FALLBACK_ERRORS:
             return self._sentence_score(hypothesis, references)
         return self._compute_score_from_stats(stats)
+
+    def _compute_f_score(self, statistics) -> float:
+        """chrF's f_beta score from the flattened `[hyp, ref, match]` counts.
+
+        A port of sacreBLEU's `CHRF._compute_f_score`. The native `_swadesh.chrf_f_score` covers the
+        ordinary path; this is the fallback for the rows it refuses.
+        """
+        eps = 1e-16
+        score = 0.0
+        effective_order = 0
+        factor = self.beta ** 2
+        avg_prec, avg_rec = 0.0, 0.0
+
+        for i in range(self.order):
+            n_hyp, n_ref, n_match = statistics[3 * i: 3 * i + 3]
+
+            # chrF++.py style EPS smoothing (also used by Moses and NLTK)
+            prec = n_match / n_hyp if n_hyp > 0 else eps
+            rec = n_match / n_ref if n_ref > 0 else eps
+
+            denom = factor * prec + rec
+            score += ((1 + factor) * prec * rec / denom) if denom > 0 else eps
+
+            # sacreBLEU <2.0.0 style effective order smoothing
+            if n_hyp > 0 and n_ref > 0:
+                avg_prec += prec
+                avg_rec += rec
+                effective_order += 1
+
+        if self.eps_smoothing:
+            return 100 * score / self.order
+
+        if effective_order == 0:
+            avg_prec = avg_rec = 0.0
+        else:
+            avg_prec /= effective_order
+            avg_rec /= effective_order
+
+        if avg_prec + avg_rec:
+            score = (1 + factor) * avg_prec * avg_rec
+            score /= ((factor * avg_prec) + avg_rec)
+            return 100 * score
+        else:
+            return 0.0
+
+    def _compute_score_from_stats(self, stats) -> Any:
+        """sacreBLEU's chrF scorer, from the flattened `[hyp, ref, match]` counts."""
+        return CHRFScore(
+            self._compute_f_score(stats), self.char_order, self.word_order, self.beta)
 
     def _score_from_row(self, row):
         """chrF score object from `[hyp, ref, match]` per order."""

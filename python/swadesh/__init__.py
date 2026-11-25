@@ -21,11 +21,18 @@ import types
 
 import sacrebleu as _sacrebleu
 import sacrebleu.compat as _compat
-from sacrebleu.metrics.bleu import BLEUScore  # noqa: F401
-from sacrebleu.metrics.chrf import CHRFScore  # noqa: F401
-
-# TERScore is ours: the TER metric no longer comes from sacreBLEU at all.
-from .metrics import BLEU, CHRF, TER, TERScore, NATIVE_TOKENIZERS, mbr  # noqa: F401
+# The score objects and the metrics are all ours: none of the three metrics comes from
+# sacreBLEU any more.
+from .metrics import (  # noqa: F401
+    BLEU,
+    BLEUScore,
+    CHRF,
+    CHRFScore,
+    NATIVE_TOKENIZERS,
+    TER,
+    TERScore,
+    mbr,
+)
 
 __version__ = "0.1.0"
 SACREBLEU_COMPAT_VERSION = _sacrebleu.__version__
@@ -65,20 +72,28 @@ def patch() -> None:
 
     if _PATCHED:
         return
-    # `swadesh.TER` stands alone -- it is not a subclass of sacreBLEU's TER -- but downstream code
-    # does `isinstance(x, sacrebleu.metrics.ter.TER)` and that has to keep working after a patch.
-    # So the class that gets installed is built here, at patch time, as a subclass of both.
+    # The metrics stand alone -- they are not subclasses of sacreBLEU's -- but downstream code
+    # does `isinstance(x, sacrebleu.metrics.bleu.BLEU)` and that has to keep working after a patch.
+    # So the classes that get installed are built here, at patch time, as subclasses of both.
+    class _BleuCompatible(BLEU, mb.BLEU):
+        pass
+
+    class _ChrfCompatible(CHRF, mc.CHRF):
+        pass
+
     class _TerCompatible(TER, mt.TER):
         pass
 
-    _TerCompatible.__name__ = "TER"
-    _TerCompatible.__qualname__ = "TER"
-    ter = _TerCompatible
+    for _cls, _name in ((_BleuCompatible, "BLEU"), (_ChrfCompatible, "CHRF"), (_TerCompatible, "TER")):
+        _cls.__name__ = _cls.__qualname__ = _name
+    bleu, chrf, ter = _BleuCompatible, _ChrfCompatible, _TerCompatible
     targets = [
-        (_sacrebleu, "BLEU", BLEU), (_sacrebleu, "CHRF", CHRF), (_sacrebleu, "TER", ter),
-        (m, "BLEU", BLEU), (m, "CHRF", CHRF), (m, "TER", ter),
-        (mb, "BLEU", BLEU), (mc, "CHRF", CHRF), (mt, "TER", ter),
-        (_compat, "BLEU", BLEU), (_compat, "CHRF", CHRF), (_compat, "TER", ter),
+        (_sacrebleu, "BLEU", bleu), (_sacrebleu, "CHRF", chrf), (_sacrebleu, "TER", ter),
+        (m, "BLEU", bleu), (m, "CHRF", chrf), (m, "TER", ter),
+        (mb, "BLEU", bleu), (mc, "CHRF", chrf), (mt, "TER", ter),
+        (_compat, "BLEU", bleu), (_compat, "CHRF", chrf), (_compat, "TER", ter),
+        (sys.modules[__name__], "BLEU", bleu),
+        (sys.modules[__name__], "CHRF", chrf),
         (sys.modules[__name__], "TER", ter),
     ]
     for mod, name, new in targets:
@@ -88,9 +103,9 @@ def patch() -> None:
 
     _PATCHED[("significance",)] = _significance.install()
     _PATCHED[("METRICS",)] = dict(m.METRICS)
-    m.METRICS["BLEU"] = BLEU
-    m.METRICS["CHRF"] = CHRF
-    m.METRICS["TER"] = TER
+    m.METRICS["BLEU"] = bleu
+    m.METRICS["CHRF"] = chrf
+    m.METRICS["TER"] = ter
 
 
 def unpatch() -> None:
