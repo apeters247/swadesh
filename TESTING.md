@@ -79,6 +79,15 @@ reach 42, 62 leave it at 43 — and the oracle's own move is one of the last gro
 Neither maximising the distance gain, nor the match-count gain, nor first-improvement reproduces that
 choice, which is why the remaining route is structural rather than a knob.
 
+**The oracle's first move is not the maximum of any objective measured.** Cross-referencing every one
+of the 157 distinct first-iteration candidates on the 57-token case against the oracle's own
+continuation (`1 + oracle_total(shifted)`) rules out the two obvious objectives at once: the four
+candidates that maximise the edit-distance gain lead to totals 41, 41, 42, 42 - never the oracle's own
+43 - and the four that maximise the match-count gain are *the same four*. The 62 candidates that leave
+the oracle at 43 are almost all gain-1 moves. So the oracle's first move neither most reduces the edit
+distance (the published definition) nor most increases the number of matches, and the oracle's own
+result is unreachable by any maximum-gain move in the list.
+
 **Reproduction.**
 `~/venv311/bin/python -m pytest "tests/test_ter.py::test_ter_long_sentences_shifts" -q`
 (the test is Hypothesis-driven, so which draw fails moves between runs), and the two batteries in the
@@ -93,7 +102,14 @@ optimal), the block-length cap (10, not 50), the move-distance cap (25-200; 50 i
 metric (banded vs full matrix, identical), the gain source (alignment error counts and match counts,
 43/80 and no better), the alignment orientation (reference-as-rows, 48/80), the error-filter position
 (at the block's start or boundary, 12-14/80), the full-matrix alignment for candidates (identical)
-and first-improvement hill climbing (71/80). Nineteen mechanisms in total.
+and first-improvement hill climbing (71/80). Added this session, also all worse: the candidate set
+restricted to maximal matching blocks (4/80 and 7/80, against 3/80 and 0/80 committed), the source
+block required to be all-errors (28/80, 40/80), the destination block required to be all-errors
+(22/80, 36/80), the move-distance cap removed (identical - it never binds on these lengths), the
+minimum accepted gain raised to 2 (22/80, 11/80) and to 3 (71/80, 46/80). Every mechanism measured is
+worse than the committed search, and on all three observed failures the committed search is strictly
+better than the oracle (42<43, 39<40, 9<11), never worse - so the oracle is not a restricted version
+of the published search either.
 
 **Against the published algorithm.** `docs/spec/ter.md` §4.2.1 quotes the description this
 implementation follows (Snover et al. 2006, Algorithm 1 and its three constraints). The oracle departs
@@ -106,7 +122,12 @@ network access. Every issue touching TER is about something this implementation 
 `asian_support` gating (`normalized` is what enables tokenization, #229), score scaling to 0-100
 (#208), empty references and empty segments (#228, #232, #161), `normalized` docstrings (#230, #235)
 and zh tokenization (#127). **None describes the shift search**, so the departure is undocumented
-publicly and cannot be resolved by reading discussion.
+publicly and cannot be resolved by reading discussion. Two further sources were read this session and
+add nothing: open issue #314 (kana-boundary regexes in Asian TER normalisation, still unmerged - the
+implementation returns exactly the oracle's value for its example, i.e. it matches the pre-fix 2.6.0
+behaviour), and the TERp technical description (Snover et al. 2009, TER-Plus), whose section 3.2
+restates the same four constraints and the same "most reduces the WER" selection rule with no
+tie-break or enumeration detail.
 
 **Next step, if anyone takes it.** The remaining route is structural rather than a knob: re-derive the
 candidate generation and gain accounting of the reference's shift search as a two-stage routine from
