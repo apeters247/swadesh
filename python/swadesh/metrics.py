@@ -523,8 +523,14 @@ class _NativeBleuTokenizer:
 def _make_bleu_tokenizer(name: str):
     if name in NATIVE_TOKENIZERS:
         return _NativeBleuTokenizer(name)
-    from sacrebleu.metrics.bleu import _get_tokenizer  # lazy: exotic tokenizers only
-
+    try:
+        from sacrebleu.metrics.bleu import _get_tokenizer  # lazy: exotic tokenizers only
+    except ImportError as e:
+        raise ImportError(
+            f"the {name!r} tokenizer is not one of the five native ones "
+            f"({', '.join(sorted(NATIVE_TOKENIZERS))}); it needs sacreBLEU installed, and it needs "
+            f"mecab or sentencepiece in any case."
+        ) from e
     return _get_tokenizer(name)()
 
 
