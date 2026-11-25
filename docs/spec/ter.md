@@ -64,15 +64,20 @@ section 3.2 matters: the `&` it produces survives `no_punct`.
 ### 3.2 `normalized = true` (the sacreBLEU "normalized" tokenizer)
 
 1. Lowercase unless `case_sensitive`.
-2. **Unescape XML entities.** Four sequential global replacements, in this order: `&amp;` → `&`,
-   `&lt;` → `<`, `&gt;` → `>`, `&quot;` → `"`. The pass runs after lowercasing, so the four
+2. **Unescape XML entities.** Four sequential global replacements, in this order: `&quot;` → `"`,
+   `&amp;` → `&`, `&lt;` → `<`, `&gt;` → `>`. The pass runs after lowercasing, so the four
    entities are covered case-insensitively when `case_sensitive` is false; with
    `case_sensitive = true` only the lowercase spellings are replaced. Measured on
-   `_preprocess_segment`: `&amp;` → `&`, `&AMP;` → `&` (default) but `&AMP;` → `& AMP ;`
-   (`case_sensitive`), `&amp;lt;` → `<`, `&amp;amp;` → `& amp ;`, `&amp;AMP;` → `& amp ;`. The
-   order matters: `&amp;` runs first, so `&amp;lt;` collapses to `<` while `&amp;amp;` leaves the
-   second `amp;` for the tokenizer to split. The default tokenizer (section 3.1) does not unescape
-   entities at all: `&amp;` stays `&amp;`.
+   `_preprocess_segment`: `&quot;` → `"`, `&amp;` → `&`, `&AMP;` → `&` (default) but `&AMP;` →
+   `& AMP ;` (`case_sensitive`), `&lt;` → `<`, `&gt;` → `>`, `&amp;amp;` → `& amp ;`.
+
+   **The order is `&quot;` first, then `&amp;`, then `&lt;` and `&gt;`** (measured 2026-11-24). It is
+   decisive in both directions. `&amp;lt;` collapses to `<` and `&amp;gt;` to `>` because `&lt;` and
+   `&gt;` run *after* `&amp;`; but `&amp;quot;` leaves `& quot ;` because `&quot;` has already run, so
+   the `&quot;` that `&amp;` produces is never decoded. `&amp;amp;` leaves `& amp ;` because the
+   produced `&amp;` has no following `&` to re-match. An earlier revision ran `&amp;` first and so
+   collapsed `&amp;quot;` to `"`; `test_deep.py` (seed 52526) caught it. The default tokenizer
+   (section 3.1) does not unescape entities at all: `&amp;` stays `&amp;`.
 3. Normalise headline quotes and apostrophes: `“ ” „ ‟ « » ‘ ’ ‚ ‛` are mapped so that the
    *apostrophe-like* marks become `'` and the quote-like marks stay themselves. Measured: `“x”`
    survives as one token `“x”`, while `"x"` becomes `" x "`. The distinction matters: `"` (U+0022)
