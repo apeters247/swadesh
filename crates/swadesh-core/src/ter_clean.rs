@@ -656,19 +656,15 @@ fn best_shift(
     hyp: &[u32],
     refs: &[u32],
     scratch: &mut Scratch,
-    budget: usize,
-) -> Option<(i64, Vec<u32>, usize)> {
+    mut used: usize,
+) -> (i64, Vec<u32>, usize) {
     let trace = trace_align(refs, hyp, &mut scratch.ops);
     distance_row(refs, hyp, &mut scratch.row);
     let before = scratch.row[refs.len()];
 
     let mut best: Option<(i64, usize, i64, i64, Vec<u32>)> = None;
-    let mut used = 0usize;
 
     for (s_h, s_r, len) in shifted_pairs(hyp, refs) {
-        if used >= budget {
-            break;
-        }
         // Only shift a block the hypothesis got wrong, toward a block the reference got wrong.
         if trace.hyp_err[s_h..s_h + len].iter().all(|&e| e == 0) {
             continue;
@@ -716,13 +712,20 @@ fn best_shift(
             if better {
                 best = Some((key.0, key.1, key.2, key.3, scratch.shifted.clone()));
             }
-            if used >= budget {
-                break;
-            }
+        }
+        // Tercom checks the candidate budget once per matching block, not once per candidate, so
+        // the search may overshoot the cap by up to one block's worth of offsets (measured
+        // 2026-11-24: this is what makes the 1,000-candidate stop land on 1,001 and refuse the
+        // next shift).
+        if used >= MAX_CANDIDATES {
+            break;
         }
     }
 
-    best.map(|(gain, _, _, _, words)| (gain, words, used))
+    match best {
+        Some((gain, _, _, _, words)) => (gain, words, used),
+        None => (0, hyp.to_vec(), used),
+    }
 }
 
 /// `(edits, reference length)` for one hypothesis against one reference (spec 4.3).
@@ -736,21 +739,18 @@ pub fn translation_edit_rate(hyp_words: &[u32], ref_words: &[u32]) -> (i64, usiz
     let mut spent = 0usize;
 
     loop {
-        let budget = MAX_CANDIDATES.saturating_sub(spent);
-        if budget == 0 {
+        let (gain, words, used) = best_shift(&current, ref_words, &mut scratch, spent);
+        spent = used;
+        // The budget is checked before the reduction, so a beneficial shift found on the iteration
+        // that exhausts it is not applied (measured 2026-11-24).
+        if spent >= MAX_CANDIDATES {
             break;
         }
-        match best_shift(&current, ref_words, &mut scratch, budget) {
-            None => break,
-            Some((gain, words, used)) => {
-                spent += used;
-                if gain <= 0 {
-                    break;
-                }
-                shifts += 1;
-                current = words;
-            }
+        if gain <= 0 {
+            break;
         }
+        shifts += 1;
+        current = words;
     }
 
     distance_row(ref_words, &current, &mut scratch.row);
