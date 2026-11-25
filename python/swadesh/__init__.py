@@ -16,15 +16,16 @@ Usage::
 
 from __future__ import annotations
 
+import sys
 import types
 
 import sacrebleu as _sacrebleu
 import sacrebleu.compat as _compat
 from sacrebleu.metrics.bleu import BLEUScore  # noqa: F401
 from sacrebleu.metrics.chrf import CHRFScore  # noqa: F401
-from sacrebleu.metrics.ter import TERScore  # noqa: F401
 
-from .metrics import BLEU, CHRF, TER, NATIVE_TOKENIZERS, mbr  # noqa: F401
+# TERScore is ours: the TER metric no longer comes from sacreBLEU at all.
+from .metrics import BLEU, CHRF, TER, TERScore, NATIVE_TOKENIZERS, mbr  # noqa: F401
 
 __version__ = "0.1.0"
 SACREBLEU_COMPAT_VERSION = _sacrebleu.__version__
@@ -64,11 +65,21 @@ def patch() -> None:
 
     if _PATCHED:
         return
+    # `swadesh.TER` stands alone -- it is not a subclass of sacreBLEU's TER -- but downstream code
+    # does `isinstance(x, sacrebleu.metrics.ter.TER)` and that has to keep working after a patch.
+    # So the class that gets installed is built here, at patch time, as a subclass of both.
+    class _TerCompatible(TER, mt.TER):
+        pass
+
+    _TerCompatible.__name__ = "TER"
+    _TerCompatible.__qualname__ = "TER"
+    ter = _TerCompatible
     targets = [
-        (_sacrebleu, "BLEU", BLEU), (_sacrebleu, "CHRF", CHRF), (_sacrebleu, "TER", TER),
-        (m, "BLEU", BLEU), (m, "CHRF", CHRF), (m, "TER", TER),
-        (mb, "BLEU", BLEU), (mc, "CHRF", CHRF), (mt, "TER", TER),
-        (_compat, "BLEU", BLEU), (_compat, "CHRF", CHRF), (_compat, "TER", TER),
+        (_sacrebleu, "BLEU", BLEU), (_sacrebleu, "CHRF", CHRF), (_sacrebleu, "TER", ter),
+        (m, "BLEU", BLEU), (m, "CHRF", CHRF), (m, "TER", ter),
+        (mb, "BLEU", BLEU), (mc, "CHRF", CHRF), (mt, "TER", ter),
+        (_compat, "BLEU", BLEU), (_compat, "CHRF", CHRF), (_compat, "TER", ter),
+        (sys.modules[__name__], "TER", ter),
     ]
     for mod, name, new in targets:
         _PATCHED[(mod, name)] = getattr(mod, name)

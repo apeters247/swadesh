@@ -33,13 +33,13 @@ class _LazyNumpy:
 
 
 np = _LazyNumpy()
-from sacrebleu.metrics.base import Metric as _SacreMetric  # noqa: E402
 from sacrebleu.metrics.bleu import BLEU as _SacreBLEU
 from sacrebleu.metrics.bleu import MAX_NGRAM_ORDER
 from sacrebleu.metrics.chrf import CHRF as _SacreCHRF
-from sacrebleu.metrics.ter import TER as _SacreTER
 
 from . import _swadesh
+from .base import Metric as _NativeMetric
+from .base import Signature as _NativeSignature
 
 sacrelogger = logging.getLogger("sacrebleu")
 
@@ -348,6 +348,31 @@ class TERScore(Score):
         super().__init__("TER", score)
         self.num_edits = int(num_edits)
         self.ref_length = ref_length
+
+
+class TERSignature(_NativeSignature):
+    """TER's signature: the base fields plus the four TER flags.
+
+    A port of sacreBLEU's `TERSignature`. `tok` is `self.tokenizer_signature`, which is the
+    constant `"tercom"` for every flag combination (measured 2026-11-25).
+    """
+
+    def __init__(self, args: dict):
+        super().__init__(args)
+        self._abbr.update({
+            "case": "c",
+            "tok": "t",
+            "norm": "nr",
+            "punct": "pn",
+            "asian": "as",
+        })
+        self.info.update({
+            "case": "mixed" if args["case_sensitive"] else "lc",
+            "tok": args["tokenizer_signature"],
+            "norm": args["normalized"],
+            "punct": not args["no_punct"],
+            "asian": args["asian_support"],
+        })
 
 
 class BLEU(_FastMixin, _SacreBLEU):
@@ -728,23 +753,23 @@ def mbr(candidates: Sequence[str], metric=None, exclude_self: bool = True):
     return best, util
 
 
-class TER(_FastMixin, _SacreTER):
-    """Bit-exact, accelerated ``sacrebleu.metrics.TER``.
+class _NativeTerTokenizer:
+    """Stands in for sacreBLEU's ``TercomTokenizer`` on a TER instance.
 
-    Same constructor and API. The tokenizer and the segment statistics (tercom shifts and the beam
-    edit distance) are native, so this class no longer uses sacreBLEU's tokenizer module. What it
-    still takes from the class it subclasses is the constructor, the score-object machinery and the
-    signature printing.
+    sacreBLEU stores its tokenizer on the metric object and downstream code may call it, so the
+    native one is exposed under the same attribute name -- ``tests/test_parity.py`` checks that a
+    TER instance has the same attribute names as sacreBLEU's. ``signature()`` is the constant
+    ``"tercom"`` for every flag combination (measured 2026-11-25).
     """
 
-    def __init__(self, normalized: bool = False, no_punct: bool = False, asian_support: bool = False,
-                 case_sensitive: bool = False, references: Optional[Sequence[Sequence[str]]] = None):
-        super().__init__(normalized=normalized, no_punct=no_punct, asian_support=asian_support,
-                         case_sensitive=case_sensitive, references=None)
-        if references is not None:
-            self._ref_cache = self._cache_references(references)
+    def __init__(self, normalized: bool, no_punct: bool, asian_support: bool,
+                 case_sensitive: bool):
+        self.normalized = normalized
+        self.no_punct = no_punct
+        self.asian_support = asian_support
+        self.case_sensitive = case_sensitive
 
-    def _preprocess_segment(self, sent: str) -> str:
+    def __call__(self, sent: str) -> str:
         """sacreBLEU's `TercomTokenizer(sent.rstrip())`, natively.
 
         The rstrip and CPython's `lower()` (final-sigma rule included) happen here; the tokenizing
@@ -754,10 +779,65 @@ class TER(_FastMixin, _SacreTER):
         stripped = sent.rstrip()
         if not self.case_sensitive:
             stripped = stripped.lower()
+        if not isinstance(stripped, str):
+            # sacreBLEU's tokenizer ends in `" ".join(tokens)`, and that is where a non-str
+            # segment (bytes, say) fails. Do it here so the exception and its message are the
+            # same; the native extension would raise its own TypeError with different wording.
+            " ".join([stripped])
         return _swadesh.ter_preprocess(
             stripped, bool(self.normalized), bool(self.no_punct),
             bool(self.asian_support), bool(self.case_sensitive),
         )
+
+    def signature(self) -> str:
+        return "tercom"
+
+
+class TER(_FastMixin, _NativeMetric):
+    """Bit-exact, accelerated ``sacrebleu.metrics.TER``.
+
+    Same constructor and API. The tokenizer and the segment statistics (tercom shifts and the beam
+    edit distance) are native, so this class no longer uses sacreBLEU's tokenizer module. What it
+    still takes from the class it subclasses is the constructor, the score-object machinery and the
+    signature printing.
+    """
+
+    _SIGNATURE_TYPE = TERSignature
+
+    def __init__(self, normalized: bool = False, no_punct: bool = False, asian_support: bool = False,
+                 case_sensitive: bool = False, references: Optional[Sequence[Sequence[str]]] = None):
+        _NativeMetric.__init__(self)
+        self.normalized = normalized
+        self.no_punct = no_punct
+        self.asian_support = asian_support
+        self.case_sensitive = case_sensitive
+        self.tokenizer = _NativeTerTokenizer(
+            normalized, no_punct, asian_support, case_sensitive,
+        )
+        self.tokenizer_signature = self.tokenizer.signature()
+        if references is not None:
+            self._ref_cache = self._cache_references(references)
+
+    def _compute_score_from_stats(self, stats) -> Any:
+        """TER's score object from `[edits, summed reference lengths]`.
+
+        Deliberately not `_score_from_row`: the significance paths call this with numpy rows
+        (`significance._bootstrap_resample`, `_paired_ar_test`) and sacreBLEU carries the row's
+        dtype into the score object, so an `np.float32` bootstrap row has to give an `np.float32`
+        score. Coercing to Python floats there changes what the confidence intervals report.
+        """
+        total_edits, sum_ref_lengths = stats[0], stats[1]
+        if sum_ref_lengths > 0:
+            score = total_edits / sum_ref_lengths
+        elif total_edits > 0:
+            score = 1.0
+        else:
+            score = 0.0
+        return TERScore(100 * score, total_edits, sum_ref_lengths)
+
+    def _preprocess_segment(self, sent: str) -> str:
+        """sacreBLEU's `TercomTokenizer(sent.rstrip())`, natively -- see `_NativeTerTokenizer`."""
+        return self.tokenizer(sent)
 
     def _extract_corpus_statistics(self, hypotheses: Sequence[str], references) -> Any:
         cache = self._resolve_refs(references)
