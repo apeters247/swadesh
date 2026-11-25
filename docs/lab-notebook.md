@@ -3850,3 +3850,32 @@ message, and patch/unpatch identity for all three metrics: no differences.
 
 **Next.** Slice 4: `significance.py` standalone. Then `cli.py`/`verify.py`, then dropping sacrebleu
 from `pyproject.toml` as a hard requirement.
+
+## 2026-11-25 (continued) - drop the sacreBLEU dependency, slice 4: significance runs without it
+
+**Attempted.** `significance.py` was next, but the scoping pass found it is already swadesh's own:
+`_bootstrap_resample`, `_paired_ar_test`, `_paired_bs_test`, `Result`, the p-value, the confidence
+interval and `PairedTest` are all defined in it, `_resampled_sums`/`_f32_scores`/`_i64_scores` are
+native, and `_sig.` is **never referenced**. The only sacreBLEU touch is `install()`/`uninstall()`,
+which swap sacreBLEU's resamplers for ours when `patch()` is called -- the same adapter role as
+`patch()` itself.
+
+**Done.** That import moved inside the three functions that need it, behind
+`_sacrebleu_significance()`. So the module has no module-level sacreBLEU import and
+`swadesh.PairedTest` -- reachable lazily through `swadesh.__getattr__` -- works with sacreBLEU absent.
+`uninstall({})` also returns before importing, since there is nothing to restore.
+
+**Also.** `tests/test_provenance.py` moved `significance.py` from `PENDING` (the Phase 5 backlog) to
+`PERMANENT` (modules whose job is to interoperate with sacreBLEU), with the reason written next to
+the other two. The backlog is now `{"metrics.py", "cli.py"}`.
+
+**Measured.** `test_provenance` 14 passed (including the guard that no unlisted module imports
+sacreBLEU); the significance/paired/confidence selection of `test_parity` 33 passed; the seven
+`-k patch` tests passed; `test_metrics_fallback` + `test_score_objects` 126 passed. The smoke probe
+confirms `PairedTest` on our module matches sacreBLEU's machinery for the same systems and metrics,
+bootstrap TER still matches with `n_bootstrap=50`, and `patch()`/`unpatch()` still redirect and
+restore sacreBLEU's `significance._bootstrap_resample`.
+
+**Next.** Slice 5: `cli.py` (delegates to sacreBLEU's CLI -- a documented adapter or a port) and
+`verify.py`; then slice 6, dropping `sacrebleu` from `pyproject.toml`'s runtime dependencies while
+keeping it as the test oracle.

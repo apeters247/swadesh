@@ -22,13 +22,15 @@ RS = ROOT / "crates"
 # The only places allowed to touch sacrebleu, split by why.
 #
 # PERMANENT is the small set whose job IS to interoperate with sacreBLEU. It will never shrink:
-#   __init__.py   the patch() adapter, which redirects `import sacrebleu` users to swadesh
-#   verify.py     compares swadesh against sacrebleu on the user's data -- that is the tool's job
+#   __init__.py      the patch() adapter, which redirects `import sacrebleu` users to swadesh
+#   verify.py        compares swadesh against sacrebleu on the user's data -- that is the tool's job
+#   significance.py  install()/uninstall() swap sacreBLEU's resamplers for swadesh's; the import is
+#                    lazy, so the module itself runs without sacreBLEU
 #
-# PENDING is the Phase 5 backlog. Each module leaves this set as it is rewritten standalone, and the
-# test below fails if that set ever grows.
-PERMANENT = {"__init__.py", "verify.py"}
-PENDING = {"metrics.py", "significance.py", "cli.py"}
+# PENDING is what is left of the Phase 5 backlog. Each module leaves this set as it is rewritten
+# standalone, and the test below fails if that set ever grows.
+PERMANENT = {"__init__.py", "verify.py", "significance.py"}
+PENDING = {"metrics.py", "cli.py"}
 ALLOWED = PERMANENT | PENDING
 
 IMPORT_RE = re.compile(r"^\s*(?:import\s+sacrebleu|from\s+sacrebleu)", re.M)
