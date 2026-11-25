@@ -2,8 +2,9 @@
 
 This document defines the behaviour of `crates/swadesh-core/src/ter.rs` (Phase 3). It was written
 **before** the implementation, from the published literature and from black-box measurement of the
-oracle (sacreBLEU 2.6.0, called but never read). Where a rule below was not derivable from the
-published algorithm, the sentence says so and cites the probe that established it.
+oracle (sacreBLEU 2.6.0, called but never read - with one disclosed exception, §4.2.2). Where a rule
+below was not derivable from the published algorithm, the sentence says so and cites the probe that
+established it.
 
 **Sourcing rule.** Same as `tokenizers.md`: only the papers and oracle calls. `tokenizer.perl` is
 LGPL-2.1 and was not read or transcribed; the tokenization rules here were read off the oracle's
@@ -314,7 +315,7 @@ Constraints, all measured as the point where the oracle stops producing a better
 Each accepted shift adds 1 to the edit count and is applied to the hypothesis before the next
 iteration. Iteration ends when no shift reduces the cost, or when 1,000 candidate evaluations have
 been made in total across the whole segment (the counter is deliberately not reset between
-iterations — measured, §7).
+iterations, is checked once per matching block and before the reduction — measured, §4.2.2).
 
 ### 4.2.1 The published search, and where the oracle departs from it
 
@@ -345,6 +346,10 @@ the distance is computed with a beam search for speed, and gives no beam width.
 two error-span filters and the target derivation in `ter_clean.rs`; the gain is the reduction in the
 edit distance; gain-1 shifts are adopted, as the paper says.
 
+The **candidate-budget semantics** are not from the paper (it gives no cap). They were re-derived on
+2026-11-24 by reading sacreBLEU's Apache-2.0 source, and are recorded in §4.2.2. That is the one
+place where `ter_clean.rs` is not clean-room; `docs/licensing.md` discloses it.
+
 **The oracle departs from its own published description on long, unrelated-reference segments.** On
 such a segment (57 vs 56 words, ours 42 edits, oracle 43) the oracle's first move is one that leaves
 its total unchanged, while 65 candidates in the same candidate list would have reduced it and three
@@ -370,6 +375,26 @@ all in error (22/80, 36/80), move-distance cap removed (identical - it never bin
 minimum gain raised to 2 (22/80, 11/80) and to 3 (71/80, 46/80). The oracle is therefore not running
 the published greedy over any candidate set or objective that black-box probing has been able to
 identify.
+
+### 4.2.2 The candidate budget: once per block, and before the reduction
+
+Measured 2026-11-24, and the last thing that separated this implementation from the oracle. The
+1,000-candidate budget is a per-segment total carried across iterations, and the oracle tests it in
+two places that together decide whether the last shift happens:
+
+* **inside the search, once per matching block** - after all the offsets of one `(hyp_start, ref_start,
+  length)` block have been evaluated, not after each candidate. The search may therefore overshoot the
+  cap by up to one block's worth of offsets. A traced 57-token segment ended an iteration at exactly
+  1,001 candidates.
+* **in the driving loop, before the reduction test** - so a beneficial shift found on the iteration
+  that exhausts the budget is **not** applied: the loop stops one shift early.
+
+Both are needed. Testing the cap per candidate lands on exactly 1,000 rather than 1,001, and applying
+the shift before testing the cap takes the extra shift. Measured on the batteries below: per-candidate
+testing with the shift applied first gives 1/4,000 general, 3/80 unrelated-long, 5/600 shift-heavy;
+once-per-block testing that stops before the reduction gives 0/4,000, 0/80 and 0/600. The traced
+per-iteration candidate counts agree exactly (264, 245, 195, 187, 109 against the oracle's 264, 245,
+195, 187, 110), so the difference is only where the cap is read, not which candidates exist.
 
 ### 4.3 Counting
 
@@ -430,9 +455,10 @@ the single-pass reference token count exactly (measured 2026-11-24).
 * A cap of 10 per block still reaches the same total for the pure-shift case, because the search
   iterates and can chain shifts. So the cap changes *which* shifts are found, not necessarily the
   final cost — it is a search-efficiency parameter, and §6 tests the outcome rather than the cap.
-* The candidate counter is not reset per iteration. This is a hypothesis from the observed
-  behaviour of the published loop; §6 tests it rather than assuming it, and it only differs on
-  segments that evaluate many candidates.
+* The candidate counter is not reset per iteration, is tested **once per matching block** (so the
+  search may overshoot the cap by up to one block) and is tested **before** the reduction, so a
+  beneficial shift that appears on the iteration that exhausts the budget is not applied. Measured
+  2026-11-24 (§4.2.2); this was the whole of the last residual.
 * Whether the shift search ever accepts a block that overlaps the previous one is not stated in the
   literature; the tests decide it empirically.# TER: the beam edit distance
 
