@@ -3910,3 +3910,23 @@ including for the exception cases; the eight signature and docstring comparisons
 
 **Next.** Slice 6: `pyproject.toml` -- `dependencies = ["numpy>=1.24"]`, with `sacrebleu==2.6.0`
 moved to an extra for the CLI, `patch()`, `verify.py` and the exotic tokenizers. Then one final gate.
+
+## 2026-11-25 (continued) - drop the sacreBLEU dependency, slice 6: it is an extra now
+
+**Done.** `pyproject.toml` declares `dependencies = ["numpy>=1.24"]`; `sacrebleu==2.6.0` moves to
+extras, alongside a `test` extra (it is the oracle the suite compares against). `README.md` says
+what that means in one paragraph. The dependency-licence guard became
+`test_runtime_dependencies_are_only_numpy`, which asserts `names == {"numpy"}` and that sacreBLEU is
+still declared as an extra somewhere. One last gap found on the way: the six exotic tokenizers raised
+a bare `ModuleNotFoundError` when sacreBLEU was absent; they now name themselves and say what they
+need.
+
+**Proved, not asserted.** A probe installs a `sys.meta_path` finder that raises `ModuleNotFoundError`
+for `sacrebleu` and every submodule, evicts it from `sys.modules`, and then exercises the library:
+BLEU (plain, `intl`+lowercase), chrF, chrF++, TER (plain and `normalized`+`no_punct`) on corpus and
+sentence scoring, signatures, `repr`, bootstrap with `n_bootstrap=50`, cached `references=`, `mbr`,
+and `PairedTest` with two systems and two metrics. Everything runs; `patch()`, `swadesh.corpus_bleu`
+and an exotic tokenizer all fail with the message written for the occasion, not a traceback.
+**0 failures.** `test_dependency_licences` + `test_version` + `test_provenance`: 21 passed.
+
+**Next.** One final seven-file gate on this frozen tree, then the goal is done.

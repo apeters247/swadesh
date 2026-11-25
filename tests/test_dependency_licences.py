@@ -57,11 +57,19 @@ def test_dependency_licences_are_documented():
         assert expected in doc, f"docs/licensing.md does not record {expected}"
 
 
-def test_runtime_dependencies_are_only_sacrebleu_and_numpy():
+def test_runtime_dependencies_are_only_numpy():
+    """The library API stands alone; sacreBLEU is an extra, not a requirement.
+
+    It is still declared, because patch(), the command line, verify.py and the mecab/sentencepiece
+    tokenizers do need it -- but nothing imports it at `import swadesh` any more.
+    """
     import tomllib
 
     data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     deps = data["project"]["dependencies"]
     names = {d.split("=")[0].split("[")[0].split(">")[0].split("<")[0].strip() for d in deps}
-    unexpected = {n for n in names if n not in ("sacrebleu", "numpy")}
-    assert not unexpected, f"unexpected runtime dependencies: {sorted(unexpected)}"
+    assert names == {"numpy"}, f"unexpected runtime dependencies: {sorted(names)}"
+    extras = data["project"]["optional-dependencies"]
+    assert any("sacrebleu" in d for group in extras.values() for d in group), (
+        "sacreBLEU must still be declared as an extra"
+    )

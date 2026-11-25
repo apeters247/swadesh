@@ -8,7 +8,7 @@ description = "Bit-exact sacreBLEU-compatible BLEU/chrF/TER in Rust, AGPL-3.0; c
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "AGPL-3.0-or-later" }
-dependencies = ["sacrebleu==2.6.0", "numpy>=1.24"]
+dependencies = ["numpy>=1.24"]
 dynamic = ["version"]
 classifiers = [
   "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
@@ -25,7 +25,12 @@ classifiers = [
 keywords = ["bleu", "chrf", "sacrebleu", "machine-translation", "evaluation", "nlp", "llm"]
 
 [project.optional-dependencies]
+# The library API -- BLEU, chrF, chrF++, TER, PairedTest -- needs none of these. sacreBLEU is needed
+# by patch(), the `swadesh` command line, verify.py and the six tokenizers that use mecab or
+# sentencepiece; the test suite needs it as the oracle it compares against.
 mcp = ["mcp>=2"]
+sacrebleu = ["sacrebleu==2.6.0"]
+test = ["sacrebleu==2.6.0", "pytest", "hypothesis"]
 
 [project.urls]
 Homepage = "https://github.com/apeters247/swadesh"

@@ -16,6 +16,11 @@ build host and not on every machine.
 pip install swadesh
 ```
 
+The library needs only NumPy. BLEU, chrF, chrF++, TER and the paired significance tests all run
+with sacreBLEU absent; `sacrebleu` is an extra, needed by `patch()`, the `swadesh` command line,
+`verify.py` and the six tokenizers that use mecab or sentencepiece
+(`pip install "swadesh[sacrebleu]"`).
+
 ```python
 import swadesh as sacrebleu   # that's the whole migration
 
