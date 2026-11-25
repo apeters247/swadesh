@@ -171,9 +171,11 @@ translation and its reference: they count shared n-grams.
 ## Credits
 
 swadesh reproduces [sacreBLEU](https://github.com/mjpost/sacrebleu) by Matt Post and contributors
-(Apache-2.0), and the Python package still imports it in five modules. The Rust implementations were
-written from published specifications and from measurement of sacreBLEU's output, not from its
-source; `docs/spec/` records each one and `NOTICE` says exactly what remains derived. chrF is due to
+(Apache-2.0). The Python metric layer used to inherit from sacreBLEU and has since been ported, so
+the library API needs no sacreBLEU at all; what still touches it -- `patch()`, the command line,
+`verify.py`, `significance.install()` and the mecab/sentencepiece tokenizers -- does so on use, and
+`NOTICE` names each one. The Rust implementations were written from published specifications and
+from measurement of sacreBLEU's output, not from its source; `docs/spec/` records each one. chrF is due to
 Maja Popović; BLEU to Papineni et al. (2002). Please keep citing sacreBLEU
 ([Post, 2018](https://aclanthology.org/W18-6319/)) when you report scores: they *are* sacreBLEU scores.
 

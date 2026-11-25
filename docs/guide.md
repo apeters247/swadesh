@@ -25,7 +25,10 @@ Contents
 ## Install
 
 swadesh needs Python 3.10 or newer, and it builds with a Rust toolchain through
-maturin. The runtime dependencies are `sacrebleu==2.6.0` and `numpy`.
+maturin. The only runtime dependency is `numpy`. `sacrebleu==2.6.0` is an extra
+(`pip install "swadesh[sacrebleu]"`), needed by `patch()`, the `swadesh` command line,
+`verify.py` and the six tokenizers that use mecab or sentencepiece -- the library API, including
+the metrics and the significance tests, runs without it.
 
 From a checkout of the repository:
 
