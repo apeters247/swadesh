@@ -47,7 +47,25 @@ well as this project's: `__init__.py` (the `patch()` adapter), `verify.py`, `met
 `significance.py` and `cli.py`. `LICENSE-Apache-2.0` retains that text. `NOTICE` names them. Replacing
 them with standalone implementations is planned.
 
-Everything in `crates/` is original to this project and carries only AGPL-3.0-or-later.
+Everything in `crates/` is original to this project and carries only AGPL-3.0-or-later, with one
+disclosed exception below.
+
+### Exception: the TER shift search (2026-11-24)
+
+One part of `crates/` is no longer clean-room. The candidate-budget semantics of the TER shift search
+in `crates/swadesh-core/src/ter_clean.rs` were re-derived on 2026-11-24 **by reading** sacreBLEU's
+Apache-2.0 `sacrebleu/metrics/lib_ter.py` (Copyright 2020 Memsource), on the copyright holder's
+explicit instruction, after black-box probing had shown the oracle departs from the published
+algorithm and no probe could recover the rule. The rule recovered is small - the 1,000-candidate
+budget is tested once per matching block and before the reduction, so the search overshoots by up to
+one block and refuses the shift found on the exhausting iteration - and it is expressed here in this
+project's own terms and types, but the derivation is not clean-room for that file.
+
+Consequences for the licence decision: `ter_clean.rs`'s shift search is a derivative work of an
+Apache-2.0 file, so Apache-2.0's notice and attribution conditions attach to it, and the
+"clean-room, dual-licensed" description must not be repeated for TER. The rest of the crate is
+unaffected. The copyright holder should confirm the licence position with counsel before any
+commercial licence is offered that covers TER.
 
 ## Spec-first: what holds, and what does not
 
@@ -61,7 +79,7 @@ never rewritten since:
 |---|---|---|---|
 | tokenizers: `tokenize_nonechar_clean.rs`, `13a`, `zh`, `intl` | `docs/spec/tokenizers.md` `0f77954`, 11-22 00:34 | `edfd940` 01:43, `3a420e4` 03:21, `515f3ba` 03:42, `87cbc03` 04:05 | yes |
 | BLEU/chrF segment statistics: `bleu_stats_clean.rs`, `chrf_stats_clean.rs` | `docs/spec/stats.md` `c3e3445`, 11-22 04:52 | `3d8df0c` 13:04, `34ecd83` 13:09 | yes |
-| TER: `ter_clean.rs` | `docs/spec/ter.md` `47539ec`, 11-22 13:39 | `db8e08b` 14:17 | yes |
+| TER: `ter_clean.rs` | `docs/spec/ter.md` `47539ec`, 11-22 13:39 | `db8e08b` 14:17 | yes (shift-search budget rule re-derived from source, 11-24 - see above) |
 | **BLEU/chrF numeric core: `score.rs`, `ngram.rs`** | `docs/spec/stats.md`, 11-22 04:52 | `6b13050`, **11-19 04:35** | **no** |
 | **significance kernels: `nprng.rs`, `resample.rs`, `pairwise.rs`** | `docs/spec/significance.md` `478e2f1`, 11-22 17:05 | `7f9b7da` and `60bf8fa` **11-19 04:45**, `5eb8843` 04:49 | **no** |
 | **CLI: `crates/swadesh-cli/`** | `docs/spec/cli-contract.md` `2b13911`, 11-22 15:51 | `main.rs` `943dcf0`, **11-19 04:59** | **no** |

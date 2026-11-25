@@ -18,6 +18,13 @@ specification and from black-box measurement of sacreBLEU's observable output, r
 The differential tests compare against recorded sacreBLEU output. That is measurement, not
 derivation: no sacreBLEU source was read for these, and no sacreBLEU code is copied into `crates/`.
 
+**One disclosed exception (2026-11-24).** The candidate-budget semantics of the TER shift search in
+`crates/swadesh-core/src/ter_clean.rs` were re-derived by reading sacreBLEU's Apache-2.0
+`sacrebleu/metrics/lib_ter.py` (Copyright 2020 Memsource), on the copyright holder's instruction,
+after black-box probing showed the oracle departs from the published algorithm and no probe could
+recover the rule. That file's shift search is therefore a derivative work of an Apache-2.0 file; the
+rest of the crate is unaffected. See `docs/licensing.md`.
+
 ## Apache-2.0, and what is still derived
 
 sacreBLEU (https://github.com/mjpost/sacreBLEU), copyright Matt Post and contributors, is licensed
