@@ -96,10 +96,72 @@ def test_statistics_methods_belong_to_swadesh():
             assert getattr(cls, name) is not getattr(parent, name), name
 
 
-def test_compute_score_from_stats_is_still_sacrebleus():
-    """The bootstrap fast path recognises this method by identity; overriding it breaks bootstrap."""
-    assert BLEU._compute_score_from_stats is sacre_bleu.BLEU._compute_score_from_stats
-    assert CHRF._compute_score_from_stats is sacre_chrf.CHRF._compute_score_from_stats
+def test_compute_score_from_stats_is_swadeshs_own():
+    """Both scorers are ours now.
+
+    They used to be sacreBLEU's. The bootstrap fast path keys off the attributes the kernel reads
+    rather than on class or function identity (see `significance._native_bleu_scores`), so porting
+    them does not take BLEU or chrF off that path -- `test_compute_score_from_stats_matches_sacrebleu`
+    below holds the ported arithmetic to sacreBLEU's.
+    """
+    for cls, parent in ((BLEU, sacre_bleu.BLEU), (CHRF, sacre_chrf.CHRF)):
+        assert "_compute_score_from_stats" in cls.__dict__, cls.__name__
+        assert getattr(cls, "_compute_score_from_stats") is not getattr(
+            parent, "_compute_score_from_stats"), cls.__name__
+
+
+def test_compute_score_from_stats_matches_sacrebleu():
+    """The ported fallback scorers have to agree with sacreBLEU's on the rows they exist for.
+
+    Rows too short for the metric's order are included on purpose: both implementations then fail
+    the same way, and the exception is part of the contract.
+    """
+    def grab(fn):
+        try:
+            return ("ok", fn())
+        except Exception as e:  # noqa: BLE001 -- the exception is the expectation
+            return ("exc", type(e).__name__, str(e))
+
+    def bleu_rows(n):
+        w = 2 + 2 * n
+        rows = [
+            [3, 4] + [1, 0, 0, 0][:n] + [1, 2, 3, 4][:n],          # no matches (issue #141 path)
+            [12, 10] + [8, 6, 4, 0][:n] + [9, 7, 5, 0][:n],        # ordinary
+            [0, 0] + [0] * n + [0] * n,                            # both empty
+            [5, 5] + [3.5, 2.25, 0.0, 0.1][:n] + [4.0, 3.5, 0.0, 0.0][:n],  # fractional float32 row
+            [7, 3] + [1, 0, 0, 0][:n] + [4, 0, 0, 0][:n],          # short segment, zero higher orders
+        ]
+        for r in rows:
+            assert len(r) == w
+        rows.append([1, 1, 1])                                     # deliberately too short
+        return rows
+
+    for kw in (dict(), dict(smooth_method="add-k"), dict(smooth_method="floor"),
+               dict(smooth_method="none"), dict(smooth_method="add-k", smooth_value=0.5),
+               dict(smooth_method="floor", smooth_value=0.25), dict(max_ngram_order=2),
+               dict(max_ngram_order=1), dict(effective_order=True),
+               dict(effective_order=True, smooth_method="add-k")):
+        ours, theirs = BLEU(**kw), sacre_bleu.BLEU(**kw)
+        for row in bleu_rows(ours.max_ngram_order):
+            a = grab(lambda: ours._compute_score_from_stats(list(row)))
+            b = grab(lambda: theirs._compute_score_from_stats(list(row)))
+            if a[0] == "ok" and b[0] == "ok":
+                assert (a[1].score, repr(a[1])) == (b[1].score, repr(b[1])), (kw, row)
+            else:
+                assert a[0] == b[0], (kw, row, a, b)
+
+    for kw in (dict(), dict(eps_smoothing=True), dict(beta=1), dict(beta=3),
+               dict(char_order=2, word_order=2, beta=3, lowercase=True, whitespace=True)):
+        ours, theirs = CHRF(**kw), sacre_chrf.CHRF(**kw)
+        order = ours.order
+        for row in ([4, 4, 2] * order, [0] * (3 * order), [3, 0, 0] * order, [0, 3, 0] * order,
+                    [1, 1, 1]):
+            a = grab(lambda: ours._compute_score_from_stats(list(row)))
+            b = grab(lambda: theirs._compute_score_from_stats(list(row)))
+            if a[0] == "ok" and b[0] == "ok":
+                assert (a[1].score, repr(a[1])) == (b[1].score, repr(b[1])), (kw, row)
+            else:
+                assert a[0] == b[0], (kw, row, a, b)
 
 
 def test_the_fallback_loop_is_the_path_under_test():
