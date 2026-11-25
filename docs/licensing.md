@@ -81,6 +81,24 @@ sacreBLEU installed. Unlike the TER budget rule (which was black-box unrecoverab
 be re-derived from behaviour and the clean-room claim restored for it; it was ported because the
 copyright holder authorised a direct port.
 
+### Ported metric layer (2026-11-25)
+
+The same authorisation covers the rest of the move off sacreBLEU. Ported so far, all Apache-2.0
+derivatives (Copyright Matt Post and contributors):
+
+| what | ported from |
+|---|---|
+| `python/swadesh/base.py` - `Score`, `Signature`, `Metric` | `sacrebleu/metrics/base.py` |
+| TER's tokenizer surface (`_NativeTerTokenizer`, `metric.tokenizer`) | `sacrebleu/tokenizers/tokenizer_ter.py` (interface only) |
+| `BLEU`: class constants, `__init__`, `_preprocess_segment`, `_compute_score_from_stats`, `_compute_bleu` | `sacrebleu/metrics/bleu.py` |
+| `CHRF`: class constants, `__init__`, `_preprocess_segment`, `_remove_punctuation`, `_compute_f_score`, `_compute_score_from_stats` | `sacrebleu/metrics/chrf.py` |
+| `BLEUSignature`, `CHRFSignature`, `TERSignature` | the same two modules |
+
+`crates/` is unaffected: the Rust kernels are still the clean-room work, and the ports are the
+Python layer that had been inheriting from sacreBLEU. The five native tokenizers work without
+sacreBLEU installed; the six exotic ones still need it (they need mecab or sentencepiece in any
+case) and it is imported lazily, only when one of those names is asked for.
+
 ## Spec-first: what holds, and what does not
 
 `NOTICE` describes the Rust crate as written from published specifications and from black-box

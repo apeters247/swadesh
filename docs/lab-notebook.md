@@ -3811,3 +3811,42 @@ correctly; `unpatch()` restores both sides.
 **Next.** Slice 3: BLEU and chrF onto the ported base, dropping `sacrebleu.metrics.bleu` and
 `sacrebleu.metrics.chrf` (they also use `MAX_NGRAM_ORDER` and chrF's `BETA`/`CHAR_ORDER`/`WORD_ORDER`
 class attributes).
+
+## 2026-11-25 (continued) - drop the sacreBLEU dependency, slice 3: BLEU and chrF stand alone
+
+**Attempted.** With TER standalone, BLEU and chrF were next: `metrics.py` still imported
+`sacrebleu.metrics.bleu` and `sacrebleu.metrics.chrf` for the class bases, `MAX_NGRAM_ORDER`,
+chrF's `CHAR_ORDER`/`WORD_ORDER`/`BETA` and the signature classes.
+
+**Measured first.** `MAX_NGRAM_ORDER = 4`; `SMOOTH_DEFAULTS = {'none': None, 'floor': 0.1, 'add-k': 1,
+'exp': None}`; `TOKENIZER_DEFAULT = '13a'`; `_TOKENIZER_MAP = {'zh': 'zh', 'ja': 'ja-mecab',
+'ko': 'ko-mecab'}`; `CHAR_ORDER/WORD_ORDER/BETA = 6/0/2`; `BLEU.TOKENIZERS` is a **key view** (a
+`dict_keys`, not a lookup table) over eleven names; the tokenizer `signature()` is the name itself for
+the five native ones; and `ja-mecab`, `ko-mecab`, `spm`, `flores101`, `flores200`, `spBLEU-1K` all
+raise without mecab/sentencepiece.
+
+**Done.** `metrics.py` now imports no sacreBLEU class. `BLEUSignature` and `CHRFSignature` are ports;
+`BLEU` and `CHRF` carry sacreBLEU's class constants, a native `__init__`, `_preprocess_segment`,
+chrF's `_remove_punctuation`, and the two ported fallback scorers (`_compute_bleu` with `_my_log`,
+and `CHRF._compute_f_score`) that `_score_from_row` delegates to for the rows the native scorer
+refuses: a degenerate n-gram order and a fractional float32 bootstrap row. `_make_bleu_tokenizer`
+builds the five native tokenizers natively and imports sacreBLEU **lazily** for the six exotic ones.
+
+**Two stale tests, both encoding the old inheritance, both replaced by something stronger.**
+`test_compute_score_from_stats_is_still_sacrebleus` asserted the two scorers *were* sacreBLEU's
+functions; that contract is exactly what `significance._native_bleu_scores` documents it does not
+need ("duck-typed on the attributes the kernels read rather than on class identity"). It is now
+`..._is_swadeshs_own` plus a differential test over eleven BLEU configurations and five chrF ones,
+including rows too short for the order -- where the exception is part of the contract. That new test
+earned its place immediately: its first version passed a 9-element row to an order-4 metric and
+found the resulting `IndexError`. `test_class_constants` needed `BLEU.TOKENIZERS`, which is now the
+same key view sacreBLEU exposes.
+
+**Measured.** Focused set (`test_metrics_fallback`, `test_parity`, `test_score_objects`,
+`test_provenance`, `test_frozen_oracle`): **651 passed, 0 failed**. The smoke probe checks BLEU
+(16 configurations) and chrF (10) on score, signature, short signature, repr, JSON, sentence score
+and **instance attribute names**, plus the exotic-tokenizer errors and the bad-`smooth_method`
+message, and patch/unpatch identity for all three metrics: no differences.
+
+**Next.** Slice 4: `significance.py` standalone. Then `cli.py`/`verify.py`, then dropping sacrebleu
+from `pyproject.toml` as a hard requirement.

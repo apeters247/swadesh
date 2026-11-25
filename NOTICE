@@ -25,6 +25,15 @@ after black-box probing showed the oracle departs from the published algorithm a
 recover the rule. That file's shift search is therefore a derivative work of an Apache-2.0 file; the
 rest of the crate is unaffected. See `docs/licensing.md`.
 
+**Ported metric code (2026-11-25).** The Python metric layer is being moved off sacreBLEU by direct
+port, authorised by the copyright holder. So far: `python/swadesh/base.py` (`Score`, `Signature`,
+`Metric`, from `sacrebleu/metrics/base.py`), the TER tokenizer surface, the BLEU and chrF metric
+classes with their signature classes and their fallback scorers (`BLEU.compute_bleu`,
+`CHRF._compute_f_score`), and chrF's punctuation splitter. All are Apache-2.0 derivatives (Copyright
+Matt Post and contributors); the notice conditions apply to them. The five native tokenizers
+(`none`, `13a`, `intl`, `zh`, `char`) need no sacreBLEU; the exotic ones (`ja-mecab`, `ko-mecab`,
+`spm`, `flores101`, `flores200`, `spBLEU-1K`) still do, and are imported lazily for that reason.
+
 **Also ported (2026-11-25).** `python/swadesh/base.py` - the `Score`, `Signature` and `Metric` base
 classes the metrics derive from - is a direct port of sacreBLEU's `sacrebleu/metrics/base.py`
 (Apache-2.0, Copyright Matt Post and contributors), made with the copyright holder's authorisation so
