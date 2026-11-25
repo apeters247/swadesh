@@ -67,6 +67,20 @@ Apache-2.0 file, so Apache-2.0's notice and attribution conditions attach to it,
 unaffected. The copyright holder should confirm the licence position with counsel before any
 commercial licence is offered that covers TER.
 
+### Ported module: `python/swadesh/base.py` (2026-11-25)
+
+`python/swadesh/base.py` - the `Score`, `Signature` and `Metric` base classes the metrics derive from
+- is a **direct port** of sacreBLEU's `sacrebleu/metrics/base.py` (Apache-2.0, Copyright Matt Post and
+contributors), made with the copyright holder's authorisation so that the metrics stop inheriting from
+the sacreBLEU package. Apache-2.0's notice and attribution conditions attach to it. It is held to
+sacreBLEU's behaviour by `tests/test_base_port.py`, which diffs signatures, score formatting and the
+argument-check errors against the real classes.
+
+The module carries no sacreBLEU import: it is the first piece of the package that can run without
+sacreBLEU installed. Unlike the TER budget rule (which was black-box unrecoverable), this file *could*
+be re-derived from behaviour and the clean-room claim restored for it; it was ported because the
+copyright holder authorised a direct port.
+
 ## Spec-first: what holds, and what does not
 
 `NOTICE` describes the Rust crate as written from published specifications and from black-box

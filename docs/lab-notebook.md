@@ -3691,3 +3691,41 @@ licence covers TER.
 **Next.** Blocker 1 of the goal is met (0 failed) and the four commits for it are pushed. What
 remains open is not parity: the CLI 27-flag question for cli.py, and the four unverified TESTING.md
 criteria (mutation, coverage, crash campaign, stress), which need tools that are not installed here.
+
+## 2026-11-25 - drop the sacreBLEU runtime dependency, slice 1: the metric base
+
+**Attempted.** Goal: replace the sacreBLEU dependency outright, starting from `lib_ter.py`. Survey
+first: the Rust TER core (`ter_clean.rs`) is already a native replacement for `lib_ter.py` and there
+is nothing left to port *there* - every TER statistic already comes from `_swadesh.ter_stats`. What
+still ties TER (and BLEU, chrF) to the sacreBLEU package is the Python side: `pyproject.toml`
+declares `sacrebleu==2.6.0`, and `python/swadesh/{__init__,metrics,significance,verify,cli}.py`
+import it. `metrics.py`'s classes subclass sacreBLEU's and inherit `Metric`, `Score` and `Signature`
+from `sacrebleu/metrics/base.py`.
+
+**Measured.** `TercomTokenizer(...).signature()` is the constant `'tercom'` for all sixteen flag
+combinations, so `TERSignature`'s `tok` field needs no tokenizer dependency.
+
+**Done (slice 1).** `python/swadesh/base.py` - a direct port of sacreBLEU's `metrics/base.py`
+(`Score`, `Signature`, `Metric`), authorised by the copyright holder. It imports no sacreBLEU and
+keeps the observable behaviour byte-identical, including the `"sacrebleu"` log channel and the
+signature version literal `COMPAT_VERSION = "2.6.0"`.
+
+**Verified.** `tests/test_base_port.py` diffs the port against the real classes: `Signature` info,
+abbreviations, `format()`, `format(short=True)`, `str`, `repr`, `update` and the missing-`num_refs`
+error; `Score.format` over widths 0/1/2/4 x `score_only` x empty/short signatures x JSON x verbose x
+confidence interval, plus `repr` and `estimate_ci`; `Metric._check_sentence_score_args` and
+`_check_corpus_score_args` type and message over 6 + 8 bad-input cases. **0 differences** (37 new
+tests, 41 with the provenance guard, all green). The guard's allow-list still passes: `base.py`
+imports no sacreBLEU.
+
+**Failed and why.** Nothing; the only hiccups were in the probe (class-name prefixes in the error
+messages under test, and `format(is_json=True)` on an empty signature raising in both
+implementations).
+
+**Decisions and reasons.** Porting is disclosed in `NOTICE` and `docs/licensing.md`: `base.py` is
+derivative of an Apache-2.0 file. Unlike the TER budget rule this one is recoverable by measurement,
+so the note says so and offers the alternative.
+
+**Next.** Slice 2: give TER its own `TERScore`, `TERSignature` and `TER` on top of this base, so the
+TER path stops importing `sacrebleu.metrics.ter` at all. Then BLEU and chrF, then `significance.py`,
+`cli.py`, `verify.py` and the `pyproject.toml` dependency itself.

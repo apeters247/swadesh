@@ -25,6 +25,13 @@ after black-box probing showed the oracle departs from the published algorithm a
 recover the rule. That file's shift search is therefore a derivative work of an Apache-2.0 file; the
 rest of the crate is unaffected. See `docs/licensing.md`.
 
+**Also ported (2026-11-25).** `python/swadesh/base.py` - the `Score`, `Signature` and `Metric` base
+classes the metrics derive from - is a direct port of sacreBLEU's `sacrebleu/metrics/base.py`
+(Apache-2.0, Copyright Matt Post and contributors), made with the copyright holder's authorisation so
+the metrics stop inheriting from the sacreBLEU package. Apache-2.0's notice conditions attach to it
+too. `tests/test_base_port.py` holds it to sacreBLEU's behaviour: signatures, score formatting and
+the argument-check errors are diffed against the real classes.
+
 ## Apache-2.0, and what is still derived
 
 sacreBLEU (https://github.com/mjpost/sacreBLEU), copyright Matt Post and contributors, is licensed
