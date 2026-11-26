@@ -5138,3 +5138,35 @@ lines. `-t A,B --list` prints **nothing** (exit 0). The signature is the ordinar
 set and offsets between them - not a merged `Found`.
 
 **Next.** `-t A,B`, then the real-model re-verification and the `.zip`/plain-`.gz` *download* shapes.
+
+## 2026-11-26 (continued) - M0 slice 16: the real-model re-verification
+
+**Attempted.** The evidence the earlier session left: two real LLM outputs (qwen3.8-27b and
+llama3.3:70b, 150 English->German segments each from the WMT24 set, translated through Ollama and
+cached as JSONL) scored with sacreBLEU 2.6.0 and with swadesh, every metric and configuration,
+corpus and sentence level. Re-run on this tree rather than trusting the earlier logs.
+
+**What the harness does.** `/home/kpeters/eval-compare/work/compare_real.py compare` compares two
+things per configuration: the Python API (`sacrebleu.metrics` vs `swadesh.metrics`, corpus score and
+per-sentence scores) and the CLI (`sacrebleu` vs `python -m swadesh.cli`, which now runs the compiled
+code - slice 11). The GPU was idle (`nvidia-smi`: 2 MiB, 0%) and nothing was translated: the cached
+JSONL is reused, so this is scoring only.
+
+**Result - qwen3.8-27b: every configuration bit-exact, 0 of 150 sentence-level differences.**
+BLEU 26.434178, BLEU intl 27.013552, BLEU floor 0.1 26.434178, BLEU lowercase 26.689483, chrF 59.604976,
+chrF char0/word0 59.604976, chrF beta=3 59.703728, chrF lowercase 60.856375, chrF++ 56.114313,
+TER 62.370753.
+
+**Result - llama3.3:70b: every configuration bit-exact, 0 of 150 sentence-level differences, and the
+harness's own summary line `total mismatches: 0`.** The visible configurations: chrF 59.171230,
+chrF char0/word0 59.171230, chrF beta=3 59.173297, chrF lowercase 60.352480, chrF++ 55.716776,
+TER 62.013786, TER case_sensitive 62.506155, TER normalized 56.782883. The CLI half - default BLEU,
+chrF++, all metrics, floor+intl, sentence-level chrF++ json - was byte-identical on stdout and exit
+code in all five.
+
+**Provenance note.** The extension loaded by the harness was built at 10:55, before slices 12-15
+(codecs, `.gz`, the error-line printing, the parsing and refusal fixes). None of those touch scoring,
+and the scores above are byte-identical, but the *nearest* statement is "the metric code has not
+changed since that build". A rebuild and re-run is recorded below.
+
+**Next.** `-t A,B` (concatenated sets), then the `.zip`/plain-`.gz` download shapes.
