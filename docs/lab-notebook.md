@@ -3963,3 +3963,30 @@ landed, since it costs nothing.
 **Next.** Slice 1 continues: wire `-ci`/`--confidence`/`--confidence-n` in the Rust CLI (signature
 `bs`/`seed` pairs, the JSON confidence fields, the text `mu = x +/- y`), then the paired AR/BS tests
 and their seven flags, byte-diffing each against `sacrebleu` and extending the CLI parity suite.
+
+## 2026-11-26 (continued) - slice 1c-i: `-ci` in the Rust binary, byte-identical
+
+**Done.** `swadesh_core::significance` holds the bootstrap orchestration that used to be Python's
+`sacrebleu.significance._bootstrap_resample`: draw the resample indices with the emulated numpy RNG,
+score each row per metric (`ScoreKind::{Bleu,Chrf,Ter}`), then `estimate_ci`. The CLI gained
+`-ci/--confidence` and `-cin/--confidence-n` (default 1000), the signature now carries the `bs` and
+`seed` pairs sacreBLEU inserts between `nrefs` and the metric pairs, and `report.rs` renders the
+confidence in all three formats. `SACREBLEU_SEED` is honoured; `none` is refused with a message
+rather than silently producing a different interval, since that draw is entropy-seeded and cannot be
+reproduced.
+
+**Verified.** A 12-case byte-diff of stdout, stderr and exit status against `sacrebleu` — JSON, text,
+latex, `-b`, `-w 3`, chrF, chrF++, TER, multi-metric and `--confidence-n 250` — reports **0
+differences**. That is now permanent: 15 new parity tests in `tests/test_cli.py`
+(`test_confidence_interval`, `test_confidence_interval_every_pair` over en-de/zh-en/en-zh,
+`test_confidence_seed_env`), all passing against the WMT22 fixtures, so the suite grew from 448 to
+463 cases. `cargo test --release --workspace` is green (84 lib tests, two of them new).
+
+**Note on one assumption.** `--confidence-n 0` is refused with a `StatisticsError` message rather
+than measured, because that path would otherwise index an empty sample. `--confidence-n 0` is not in
+the parity set yet; if sacreBLEU's own output differs there it needs measuring and fixing, not
+assuming.
+
+**Next.** Slice 1c-ii: the paired tests (`--paired-ar`, `--paired-bs`, `--paired-ar-n`,
+`--paired-bs-n`, `--paired-jobs`) with their `-par`/`-pbs`/`-parn`/`-pbsn` short forms, the p-value
+`(k+1)/(n+1)`, the per-system JSON array and the four stderr status lines.

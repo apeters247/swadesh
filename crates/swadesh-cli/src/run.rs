@@ -3,6 +3,7 @@
 use std::borrow::Cow;
 use std::io::Write;
 
+use swadesh_core::significance::{bootstrap_ci, ScoreKind};
 use swadesh_core::stats::{BleuConfig, ChrfConfig};
 use swadesh_core::stats_dispatch::{bleu_stats as bleu_segment, chrf_stats as chrf_segment};
 use swadesh_core::ter_clean::ter_segment as ter_segment_clean;
@@ -121,6 +122,47 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
     }
     print_single(&results, json, out).map_err(io_err)?;
     Ok(())
+}
+
+/// `-ci` needs a reproducible draw: sacreBLEU reads `SACREBLEU_SEED` (default `12345`) and accepts
+/// `none` for an entropy-seeded draw. The entropy draw cannot be reproduced, so it is refused with
+/// a message instead of quietly reporting a different interval.
+fn bootstrap_seed() -> Result<(u128, String), Fail> {
+    let raw = std::env::var("SACREBLEU_SEED").unwrap_or_else(|_| "12345".to_string());
+    if raw.eq_ignore_ascii_case("none") {
+        return Err(Fail {
+            code: 1,
+            msg: "SACREBLEU_SEED=none is not supported: swadesh draws the bootstrap indices deterministically".into(),
+        });
+    }
+    let seed: u128 = raw.parse().map_err(|_| Fail {
+        code: 1,
+        msg: format!("ValueError: invalid literal for int() with base 10: {raw:?}"),
+    })?;
+    Ok((seed, raw.to_lowercase()))
+}
+
+/// `--confidence-n`, refused when it could not produce an interval.
+fn confidence_samples(cli: &Cli) -> Result<usize, Fail> {
+    if cli.confidence_n <= 0 {
+        return Err(Fail { code: 1, msg: "StatisticsError: mean requires at least one data point".into() });
+    }
+    Ok(cli.confidence_n as usize)
+}
+
+/// The bootstrap interval when `-ci` was given, and the seed string the signature reports.
+fn confidence(
+    cli: &Cli,
+    rows: &[f64],
+    width: usize,
+    kind: &ScoreKind<'_>,
+) -> Result<(Option<(f64, f64)>, Option<String>), Fail> {
+    if !cli.confidence {
+        return Ok((None, None));
+    }
+    let n = confidence_samples(cli)?;
+    let (seed, seed_str) = bootstrap_seed()?;
+    Ok((Some(bootstrap_ci(rows, width, kind, n, seed)), Some(seed_str)))
 }
 
 fn io_err(e: std::io::Error) -> Fail {
@@ -312,8 +354,13 @@ fn bleu_corpus(
     let stats: Vec<f64> = total.iter().map(|&v| v as f64).collect();
     let res = compute_bleu(&stats, &scfg);
     let verbose = bleu_verbose(total[0], total[1], res.bp, &res.precisions);
-    let sig = bleu_signature(cli, tok, nrefs, false);
-    Ok((Score { name: "BLEU".into(), score: res.score, verbose: Some(verbose) }, sig))
+    let rows_f: Vec<f64> = rows.iter().map(|&v| v as f64).collect();
+    let (conf, seed_str) = confidence(cli, &rows_f, width, &ScoreKind::Bleu(&scfg))?;
+    let mut sig = bleu_signature(cli, tok, nrefs, false);
+    if let Some(seed) = &seed_str {
+        sig = sig.with_confidence(confidence_samples(cli)?, seed);
+    }
+    Ok((Score { name: "BLEU".into(), score: res.score, verbose: Some(verbose), confidence: conf }, sig))
 }
 
 fn bleu_sentence(
@@ -330,7 +377,7 @@ fn bleu_sentence(
     let res = compute_bleu(&stats, &scfg);
     let verbose = bleu_verbose(row[0], row[1], res.bp, &res.precisions);
     let sig = bleu_signature(cli, tok, nrefs, true);
-    (Score { name: "BLEU".into(), score: res.score, verbose: Some(verbose) }, sig)
+    (Score { name: "BLEU".into(), score: res.score, verbose: Some(verbose), confidence: None }, sig)
 }
 
 fn chrf_config(cli: &Cli) -> ChrfConfig {
@@ -395,7 +442,14 @@ fn chrf_corpus(cli: &Cli, system: &[String], refs: &[Vec<String>], nrefs: usize)
         }
     }
     let score = chrf_f_score(&total, order, cfg.beta, cfg.eps_smoothing);
-    Ok((Score { name: chrf_name(cli), score, verbose: None }, chrf_signature(cli, nrefs)))
+    let rows_f: Vec<f64> = rows.iter().map(|&v| v as f64).collect();
+    let kind = ScoreKind::Chrf { order, beta: cfg.beta, eps_smoothing: cfg.eps_smoothing };
+    let (conf, seed_str) = confidence(cli, &rows_f, width, &kind)?;
+    let mut sig = chrf_signature(cli, nrefs);
+    if let Some(seed) = &seed_str {
+        sig = sig.with_confidence(confidence_samples(cli)?, seed);
+    }
+    Ok((Score { name: chrf_name(cli), score, verbose: None, confidence: conf }, sig))
 }
 
 fn chrf_sentence(cli: &Cli, hyp: &str, refs: &[&str], nrefs: usize) -> Result<(Score, Signature), Fail> {
@@ -408,7 +462,7 @@ fn chrf_sentence(cli: &Cli, hyp: &str, refs: &[&str], nrefs: usize) -> Result<(S
     let mut row = Vec::new();
     chrf_segment(&cfg, hyp, refs, &mut row);
     let score = chrf_f_score(&row, order, cfg.beta, cfg.eps_smoothing);
-    Ok((Score { name: chrf_name(cli), score, verbose: None }, chrf_signature(cli, nrefs)))
+    Ok((Score { name: chrf_name(cli), score, verbose: None, confidence: None }, chrf_signature(cli, nrefs)))
 }
 
 // ------------------------------------------------------------------ TER
@@ -473,7 +527,12 @@ fn ter_corpus(cli: &Cli, system: &[String], refs: &[Vec<String>], nrefs: usize) 
         total[1] += row[1];
     }
     let score = ter_score_value(total[0], total[1]);
-    Ok((Score { name: "TER".into(), score, verbose: None }, ter_signature(cli, nrefs)))
+    let (conf, seed_str) = confidence(cli, &rows, 2, &ScoreKind::Ter)?;
+    let mut sig = ter_signature(cli, nrefs);
+    if let Some(seed) = &seed_str {
+        sig = sig.with_confidence(confidence_samples(cli)?, seed);
+    }
+    Ok((Score { name: "TER".into(), score, verbose: None, confidence: conf }, sig))
 }
 
 fn ter_sentence(cli: &Cli, hyp: &str, refs: &[&str], nrefs: usize) -> Result<(Score, Signature), Fail> {
@@ -484,7 +543,7 @@ fn ter_sentence(cli: &Cli, hyp: &str, refs: &[&str], nrefs: usize) -> Result<(Sc
     let refs_view: Vec<&str> = refs_lower.iter().map(|c| c.as_ref()).collect();
     let [edits, ref_len] = ter_segment_clean(&cfg, &hyp, &refs_view).map_err(ter_err)?;
     let score = ter_score_value(edits, ref_len);
-    Ok((Score { name: "TER".into(), score, verbose: None }, ter_signature(cli, nrefs)))
+    Ok((Score { name: "TER".into(), score, verbose: None, confidence: None }, ter_signature(cli, nrefs)))
 }
 
 /// Per-segment reference lists (transposed from per-reference streams), lowercased if asked.

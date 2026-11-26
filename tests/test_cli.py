@@ -673,3 +673,45 @@ def test_ter_sentence_level_with_other_metric_fails(ter_files):
     assert rc == 1 and out == b"" and b"Only one metric" in err
     assert assert_same([str(ter_files / "en-de.ref"), "-m", "ter", "chrf", "-sl",
                         "-i", str(ter_files / "en-de.ref2")]) == 1
+
+
+# ------------------------------------------------------------------ confidence intervals
+
+CI_FLAG_SETS = [
+    ["-m", "bleu", "-ci"],
+    ["-m", "bleu", "-ci", "-f", "text"],
+    ["-m", "bleu", "-ci", "-b"],
+    ["-m", "bleu", "-ci", "-w", "3"],
+    ["-m", "chrf", "-ci"],
+    ["-m", "chrf", "-cw", "2", "-ci", "-f", "text"],
+    ["-m", "ter", "-ci"],
+    ["-m", "ter", "-ci", "-f", "text"],
+    ["-m", "bleu", "chrf", "ter", "-ci"],
+    ["-m", "bleu", "-ci", "--confidence-n", "250"],
+    ["-m", "bleu", "-ci", "-f", "latex"],
+]
+
+
+@pytest.mark.parametrize("flags", CI_FLAG_SETS, ids=[" ".join(f) for f in CI_FLAG_SETS])
+def test_confidence_interval(wmt_files, flags):
+    """`-ci`: the bootstrap interval, the `bs`/`seed` signature pairs and the confidence fields."""
+    refs = wmt_files / "en-de.ref"
+    hyp = wmt_files / "en-de.short.hyp"
+    assert assert_same([str(refs), "-i", str(hyp), *flags]) == 0
+
+
+@pytest.mark.parametrize("pair", [p for p, _ in DATASETS])
+def test_confidence_interval_every_pair(wmt_files, pair):
+    """The interval has to match for the pairs whose tokenizers differ (zh, intl)."""
+    refs = wmt_files / f"{pair}.ref"
+    hyp = wmt_files / f"{pair}.short.hyp"
+    assert assert_same([str(refs), "-i", str(hyp), "-m", "bleu", "chrf", "ter", "-ci"]) == 0
+
+
+def test_confidence_seed_env(wmt_files, monkeypatch):
+    """`SACREBLEU_SEED` moves the draw, and the signature reports it."""
+    refs = wmt_files / "en-de.ref"
+    hyp = wmt_files / "en-de.short.hyp"
+    for seed in ("12345", "7", "999"):
+        monkeypatch.setenv("SACREBLEU_SEED", seed)
+        assert assert_same([str(refs), "-i", str(hyp), "-m", "bleu", "-ci", "-f", "text"]) == 0

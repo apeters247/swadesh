@@ -40,6 +40,9 @@ options:
                         BLEU tokenizer (default: 13a)
   -lc, --lowercase      BLEU: lowercase input
   --force               BLEU: suppress the tokenized-input warning
+  -ci, --confidence     report a bootstrap confidence interval
+  -cin, --confidence-n N
+                        bootstrap resamples for the confidence interval (default: 1000)
   --max-ngram-order N   BLEU maximum n-gram order (default: 4)
   --python-version X.Y  emulate sacreBLEU running on this CPython (float sum()
                         semantics changed in 3.12 and 3.14; default: 3.12)
@@ -111,6 +114,8 @@ const OPTS: &[Opt] = &[
     o("--tokenize", "-tok", Nargs::One, "tokenize"),
     o("--lowercase", "-lc", Nargs::Zero, "lowercase"),
     o("--force", "", Nargs::Zero, "force"),
+    o("--confidence", "-ci", Nargs::Zero, "confidence"),
+    o("--confidence-n", "-cin", Nargs::One, "confidence_n"),
     o("--max-ngram-order", "", Nargs::One, "max_order"),
     o("--python-version", "", Nargs::One, "pyver"),
     o("--chrf-char-order", "-cc", Nargs::One, "cc"),
@@ -163,6 +168,9 @@ pub struct Cli {
     pub tokenize: Option<String>,
     pub lowercase: bool,
     pub force: bool,
+    /// `-ci`: report a bootstrap confidence interval.
+    pub confidence: bool,
+    pub confidence_n: i64,
     pub max_ngram_order: i64,
     pub python_version: (u32, u32),
     pub chrf_char_order: i64,
@@ -291,6 +299,8 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
         tokenize: None,
         lowercase: false,
         force: false,
+        confidence: false,
+        confidence_n: 1000,
         max_ngram_order: 4,
         python_version: (3, 12),
         chrf_char_order: 6,
@@ -391,6 +401,8 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
             "tokenize" => cli.tokenize = Some(choice("-tok/--tokenize", &one(), TOKENIZE_CHOICES)?),
             "lowercase" => cli.lowercase = true,
             "force" => cli.force = true,
+            "confidence" => cli.confidence = true,
+            "confidence_n" => cli.confidence_n = parse_int("--confidence-n", &one())?,
             "max_order" => cli.max_ngram_order = parse_int("--max-ngram-order", &one())?,
             "pyver" => {
                 let v = one();

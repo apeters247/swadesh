@@ -7,6 +7,7 @@ pub mod pairwise;
 pub mod resample;
 pub mod nprng;
 pub mod score;
+pub mod significance;
 pub mod stats;
 pub mod table;
 pub mod ter_clean;
