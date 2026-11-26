@@ -4729,3 +4729,55 @@ construction - those *are* the files that differ if the rules are wrong. `cargo 
 **Next.** The remaining families (TSV, plain text, IWSLT XML) and the SGML variants (`B`, `tworefs`,
 `dev`), then the feature-gated fetch so a cold cache downloads - at which point `-t` is complete for
 the sets the catalogue can fetch, and `--download` becomes reachable.
+
+## 2026-11-26 (continued) - M0 slice 6: the downloader, so `-t` works on a cold cache
+
+**Attempted.** WS0.3's remaining half and WS0.4: the fetch. This is the first slice to add
+third-party crates (decided in D-2): `ureq` with the rustls stack, `flate2` with the pure-Rust
+`rust_backend`, `tar` and `md-5`, behind a `downloader` feature that is in `default` but **not** in
+`--no-default-features` - so a cache-only build stays crate-free, which is what `crates/swadesh-wasm`
+builds and what the "no dependencies" property now means. Third-party crates went from 26 to 108 and
+every licence is permissive: the two that look unusual are `webpki-roots` (`CDLA-Permissive-2.0`, a
+data licence for the certificate roots) and `ring` (`Apache-2.0 AND ISC`), both read out of
+`cargo metadata` rather than assumed. That command now generates `docs/licensing.md`'s table instead
+of a hand-written one, and `NOTICE` records the downloader's crates.
+
+**What the fetch does, measured.** On a cold cache the oracle prints exactly two lines and nothing
+else - no progress bar, so the output is deterministic:
+
+    sacreBLEU: Downloading <url> to <cache>/<set>/raw/<prefix>.<archive basename>
+    sacreBLEU: Extracting <archive> to <cache>/<set>/raw
+
+the archive being named `<prefix>.<url basename>` (`multi30k_2017.multi30k_test_sets_d3ec2a38.tar.gz`),
+extraction leaving the archive's own tree under `raw/`. sacreBLEU also leaves a `.lock` beside the
+archive; we do not, because it is invisible to every output and unread by the parsers.
+
+**Verification, and it is this session's milestone.** A cold `wmt16` download end to end - fetch, md5
+verify, extract, SGML parse - matches the oracle performing its own cold download: stdout identical
+(2999 lines), **stderr identical**, all five generated files byte-identical, scoring identical. That
+is `-t` working with an empty cache. There is an opt-in test for it (`SWADESH_DOWNLOAD_TESTS=1`;
+3.7 MB twice) and a smaller one for `--download NAME -l PAIR`; both pass (2 passed in 2.4 s).
+
+**Scope, and what still refuses.** The catalogue stores a *flat* URL list per set, so which archive
+belongs to a given pair is not recoverable from it. 31 of the 67 sets have exactly one archive and a
+measured format and now work cold; the 36 multi-archive sets, the four `.zip` sets and the one
+plain-`.gz` set refuse with an accurate message (`run `swadesh --download <set>` first`), pinned by
+`test_an_unfetchable_set_still_refuses`. Recovering the per-pair mapping is the next step here: either
+the generator carries the registry's nesting or a measurement per set does.
+
+Two divergences registered: `--download NAME` without `-l` (the oracle raises a traceback; we refuse
+in one line with the same exit code, since the archive is per set) and the md5-mismatch wording (ours,
+unmeasured - a corrupted download needs a fake server).
+
+**A trap worth recording.** `cargo build --no-default-features` *replaces* `target/release/swadesh`,
+and the two test failures in the middle of this slice were exactly that: the suite then ran a
+downloader-less binary, so `--download` looked unsupported again and a message a test pinned had
+changed. Always rebuild with default features before believing a CLI run.
+
+**Numbers.** `cargo test --release --workspace`: 13 suites green. The `-t`-and-parsers area: 14 pass.
+The fast half is re-running. `--no-default-features` builds clean, which keeps the crate-free
+property honest.
+
+**Next.** The per-pair URL mapping (so multi-archive sets fetch), then the remaining parser families
+(TSV, plain text, IWSLT XML) and the SGML variants (`B`, `tworefs`, `dev`), then the WS0.8 small
+divergences.

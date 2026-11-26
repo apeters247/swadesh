@@ -57,6 +57,31 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
         eprintln!("sacreBLEU: Only one metric can be used in sentence-level mode.");
         return Err(Fail { code: 1, msg: String::new() });
     }
+    // `--download NAME -l PAIR` fetches the set's archive and quits. The oracle raises when `-l` is
+    // missing (registered divergence: swadesh refuses in one line, same exit code, because the
+    // archive is per set).
+    if let Some(name) = &cli.download {
+        if cli.langpair.is_none() {
+            eprintln!("sacreBLEU: I need a language pair (-l). Use --list to see available language pairs for this test set.");
+            return Err(Fail { code: 1, msg: String::new() });
+        }
+        #[cfg(feature = "downloader")]
+        {
+            if !crate::fetch::download_set(name)? {
+                eprintln!("sacreBLEU: Unknown test set '{name}'");
+                eprintln!("sacreBLEU: Please run with --list to see the available test sets.");
+                return Err(Fail { code: 1, msg: String::new() });
+            }
+        }
+        #[cfg(not(feature = "downloader"))]
+        {
+            let _ = name;
+            eprintln!("swadesh: error: this build has no downloader (--no-default-features)");
+            return Err(Fail { code: 1, msg: String::new() });
+        }
+        return Ok(());
+    }
+
     // `--citation` needs a test set: sacreBLEU has no default citation, and the check comes before
     // the reference checks but after the sentence-level one (both measured). With `-t` the oracle
     // crashes (`TypeError: argument of type 'WMTXMLDataset' is not iterable`), so printing the
@@ -106,10 +131,21 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
     if let Some((found, pair)) = &test_set {
         let fields = found.fields_of(pair).cloned().unwrap_or_default();
         if fields.iter().any(|field| !dataset::field_path(found, pair, field).exists()) {
-            // Each family says whether it recognises the layout; an unmeasured one leaves the
-            // refusal below intact.
-            if !crate::sgml::rebuild(found, pair)? {
-                crate::wmtxml::rebuild(found, pair)?;
+            // Each family says whether it recognises the layout. A raw tree may already be there; if
+            // not, the downloader fetches it (when the build has one and the set is single-archive),
+            // and then the parsers run again. An unknown layout or format leaves the refusal below
+            // intact rather than producing plausible-looking wrong data.
+            let rebuild = |found: &dataset::Found, pair: &str| -> Result<bool, Fail> {
+                if crate::sgml::rebuild(found, pair)? {
+                    return Ok(true);
+                }
+                crate::wmtxml::rebuild(found, pair)
+            };
+            if !rebuild(found, pair)? {
+                #[cfg(feature = "downloader")]
+                if crate::fetch::ensure_archive(found)? {
+                    rebuild(found, pair)?;
+                }
             }
         }
     }

@@ -57,6 +57,7 @@ options:
   -ol, --origlang X     keep segments whose source language is X (or 'non-X')
   --subset X            keep segments whose domain annotation is X
   -d, --detail          break the score down by source language and domain
+  --download NAME       fetch that test set's archive and quit
   --max-ngram-order N   BLEU maximum n-gram order (default: 4)
   --python-version X.Y  emulate sacreBLEU running on this CPython (float sum()
                         semantics changed in 3.12 and 3.14; default: 3.12)
@@ -174,6 +175,7 @@ const OPTS: &[Opt] = &[
     o("--echo", "", Nargs::Plus, "echo"),
     o("--origlang", "-ol", Nargs::One, "origlang"),
     o("--subset", "", Nargs::One, "subset"),
+    o("--download", "", Nargs::One, "download"),
     o("--detail", "-d", Nargs::Zero, "detail"),
     o("--cite", "", Nargs::Zero, "citation"),
     o("--max-ngram-order", "", Nargs::One, "max_order"),
@@ -191,7 +193,6 @@ const OPTS: &[Opt] = &[
     o("--no-color", "-nc", Nargs::Zero, "no_color"),
     o("--format", "-f", Nargs::One, "format"),
     // Recognised so that they fail with a helpful message instead of "unknown option".
-    u("--download", "", Nargs::One, "--download (test sets) is not supported by swadesh; pip install swadesh"),
     o("--ter-case-sensitive", "", Nargs::Zero, "ter_case_sensitive"),
     o("--ter-asian-support", "", Nargs::Zero, "ter_asian_support"),
     o("--ter-no-punct", "", Nargs::Zero, "ter_no_punct"),
@@ -236,6 +237,8 @@ pub struct Cli {
     pub subset: Option<String>,
     /// `-d/--detail`: break the corpus score down by (origlang, domain) group.
     pub detail: bool,
+    /// `--download NAME`: fetch a test set's archive and quit.
+    pub download: Option<String>,
     pub max_ngram_order: i64,
     pub python_version: (u32, u32),
     pub chrf_char_order: i64,
@@ -388,6 +391,7 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
         origlang: None,
         subset: None,
         detail: false,
+        download: None,
         max_ngram_order: 4,
         python_version: (3, 12),
         chrf_char_order: 6,
@@ -516,6 +520,7 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
             "origlang" => cli.origlang = Some(one()),
             "subset" => cli.subset = Some(one()),
             "detail" => cli.detail = true,
+            "download" => cli.download = Some(one()),
             "max_order" => cli.max_ngram_order = parse_int("--max-ngram-order", &one())?,
             "pyver" => {
                 let v = one();

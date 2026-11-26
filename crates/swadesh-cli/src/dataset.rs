@@ -408,7 +408,8 @@ pub fn not_cached(found: &Found, pair: &str, field: &str, path: &Path) -> Fail {
         path.display()
     );
     eprintln!(
-        "swadesh: error: this build has no downloader yet, so fetch the set first (PLAN.md WS0.3)"
+        "swadesh: error: the set is not in the cache; run `swadesh --download {name}` first, or populate it",
+        name = found.name
     );
     Fail { code: 1, msg: String::new() }
 }

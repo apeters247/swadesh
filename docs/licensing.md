@@ -141,16 +141,31 @@ side permanently.
 
 Checked at the time of writing; all are permissive and all are compatible with AGPL-3.0-or-later.
 
-**Rust crates** (26 third-party, from `cargo metadata`):
+**Rust crates (108 third-party, from `cargo metadata`).** The downloader added the only
+non-permissive-looking name in the set and it is permissive too: `webpki-roots` is
+`CDLA-Permissive-2.0`, a data licence for the certificate roots. `ring` is `Apache-2.0 AND ISC`
+and compiles C and assembly; `rustls`, `rustls-webpki` and `untrusted` are the TLS stack it
+serves. `--no-default-features` drops the whole downloader and its crates.
 
 | licence | crates |
 |---|---|
-| `MIT OR Apache-2.0` | 20 |
-| `Apache-2.0 OR MIT` | 2 |
+| `MIT OR Apache-2.0` | 62 |
+| `Unicode-3.0` | 18 |
+| `Apache-2.0 OR MIT` | 7 |
+| `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT` | 3 |
+| `MIT` | 3 |
+| `CDLA-Permissive-2.0` | 2 |
+| `ISC` | 2 |
+| `MIT/Apache-2.0` | 2 |
 | `(MIT OR Apache-2.0) AND Unicode-3.0` | 1 |
+| `0BSD OR MIT OR Apache-2.0` | 1 |
+| `Apache-2.0 AND ISC` | 1 |
+| `Apache-2.0 OR ISC OR MIT` | 1 |
 | `Apache-2.0 WITH LLVM-exception` | 1 |
+| `BSD-3-Clause` | 1 |
+| `MIT OR Zlib OR Apache-2.0` | 1 |
 | `Unlicense OR MIT` | 1 |
-
+| `Zlib` | 1 |
 No third-party crate is copyleft. The only copyleft entries in `cargo metadata` are swadesh's own
 four crates.
 

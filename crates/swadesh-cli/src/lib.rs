@@ -4,6 +4,8 @@
 
 pub mod args;
 pub mod dataset;
+#[cfg(feature = "downloader")]
+pub mod fetch;
 pub mod sgml;
 pub mod wmtxml;
 pub mod datasets;

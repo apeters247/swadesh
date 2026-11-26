@@ -369,7 +369,6 @@ def test_error_exit_codes_match(tmp_path, args, stdin):
 
 
 @pytest.mark.parametrize("args", [
-    ["x.txt", "-i", "y.txt", "--download", "wmt16"],
     ["x.txt", "-i", "y.txt", "-tok", "ja-mecab"],
     ["x.txt", "-i", "y.txt", "-tok", "ko-mecab"],
     ["x.txt", "-i", "y.txt", "-tok", "spm"],
@@ -1277,19 +1276,63 @@ def test_the_default_reference_is_deterministic(tmp_path, set_pair, expected):
     assert ours == want, set_pair
 
 
-def test_a_cold_cache_is_refused_for_now(tmp_path):
-    """Interim divergence, registered in docs/parity-report.md: with a cold cache sacreBLEU
-    downloads the set and scores; swadesh refuses with a reason until the downloader lands
-    (PLAN.md WS0.3). This test pins our interim message so it cannot pass silently."""
+def test_an_unfetchable_set_still_refuses(tmp_path):
+    """The catalogue stores a *flat* URL list, so which archive belongs to a pair is not recoverable
+    from it: the 36 multi-archive sets (and the four `.zip` sets) refuse with an accurate message
+    rather than guessing which archive to fetch."""
+    cache = tmp_path / "empty-cache"
+    cache.mkdir()
     env = dict(ENV)
-    env["SACREBLEU"] = str(tmp_path / "empty-cache")
+    env["SACREBLEU"] = str(cache)
     proc = subprocess.run(
-        [str(SWADESH), "-t", "wmt16", "-l", "en-de", "--echo", "src", "--python-version", PYVER],
+        [str(SWADESH), "-t", "iwslt17", "-l", "en-de", "--echo", "src", "--python-version", PYVER],
         capture_output=True, env=env,
     )
     assert proc.returncode == 1
     assert proc.stdout == b""
-    assert b"no downloader yet" in proc.stderr
+    assert b"run `swadesh --download iwslt17` first" in proc.stderr
+
+
+@pytest.mark.skipif(os.environ.get("SWADESH_DOWNLOAD_TESTS") != "1",
+                    reason="downloads 3.7 MB twice and needs the network; set SWADESH_DOWNLOAD_TESTS=1")
+def test_cold_cache_downloads_and_matches(tmp_path):
+    """A cold cache fetches, verifies and extracts, and the parsers do the rest: stdout, stderr and
+    every generated file match the oracle performing the same cold download into its own cache.
+
+    The two stderr lines are compared with the cache paths normalised, since the two caches are
+    different directories by construction. The lock file sacreBLEU leaves beside the archive is not
+    reproduced: it is invisible to every output and the parsers do not read it.
+    """
+    ours = tmp_path / "ours"
+    theirs = tmp_path / "theirs"
+    ours.mkdir()
+    theirs.mkdir()
+    args = ["-t", "wmt16", "-l", "en-de", "--echo", "src", "ref", "docid", "origlang", "genre"]
+    ref = _run_env(SACREBLEU, args, {**ENV, "SACREBLEU": str(theirs)})
+    own = _run_env(SWADESH, [*args, "--python-version", PYVER], {**ENV, "SACREBLEU": str(ours)})
+    assert ref.returncode == own.returncode == 0, (ref.stderr[-300:], own.stderr[-300:])
+    assert own.stdout == ref.stdout
+    norm = lambda blob: blob.replace(str(ours).encode(), b"CACHE").replace(str(theirs).encode(), b"CACHE")
+    assert norm(own.stderr) == norm(ref.stderr)
+    for name in ("src", "ref", "docid", "origlang", "genre"):
+        assert (ours / "wmt16" / f"wmt16.en-de.{name}").read_bytes() == \
+            (theirs / "wmt16" / f"wmt16.en-de.{name}").read_bytes(), name
+
+
+@pytest.mark.skipif(os.environ.get("SWADESH_DOWNLOAD_TESTS") != "1",
+                    reason="downloads 0.8 MB twice and needs the network; set SWADESH_DOWNLOAD_TESTS=1")
+def test_download_subcommand_matches(tmp_path):
+    """`--download NAME -l PAIR` prints the oracle's two lines and nothing else."""
+    ours = tmp_path / "ours"
+    theirs = tmp_path / "theirs"
+    ours.mkdir()
+    theirs.mkdir()
+    args = ["--download", "multi30k/2017", "-l", "en-de"]
+    ref = _run_env(SACREBLEU, args, {**ENV, "SACREBLEU": str(theirs)})
+    own = _run_env(SWADESH, args, {**ENV, "SACREBLEU": str(ours)})
+    assert ref.returncode == own.returncode == 0
+    norm = lambda blob: blob.replace(str(ours).encode(), b"CACHE").replace(str(theirs).encode(), b"CACHE")
+    assert norm(own.stderr) == norm(ref.stderr)
 
 
 def test_citation_for_a_test_set():
@@ -1513,24 +1556,26 @@ def test_sgml_set_is_rebuilt_from_its_raw_tree(tmp_path):
         assert ours.stdout == theirs[1], flags
 
 
-def test_a_family_the_measured_rule_does_not_cover_still_refuses(tmp_path):
-    """wmt22 and later are the WMT XML family, and the SGML variants (`B`, `tworefs`, `dev`) use a
-    different archive layout: the measured rule does not cover them, so the refusal stands rather
-    than producing wrong data."""
-    cache = tmp_path / "cache"
-    (cache / "wmt22" / "raw").mkdir(parents=True)
-    (cache / "wmt22" / "raw" / "something.txt").write_text("not an sgm\n", encoding="utf-8")
-    env = dict(ENV)
-    env["SACREBLEU"] = str(cache)
-    proc = _run_env(SWADESH, ["-t", "wmt22", "-l", "en-de", "--echo", "src", "--python-version", PYVER], env)
-    assert proc.returncode == 1 and proc.stdout == b""
-    assert b"no downloader yet" in proc.stderr
+def test_an_unparsable_layout_still_refuses(tmp_path):
+    """A set whose layout no measured rule covers refuses rather than producing wrong data.
 
-    # a variant of the SGML family is refused too, even with an .sgm file sitting there
-    (cache / "wmt16" / "raw").mkdir(parents=True)
-    (cache / "wmt16" / "raw" / "newstest2016-ende-src.en.sgm").write_text("", encoding="utf-8")
-    proc = _run_env(SWADESH, ["-t", "wmt16/B", "-l", "en-fi", "--echo", "src", "--python-version", PYVER], env)
-    assert proc.returncode == 1 and b"no downloader yet" in proc.stderr
+    It is a *user* set on purpose: a built-in name would send the fetcher to the network, while a
+    user root has no catalogue entry to fetch, so this exercises the parsers' own refusal. The
+    layout here is the SGML family's directory shape with files that are not SGML.
+    """
+    root = tmp_path / "sets"
+    (root / "myset").mkdir(parents=True)
+    (root / "myset" / "myset.en-de.src").write_text("not sgml\n", encoding="utf-8")
+    env = dict(ENV)
+    env["SWADESH_TEST_SETS"] = str(root)
+    # The file exists, so `--echo src` succeeds and shows the parser was not invoked at all...
+    ok = _run_env(SWADESH, ["-t", "myset", "-l", "en-de", "--echo", "src", "--python-version", PYVER], env)
+    assert ok.returncode == 0 and ok.stdout == b"not sgml\n"
+    # ...and a field the set does not have is refused in sacreBLEU's own words, because a user set's
+    # fields are whatever files are there - nothing is invented for it.
+    missing = _run_env(SWADESH, ["-t", "myset", "-l", "en-de", "--echo", "ref", "--python-version", PYVER], env)
+    assert missing.returncode == 1 and missing.stdout == b""
+    assert b"No such field ref in test set myset" in missing.stderr
 
 # ------------------------------------------------- the WMT XML family (wmt20 and later)
 

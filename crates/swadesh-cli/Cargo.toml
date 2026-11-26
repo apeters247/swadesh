@@ -17,7 +17,15 @@ path = "src/main.rs"
 
 [dependencies]
 swadesh-core = { path = "../swadesh-core", default-features = false }
+# The downloader (PLAN.md D-2): fetching a test set's archive, verifying its md5, unpacking it. Off
+# by default nowhere - it is in `default` - but `--no-default-features` keeps the binary free of
+# third-party crates, which is what `crates/swadesh-wasm` builds and what a cache-only build wants.
+ureq = { version = "2", optional = true, default-features = false, features = ["tls", "gzip"] }
+flate2 = { version = "1", optional = true, default-features = false, features = ["rust_backend"] }
+tar = { version = "0.4", optional = true }
+md-5 = { version = "0.10", optional = true }
 
 [features]
-default = ["parallel"]
+default = ["parallel", "downloader"]
 parallel = ["swadesh-core/parallel"]
+downloader = ["dep:ureq", "dep:flate2", "dep:tar", "dep:md-5"]
