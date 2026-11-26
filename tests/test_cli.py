@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import os
 import random
+import shutil
 import subprocess
 import sys
 import time
@@ -1462,3 +1463,71 @@ def test_detail_with_a_segment_filter(tmp_path):
     assert b"origlang=en domain=ALL" in out and out.count(b"origlang=") == 1
     ref_rc, _, ref_err = run(SACREBLEU, args)
     assert ref_rc != 0 and b"ValueError" in ref_err
+
+# ------------------------------------------- rebuilding a set from its raw tree (the SGML family)
+
+def _run_env(binary, args, env):
+    return subprocess.run([str(binary), *args], capture_output=True, env=env)
+
+
+def test_sgml_set_is_rebuilt_from_its_raw_tree(tmp_path):
+    """With only `raw/` present, swadesh rebuilds the processed files from the SGML - and they are
+    byte-identical to sacreBLEU's own, so `--echo`, scoring and `-d` all match.
+
+    This is the parser half of `-t` (PLAN.md WS0.3): sacreBLEU regenerates the sidecars from the raw
+    archive the same way, which is why deleting one brings it back. Comparing the *generated files*
+    is the strongest check available - stronger than comparing output, because it exercises every
+    annotation column for every pair.
+    """
+    home = Path(os.environ.get("SACREBLEU", Path.home() / ".sacrebleu"))
+    raw = home / "wmt16" / "raw"
+    if not raw.is_dir():
+        pytest.skip("the wmt16 raw tree is not cached under $SACREBLEU")
+    cache = tmp_path / "cache"
+    (cache / "wmt16").mkdir(parents=True)
+    shutil.copytree(raw, cache / "wmt16" / "raw", dirs_exist_ok=True)
+    env = dict(ENV)
+    env["SACREBLEU"] = str(cache)
+
+    columns = (["src"], ["ref"], ["docid"], ["origlang"], ["genre"], ["src", "ref", "docid"], ["all"])
+    for pair in ("en-de", "de-en", "en-fi", "cs-en", "tr-en"):
+        for column in columns:
+            args = ["-t", "wmt16", "-l", pair, "--echo", *column]
+            theirs = run(SACREBLEU, args)
+            ours = _run_env(SWADESH, [*args, "--python-version", PYVER], env)
+            assert ours.returncode == 0, ours.stderr
+            assert ours.stdout == theirs[1], (pair, column)
+        for name in ("src", "ref", "docid", "genre", "origlang"):
+            mine = (cache / "wmt16" / f"wmt16.{pair}.{name}").read_bytes()
+            want = (home / "wmt16" / f"wmt16.{pair}.{name}").read_bytes()
+            assert mine == want, (pair, name)
+
+    # and the rebuilt cache scores identically, including the detail breakdown and a filter
+    hyp = tmp_path / "hyp.txt"
+    hyp.write_bytes(run(SACREBLEU, ["-t", "wmt16", "-l", "en-de", "--echo", "ref"])[1])
+    for flags in (["-m", "bleu", "chrf", "ter"], ["-d"], ["-ol", "en", "-m", "bleu"]):
+        args = ["-t", "wmt16", "-l", "en-de", "-i", str(hyp), *flags]
+        theirs = run(SACREBLEU, args)
+        ours = _run_env(SWADESH, [*args, "--python-version", PYVER], env)
+        assert ours.returncode == theirs[0], flags
+        assert ours.stdout == theirs[1], flags
+
+
+def test_a_family_the_measured_rule_does_not_cover_still_refuses(tmp_path):
+    """wmt22 and later are the WMT XML family, and the SGML variants (`B`, `tworefs`, `dev`) use a
+    different archive layout: the measured rule does not cover them, so the refusal stands rather
+    than producing wrong data."""
+    cache = tmp_path / "cache"
+    (cache / "wmt22" / "raw").mkdir(parents=True)
+    (cache / "wmt22" / "raw" / "something.txt").write_text("not an sgm\n", encoding="utf-8")
+    env = dict(ENV)
+    env["SACREBLEU"] = str(cache)
+    proc = _run_env(SWADESH, ["-t", "wmt22", "-l", "en-de", "--echo", "src", "--python-version", PYVER], env)
+    assert proc.returncode == 1 and proc.stdout == b""
+    assert b"no downloader yet" in proc.stderr
+
+    # a variant of the SGML family is refused too, even with an .sgm file sitting there
+    (cache / "wmt16" / "raw").mkdir(parents=True)
+    (cache / "wmt16" / "raw" / "newstest2016-ende-src.en.sgm").write_text("", encoding="utf-8")
+    proc = _run_env(SWADESH, ["-t", "wmt16/B", "-l", "en-fi", "--echo", "src", "--python-version", PYVER], env)
+    assert proc.returncode == 1 and b"no downloader yet" in proc.stderr

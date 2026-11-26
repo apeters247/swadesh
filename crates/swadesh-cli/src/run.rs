@@ -100,6 +100,16 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
         test_set = Some((found, pair));
     }
 
+    // A cached set whose processed files are missing is rebuilt from its raw tree when the family
+    // is the measured SGML one - sacreBLEU regenerates them the same way, which is why removing a
+    // sidecar brings it back. A family the measured rule does not cover keeps the usual refusal.
+    if let Some((found, pair)) = &test_set {
+        let fields = found.fields_of(pair).cloned().unwrap_or_default();
+        if fields.iter().any(|field| !dataset::field_path(found, pair, field).exists()) {
+            crate::sgml::rebuild(found, pair)?;
+        }
+    }
+
     // `-ol`/`--subset` are segment filters, and they apply to the whole segment set: the reference,
     // the system output *by position*, and what `--echo` prints. Both need a test set - without one
     // the oracle raises a traceback, so swadesh reports a clean error instead (registered).

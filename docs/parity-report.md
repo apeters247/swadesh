@@ -190,6 +190,7 @@ implements them:
 | `-d` together with `-ol`/`--subset` | crashes (`ValueError: max() arg is an empty sequence`) after the score line | prints the groups of the filtered set | `test_detail_with_a_segment_filter` |
 | `-ol`/`--subset` with reference files and no `-t` | crashes (traceback) | refuses in one line, same exit code | `test_filter_with_references_but_no_test_set` |
 | a cold cache (`-t` with nothing cached) | downloads the archive and scores | refuses with the missing file and "this build has no downloader yet" | interim: closed by PLAN.md WS0.3; `test_a_cold_cache_is_refused_for_now` pins the message so it cannot pass silently |
+| a cached set whose processed files are missing | regenerates them from `raw/` | regenerates them for the SGML family (`wmt08`..`wmt19`, byte-identical files, `test_sgml_set_is_rebuilt_from_its_raw_tree`); the WMT XML family and the `B`/`tworefs`/`dev` variants still refuse | the parser half of WS0.3; the rest of the families are unmeasured and refuse explicitly (`test_a_family_the_measured_rule_does_not_cover_still_refuses`) |
 
 Two hundred and thirty CLI parity cases (byte-diffed, stdout and stderr) cover the flags that are
 implemented: the scoring matrix, sentence level, all four significance flags, the paired report in

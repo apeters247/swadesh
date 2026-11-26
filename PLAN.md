@@ -498,7 +498,7 @@ planning aid, not a commitment.
 | WS1.5 | M0 | `swadesh check-set` validator | 1 | todo |
 | WS0.1 | M0 | Shared dataset reader | 1 | **done** |
 | WS0.2 | M0 | `-t` for the built-in catalogue | 2 | **part done** (cached sets; the cold path needs WS0.3) |
-| WS0.3 | M0 | The downloader (feature-gated) | 3 | todo |
+| WS0.3 | M0 | The downloader (feature-gated) | 3 | **part done**: the SGML parser rebuilds `wmt08`..`wmt19` from `raw/` (no crates); the fetch and the XML/TSV/plain/IWSLT parsers remain |
 | WS0.4 | M0 | `--download NAME -l PAIR` | 0.5 | todo |
 | WS0.5 | M0 | `--echo FIELD...` | 1 | **done** |
 | WS0.6 | M0 | `-ol/--origlang`, `--subset` | 1 | **done** |

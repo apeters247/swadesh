@@ -4647,3 +4647,45 @@ of the filtered set - `test_detail_with_a_segment_filter`.
 `raw/`, then the archive parsers) - the last piece of `-t` that still refuses; then `--download`
 (WS0.4), and the WS0.8 divergences (`--help`, `-e`, `.gz`, the token list, `-j` lines, negative
 `-cw`, the real-model re-verification).
+
+## 2026-11-26 (continued) - M0 slice 4: the SGML parser, so a cached set rebuilds itself
+
+**Attempted.** The parser half of WS0.3: turning `raw/` into the processed layout, which is what
+sacreBLEU does when a sidecar is missing (deleting `wmt16.en-de.src` brings it back - measured). It
+needs **no crates**, so it lands before the downloader and is the reason the download is a small
+addition rather than the whole feature.
+
+**The rule, measured from the oracle's own cache and raw tree.** The `wmt08`..`wmt19` archives hold
+`<base>-<pair><dir>-{src,ref}.<lang>.sgm` (for en-de: `newstest2016-ende-src.en.sgm` and
+`newstest2016-ende-ref.de.sgm`), each a series of `<doc docid="..." genre="..." origlang="...">`
+blocks whose `<seg id="N">text</seg>` lines are the segments in order. The processed files are that
+data laid out column-wise: the segment text verbatim, and the enclosing doc's three attributes
+repeated for each of its segments - `newstest2016-ende-src.en.sgm`'s `docid`, `genre` and `origlang`
+reproduce the cached `.docid`/`.genre`/`.origlang` exactly. No XML entity occurs in this family's raw
+text (measured: the thirteen `&`s in the wmt16 en-de source are literal, and no `&name;` or `&#NN;`
+form appears at all), so the segment text is taken verbatim - unlike the WMT XML family, which is a
+different parser and the reason the two are separate modules.
+
+**Verification, and it is the strongest available.** The test copies a raw tree into a scratch cache
+with *no* processed files, runs the binary there, and compares two things: the `--echo` output for
+seven field combinations across five pairs, and the **files we generated** against sacreBLEU's own,
+byte for byte. Both hold - 11 pairs x 7 combinations and 55 files, zero differences - and the rebuilt
+cache scores, filters and breaks down identically (`-m bleu chrf ter`, `-d`, `-ol en`). The oracle
+regenerating the same files is what makes this a real differential test of the parser rather than a
+self-consistency check.
+
+**What the measured rule does not cover, and refuses explicitly.** The WMT XML family (`wmt20`+), the
+SGML variants whose archive layout is different (`wmt16/B`, `tworefs`, `dev`, `wmt19/google/*`) and
+the TSV/plain/IWSLT families are unmeasured here, so `sgml::rebuild` returns "not mine" and the
+existing refusal stands - `test_a_family_the_measured_rule_does_not_cover_still_refuses` pins that, so
+a half-understood layout can never produce plausible-looking wrong data. The `tworefs` field naming
+(`ref:0`, `ref:1` rather than `ref:A`) is recorded as something the variant work will have to measure.
+
+**Numbers.** `cargo test --release --workspace`: 13 suites green. `tests/test_cli.py`: 3 new cases
+pass; the fast half is re-running. The plan tracker has WS0.3 as **part done** (the SGML parser; the
+fetch and the other four families remain), and the register has a row for the unmeasured families.
+
+**Next.** Two options, both bounded: finish the parser set (the WMT XML family, which is measurable
+from the cached `wmt22`/`wmt24` raw trees exactly as this one was, and is the largest remaining
+family), or add the feature-gated fetch (crates) so a cold cache downloads. The parsers are the
+bigger half of `-t` and need no crates, so they come first.
