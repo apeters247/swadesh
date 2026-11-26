@@ -1,12 +1,14 @@
 //! The slice of `tabulate` that sacreBLEU's multi-system and paired reports use:
 //! `fancy_grid` for `-f text` and `latex_booktabs` for `-f latex`.
 //!
-//! Geometry measured from sacreBLEU 2.6.0, not guessed (see docs/lab-notebook.md
-//! for the measurements). The one rule that is not obvious:
+//! Geometry measured from sacreBLEU 2.6.0, not guessed (see docs/spec/cli-contract.md
+//! and docs/lab-notebook.md for the measurements). Two rules are not obvious:
 //!
-//!   column content width = max(header.len() + 2, longest cell)
+//!   column content width = max(longest line of the heading + 2, longest line of any cell)
 //!
-//! and each cell is then drawn as one space, the aligned content, one space.
+//! and each line of a cell is drawn as one space, the aligned content, one space. A cell
+//! may contain a newline: the text form expands it into extra grid lines (the paired
+//! report's p-value), while the latex form replaces it with a space, as tabulate does.
 
 /// Horizontal alignment of a column's cells.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -26,13 +28,17 @@ impl Align {
     }
 }
 
-/// Column content widths: `max(header + 2, longest cell)`. Widths count chars, not
-/// bytes, because tabulate does (`the number of colorful characters`).
+/// The longest line of a cell (cells may be multi-line).
+fn longest_line(cell: &str) -> usize {
+    cell.split('\n').map(|line| line.chars().count()).max().unwrap_or(0)
+}
+
+/// Column content widths: `max(longest heading line + 2, longest cell line)`.
 fn widths(header: &[String], rows: &[Vec<String>]) -> Vec<usize> {
-    let mut w: Vec<usize> = header.iter().map(|h| h.chars().count() + 2).collect();
+    let mut w: Vec<usize> = header.iter().map(|h| longest_line(h) + 2).collect();
     for row in rows {
         for (j, cell) in row.iter().enumerate() {
-            let len = cell.chars().count();
+            let len = longest_line(cell);
             if len > w[j] {
                 w[j] = len;
             }
@@ -73,18 +79,24 @@ pub fn fancy_grid(header: &[String], rows: &[Vec<String>], aligns: &[Align]) -> 
         s.push(right);
         s
     };
+    // One logical row may render as several grid lines (multi-line cells).
     let row = |cells: &[String]| {
+        let split: Vec<Vec<&str>> = cells.iter().map(|c| c.split('\n').collect()).collect();
+        let height = split.iter().map(|lines| lines.len()).max().unwrap_or(1);
         let mut s = String::new();
-        s.push('\u{2502}');
-        for (j, cell) in cells.iter().enumerate() {
-            if j > 0 {
-                s.push('\u{2502}');
+        for li in 0..height {
+            s.push('\u{2502}');
+            for (j, lines) in split.iter().enumerate() {
+                if j > 0 {
+                    s.push('\u{2502}');
+                }
+                s.push(' ');
+                s.push_str(&pad(lines.get(li).copied().unwrap_or(""), w[j], aligns[j]));
+                s.push(' ');
             }
-            s.push(' ');
-            s.push_str(&pad(cell, w[j], aligns[j]));
-            s.push(' ');
+            s.push('\u{2502}');
+            s.push('\n');
         }
-        s.push('\u{2502}');
         s
     };
 
@@ -92,7 +104,6 @@ pub fn fancy_grid(header: &[String], rows: &[Vec<String>], aligns: &[Align]) -> 
     out.push_str(&border('\u{2552}', '\u{2564}', '\u{2555}', '\u{2550}'));
     out.push('\n');
     out.push_str(&row(header));
-    out.push('\n');
     out.push_str(&border('\u{255e}', '\u{256a}', '\u{2561}', '\u{2550}'));
     out.push('\n');
     for (i, r) in rows.iter().enumerate() {
@@ -101,26 +112,57 @@ pub fn fancy_grid(header: &[String], rows: &[Vec<String>], aligns: &[Align]) -> 
             out.push('\n');
         }
         out.push_str(&row(r));
-        out.push('\n');
     }
     out.push_str(&border('\u{2558}', '\u{2567}', '\u{255b}', '\u{2550}'));
     out.push('\n');
     out
 }
 
+/// The LaTeX escapes tabulate applies to a cell, measured one character at a time (a system name
+/// containing all of them is in docs/lab-notebook.md).
+fn latex_escape(cell: &str) -> String {
+    let mut out = String::with_capacity(cell.len());
+    for c in cell.chars() {
+        match c {
+            '\\' => out.push_str("\\textbackslash{}"),
+            '_' => out.push_str("\\_"),
+            '%' => out.push_str("\\%"),
+            '&' => out.push_str("\\&"),
+            '$' => out.push_str("\\$"),
+            '#' => out.push_str("\\#"),
+            '{' => out.push_str("\\{"),
+            '}' => out.push_str("\\}"),
+            '~' => out.push_str("\\textasciitilde{}"),
+            '^' => out.push_str("\\^{}"),
+            '<' => out.push_str("\\ensuremath{<}"),
+            '>' => out.push_str("\\ensuremath{>}"),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
 /// A `latex_booktabs` table: `tabular`, `toprule`, header, `midrule`, body, `bottomrule`.
+///
+/// A multi-line cell is joined with a space first and the result is LaTeX-escaped, both of which
+/// are what tabulate's latex writer does; escaping comes before the widths are measured.
 pub fn latex_table(header: &[String], rows: &[Vec<String>], aligns: &[Align]) -> String {
-    let w = widths(header, rows);
+    let one_line = |cells: &[String]| -> Vec<String> {
+        cells.iter().map(|c| c.replace('\n', " ")).collect()
+    };
+    let header = one_line(header);
+    let rows: Vec<Vec<String>> = rows.iter().map(|r| one_line(r)).collect();
+    let w = widths(&header, &rows);
     let spec: String = aligns.iter().map(|a| a.latex_char()).collect();
+    // Padding comes from the raw length and the escaping is applied afterwards, so a cell with
+    // special characters ends up wider than the column: that is what tabulate does, measured.
     let row = |cells: &[String]| {
         let mut s = String::new();
         for (j, cell) in cells.iter().enumerate() {
             if j > 0 {
                 s.push('&');
             }
-            s.push(' ');
-            s.push_str(&pad(cell, w[j], aligns[j]));
-            s.push(' ');
+            s.push_str(&latex_escape(&format!(" {} ", pad(cell, w[j], aligns[j]))));
         }
         s.push_str("\\\\");
         s
@@ -128,10 +170,10 @@ pub fn latex_table(header: &[String], rows: &[Vec<String>], aligns: &[Align]) ->
     let mut out = String::new();
     out.push_str(&format!("\\begin{{tabular}}{{{spec}}}\n"));
     out.push_str("\\toprule\n");
-    out.push_str(&row(header));
+    out.push_str(&row(&header));
     out.push('\n');
     out.push_str("\\midrule\n");
-    for r in rows {
+    for r in &rows {
         out.push_str(&row(r));
         out.push('\n');
     }
@@ -182,5 +224,40 @@ mod tests {
         let got = fancy_grid(&header, &rows, &[Align::Right, Align::Center]);
         assert!(got.contains("\u{2502}  chrF2++  \u{2502}"), "{got}");
         assert!(got.contains("\u{2502}   45.5    \u{2502}"), "{got}");
+    }
+
+    #[test]
+    fn a_multiline_cell_draws_extra_grid_lines_and_widens_the_column() {
+        // The paired report: the p-value is a second line of the same cell, and because the
+        // column must hold it, a short heading gets a wide column.
+        let header = strings(&["System", "BLEU (mu)"]); // 9 wide -> min 11
+        let rows = vec![
+            strings(&["Baseline", "50.0 (51.0 +/- 1.9)"]), // 17/18
+            strings(&["System 1", "58.1 (46.8 +/- 38.0)\n(p = 0.2941)"]),
+        ];
+        let got = fancy_grid(&header, &rows, &[Align::Right, Align::Center]);
+        // The longest score line is 20 wide, so that is the column, and "(p = 0.2941)" (12) is
+        // centred inside it -- on a line of its own, with no separator above it.
+        assert!(got.contains("\u{2502}          \u{2502}     (p = 0.2941)     \u{2502}"), "{got}");
+    }
+
+    #[test]
+    fn latex_escapes_the_measured_characters() {
+        let header = strings(&["System", "BLEU (mu +- 95% CI)"]);
+        let rows = vec![strings(&["a_b%c&d<$>#{}~^\\e", "1.0"])];
+        let got = latex_table(&header, &rows, &[Align::Right, Align::Center]);
+        assert!(
+            got.contains("a\\_b\\%c\\&d\\ensuremath{<}\\$\\ensuremath{>}\\#\\{\\}\\textasciitilde{}\\^{}\\textbackslash{}e"),
+            "{got}"
+        );
+        assert!(got.contains("95\\% CI"), "{got}");
+    }
+
+    #[test]
+    fn latex_joins_a_multiline_cell_with_a_space() {
+        let header = strings(&["System", "BLEU"]);
+        let rows = vec![strings(&["System 1", "58.1\n(p = 0.2941)"])];
+        let got = latex_table(&header, &rows, &[Align::Right, Align::Center]);
+        assert!(got.contains(" & 58.1 (p = 0.2941) \\\\"), "{got}");
     }
 }

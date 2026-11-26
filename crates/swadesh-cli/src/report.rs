@@ -24,8 +24,15 @@ impl Signature {
     }
 
     /// Add the bootstrap pairs sacreBLEU puts between `nrefs` and the metric-specific ones.
-    pub fn with_confidence(mut self, n_samples: usize, seed: &str) -> Self {
-        self.pairs.insert(1, ("bs", "bs", n_samples.to_string()));
+    pub fn with_confidence(self, n_samples: usize, seed: &str) -> Self {
+        self.with_paired(true, n_samples, seed)
+    }
+
+    /// Add the paired-test pairs: `bs` for the bootstrap resampling test, `ar` for approximate
+    /// randomization, then the seed. Both go between `nrefs` and the metric-specific pairs.
+    pub fn with_paired(mut self, bootstrap: bool, n_samples: usize, seed: &str) -> Self {
+        let (long, abbr) = if bootstrap { ("bs", "bs") } else { ("ar", "ar") };
+        self.pairs.insert(1, (long, abbr, n_samples.to_string()));
         self.pairs.insert(2, ("seed", "rs", seed.to_string()));
         self
     }

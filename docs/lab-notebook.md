@@ -4218,3 +4218,68 @@ and so is another dependency decision.
 **Next.** The paired text/latex table, then the test-set group once the downloader is chosen, then
 slice 3 (the Python significance orchestration onto `swadesh-core`) and slice 4 (the console script
 onto the binary).
+
+## 2026-11-26 (continued) - slice 1c-iv: the paired report in text and latex
+
+**Attempted.** The paired tests (`--paired-bs`, `--paired-ar`) printed JSON only; `-f text` and
+`-f latex` were refused. They are a different table from the multi-system one, and the spec entry for
+them was committed before this code (e8bd738).
+
+**What the two forms are, measured.** The heading is `BLEU (μ ± 95% CI)` for the bootstrap test and
+plain `BLEU` for approximate randomization; the baseline row is the score alone; every other system
+takes **two** grid lines - its score, then its p-value on a line whose first cell is empty, with no
+rule between them (the rule divides systems). The p-value is `(p = 0.0196)` at four decimals with the
+`*` **outside** the parenthesis when it is below 0.05 - an easy one to get backwards, and the first
+attempt did. LaTeX has one row per system, so there tabulate joins the p-value onto the score with a
+space: `58.1 (46.8 ± 38.0) (p = 0.2941)`. That is what makes a *multi-line cell* the right model: the
+text form draws the extra grid line, the latex form joins with a space, and the column is as wide as
+the longest line either way (so an AR column, whose every score is short, is still as wide as
+`(p = 0.4510)`).
+
+The footer is a titled block: dashes as long as the title, then ` - Each system is pairwise compared
+to <baseline>.` (or nothing at all for stdin systems - `compared to .`, an oracle bug kept as
+printed), then a one-line summary that differs between the tests, and three paragraphs about the null
+hypothesis, the 0.05 threshold and the meaning of the p-value. The signature gains `bs:<n>` or
+`ar:<n>` (`ar` is its own long *and* short key) plus `seed:<seed>`.
+
+**Two more measured rules, both found by these tests.**
+
+*The paired names.* For files the baseline is `Baseline: <file>` and the others keep their file
+names; for **stdin** systems the baseline is just `Baseline` and the others are renumbered `System 1`
+.. `System N-1` - so a 3-system stdin run reads `Baseline`, `System 1`, `System 2`, not
+`System 2`/`System 3`. The status lines (`Computing BLEU for '...'`) use those same names. The
+unpaired multi-system report does *not* renumber.
+
+*LaTeX escaping.* A cell is aligned first and escaped **after**, so a name with special characters
+ends up wider than its column. The set is measured character by character: `\` →
+`\textbackslash{}`, `_` `%` `&` `$` `#` `{` `}` → `\_` `\%` `\&` `\$` `\#` `\{` `\}`,
+`~` → `\textasciitilde{}`, `^` → `\^{}`, `<` `>` → `\ensuremath{<}` / `\ensuremath{>}`; `|` and `"`
+are left alone. This also fixes the *multi-system* latex form, which had been passing only because
+its tests used `System 1`-style names.
+
+**A trap worth recording.** The first verification run showed one-ulp differences in the paired
+JSON (`51.04397888332107` against `...106`) which looked like an arithmetic bug. It was the probe's
+fault: the oracle ran on CPython 3.11 while our binary's default `--python-version` is 3.12, and
+BLEU's `sum()` precision changed in 3.12. `tests/test_cli.py` passes `--python-version` automatically;
+an ad-hoc byte-diff must set it too.
+
+**Measured.** `cargo test --release --workspace`: 137 tests, 0 failed (the tabulate suite is 9 tests
+now, including one for each measured rule above). A 22-case byte-diff of the paired report - text and
+latex, both tests, 1-3 metrics, 1-3 systems, file and stdin sources, `-sh`, and a starred p-value -
+and the 15-case multi-system one are still 0 diffs with stderr compared. `tests/test_cli.py`: the 84
+cases covering the paired report, the latex escaping, the multi-system tables, the refusals and the
+`-ci` edges pass in 15s; the whole file (555 cases) is running as this entry is written, with the
+number to confirm next session.
+
+**Also re-run (the earlier attempt hit the harness's 10-minute cap, so it was split).** The Python
+selection on 3.11.14: 673 passed / 58 skipped in group A
+(`test_frozen_oracle`, `test_parity`, `test_provenance`, `test_score_objects`, `test_estimate_ci`,
+`test_dependency_licences`, `test_version`, `test_base_port`, `test_metrics_fallback`,
+`test_ter_preprocess`, `test_regressions`, `test_numrefs_none_refs`), 79 passed
+(`test_differential`), 72 passed (`test_fuzz_unicode`, `test_coverage_gaps`), 0 failed throughout.
+`test_ter` and `test_deep` are the slow pair and are measured separately.
+
+**Next.** The test-set group (`-t`, `--download`, `--echo`, `--origlang`, `--subset`, `--citation`,
+`--detail`), which still waits on the downloader decision recorded in the previous entry; then
+slice 3 (the Python significance orchestration onto `swadesh-core`) and slice 4 (the console script
+onto the binary).

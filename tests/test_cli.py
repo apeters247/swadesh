@@ -858,10 +858,10 @@ def test_multi_system_table(wmt_files, flags, fmt):
     assert assert_same([str(refs), "-i", str(a), str(b), *flags, "-f", fmt]) == 0
 
 
-def assert_same_streams(args):
+def assert_same_streams(args, stdin=b""):
     """Like `assert_same`, but the refusal messages on stderr are compared too."""
-    ref_rc, ref_out, ref_err = run(SACREBLEU, args)
-    sw_rc, sw_out, sw_err = run(SWADESH, args)
+    ref_rc, ref_out, ref_err = run(SACREBLEU, args, stdin)
+    sw_rc, sw_out, sw_err = run(SWADESH, args, stdin)
     assert sw_out == ref_out, args
     assert sw_err == ref_err, (args, ref_err, sw_err)
     assert sw_rc == ref_rc, (args, ref_rc, sw_rc)
@@ -934,3 +934,63 @@ def test_confidence_is_omitted_when_the_mean_is_zero(tmp_path, metric, fmt):
     hyp = tmp_path / "h.txt"
     hyp.write_text("zz\nqq\n" if metric != "ter" else "a\nb\n", encoding="utf-8")
     assert_same_streams([str(refs), "-i", str(hyp), "-m", metric, "-ci", "-cin", "3", "-f", fmt])
+
+# ------------------------------------------------------- the paired report in text and latex
+
+PAIRED_TABLE_CASES = [
+    ["-m", "bleu", "--paired-bs", "--paired-bs-n", "50"],
+    ["-m", "bleu", "--paired-ar", "--paired-ar-n", "50"],
+    ["-m", "bleu", "chrf", "--paired-bs", "--paired-bs-n", "37"],
+    ["-m", "bleu", "chrf", "ter", "--paired-ar", "--paired-ar-n", "11"],
+    ["-m", "chrf", "--paired-bs", "--paired-bs-n", "25"],
+    ["-m", "ter", "--paired-bs", "--paired-bs-n", "25"],
+    ["-m", "bleu", "--paired-bs", "--paired-bs-n", "1"],       # p < 0.05, so a star
+    ["-m", "bleu", "--paired-ar", "--paired-ar-n", "50", "-sh"],
+]
+
+
+@pytest.mark.parametrize("fmt", ["text", "latex"])
+@pytest.mark.parametrize("flags", PAIRED_TABLE_CASES, ids=[" ".join(f) for f in PAIRED_TABLE_CASES])
+def test_paired_report_table(wmt_files, flags, fmt):
+    """The paired report's text and latex forms: heading, two-line cells, footer, stderr."""
+    refs = wmt_files / "en-de.ref"
+    a = wmt_files / "en-de.short.hyp"
+    b = wmt_files / "en-de.drop.hyp"
+    assert_same_streams([str(refs), "-i", str(a), str(b), *flags, "-f", fmt])
+
+
+def test_paired_report_stdin_names(tmp_path):
+    """Tab-separated systems are named `Baseline`, `System 1`, ... for the paired report.
+
+    The footer's sentence about the baseline is the exception: sacreBLEU prints
+    `compared to .` there, with no name at all, which is kept as measured.
+    """
+    refs = tmp_path / "r.txt"
+    refs.write_text("The cat sat on the mat.\nA dog barked.\nPrices rose.\n", encoding="utf-8")
+    stdin = (
+        "The cat sits on the mat.\tThe cat sat on the mat.\tA cat sat on the mat.\n"
+        "A dog barked loudly.\tA dog barked.\tA dog barks.\n"
+        "Prices fell.\tPrices rose.\tPrices dropped.\n"
+    ).encode("utf-8")
+    for fmt in ("text", "latex", "json"):
+        assert_same_streams(
+            [str(refs), "-m", "bleu", "--paired-bs", "--paired-bs-n", "25", "-f", fmt],
+            stdin=stdin,
+        )
+
+
+LATEX_NAMES = ["a_b%c&d.hyp", "a$b#c{d}e~f^g.hyp", 'lt<gt>pipe|quote".hyp', "back\\slash.hyp"]
+
+
+@pytest.mark.parametrize("fmt", ["latex", "text"])
+def test_latex_escapes_special_characters_in_names(tmp_path, fmt):
+    """System names with LaTeX specials are escaped (and escaped after padding, so cells widen).
+
+    Measured character by character: `\\`, `_`, `%`, `&`, `$`, `#`, `{`, `}`, `~`, `^`, `<`, `>`.
+    """
+    refs = tmp_path / "r.txt"
+    refs.write_text("The cat sat on the mat.\nA dog barked.\n", encoding="utf-8")
+    for name in LATEX_NAMES:
+        (tmp_path / name).write_text("The cat sat on the mat.\nA dog barked.\n", encoding="utf-8")
+    paths = [str(tmp_path / name) for name in LATEX_NAMES]
+    assert_same([str(refs), "-i", *paths, "-m", "bleu", "-f", fmt]) == 0

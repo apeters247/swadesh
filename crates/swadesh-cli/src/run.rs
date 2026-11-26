@@ -159,9 +159,6 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
 
     // Paired significance testing: the first system is the baseline, the others are compared to it.
     if paired {
-        if !json {
-            return fail(1, "the paired report is implemented for --format json so far");
-        }
         let bs = cli.paired_bs;
         // `-pbsn` and `-parn` fall back to their defaults when not positive, as in sacreBLEU.
         let n_samples = if bs {
@@ -172,10 +169,44 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
             cli.paired_ar_n
         };
         let n_samples = n_samples as usize;
-        let (seed, _) = bootstrap_seed()?;
+        let (seed, seed_str) = bootstrap_seed()?;
         let n_ar_conf = 0usize; // `-ci` with several systems is refused above, as in sacreBLEU
         eprintln!("sacreBLEU: Found {} systems.", keep.len());
-        let bl_display = format!("Baseline: {}", sys_names[0]);
+        // The name the report gives each system. sacreBLEU prefixes the baseline's own name with
+        // `Baseline: ` when the systems came from files, but labels it plain `Baseline` for stdin
+        // systems, where the others are then renumbered from 1.
+        let from_stdin = cli.input.is_none();
+        let display: Vec<String> = (0..systems.len())
+            .map(|k| {
+                if from_stdin {
+                    if k == 0 {
+                        "Baseline".to_string()
+                    } else {
+                        format!("System {k}")
+                    }
+                } else if k == 0 {
+                    format!("Baseline: {}", sys_names[0])
+                } else {
+                    sys_names[k].clone()
+                }
+            })
+            .collect();
+        let bl_display = display[0].clone();
+        // The footer names the baseline with the file-derived label, but with nothing at all for
+        // stdin systems -- sacreBLEU prints `compared to .` there, which is kept as measured.
+        let footer_baseline = if from_stdin { String::new() } else { bl_display.clone() };
+
+        // The paired signature carries `bs`/`ar` and the seed between `nrefs` and the
+        // metric-specific pairs; the text/latex footer prints it per metric.
+        let mut sigs: Vec<Signature> = Vec::with_capacity(names.len());
+        for metric in &names {
+            let base = match metric.as_str() {
+                "BLEU" => bleu_signature(cli, bleu_tokenizer(cli)?, nrefs, false),
+                "TER" => ter_signature(cli, nrefs),
+                _ => chrf_signature(cli, nrefs),
+            };
+            sigs.push(base.with_paired(bs, n_samples, &seed_str));
+        }
 
         // sacreBLEU pre-computes the baseline for *every* metric first, then walks the systems, so
         // the status lines come out in two passes.
@@ -207,7 +238,7 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
                 let sys = corpus_rows(cli, metric, &systems[*i], &refs, nrefs)?;
                 eprintln!(
                     "sacreBLEU: Computing {} for '{}' and extracting sufficient statistics",
-                    sys.name, sys_names[*i]
+                    sys.name, display[*i]
                 );
                 // sacreBLEU says "paired bootstrap resampling test" but plain "approximate
                 // randomization test": the word "paired" is only in the bootstrap wording.
@@ -237,26 +268,81 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
             }
         }
 
-        let mut rows_out: Vec<String> = Vec::with_capacity(keep.len());
-        for (k, entry) in table.iter().enumerate() {
-            let shown = if k == 0 { bl_display.clone() } else { sys_names[keep[k]].clone() };
-            let mut lines: Vec<String> = vec![format!("        \"system\": {}", json_str(&shown))];
-            for (name, score, p, mean, ci) in entry {
-                let opt = |v: &Option<f64>| match v {
-                    Some(x) => json_float(*x),
-                    None => "null".to_string(),
-                };
-                let fields = vec![
-                    format!("            \"score\": {}", json_float(*score)),
-                    format!("            \"p_value\": {}", opt(p)),
-                    format!("            \"mean\": {}", opt(mean)),
-                    format!("            \"ci\": {}", opt(ci)),
-                ];
-                lines.push(format!("        {}: {{\n{}\n        }}", json_str(name), fields.join(",\n")));
+        if json {
+            let mut rows_out: Vec<String> = Vec::with_capacity(keep.len());
+            for (k, entry) in table.iter().enumerate() {
+                let shown = display[keep[k]].clone();
+                let mut lines: Vec<String> =
+                    vec![format!("        \"system\": {}", json_str(&shown))];
+                for (name, score, p, mean, ci) in entry {
+                    let opt = |v: &Option<f64>| match v {
+                        Some(x) => json_float(*x),
+                        None => "null".to_string(),
+                    };
+                    let fields = vec![
+                        format!("            \"score\": {}", json_float(*score)),
+                        format!("            \"p_value\": {}", opt(p)),
+                        format!("            \"mean\": {}", opt(mean)),
+                        format!("            \"ci\": {}", opt(ci)),
+                    ];
+                    lines.push(format!(
+                        "        {}: {{\n{}\n        }}",
+                        json_str(name),
+                        fields.join(",\n")
+                    ));
+                }
+                rows_out.push(format!("    {{\n{}\n    }}", lines.join(",\n")));
             }
-            rows_out.push(format!("    {{\n{}\n    }}", lines.join(",\n")));
+            writeln!(out, "[\n{}\n]", rows_out.join(",\n")).map_err(io_err)?;
+            return Ok(());
         }
-        writeln!(out, "[\n{}\n]", rows_out.join(",\n")).map_err(io_err)?;
+
+        // Text and latex: the same grid as the multi-system report. The heading carries the
+        // interval for `--paired-bs`, the baseline row is the score alone, and every other system
+        // takes a second grid line (a newline inside its cell) holding its p-value -- in latex
+        // tabulate joins that line onto the score with a space instead.
+        let mut header: Vec<String> = vec!["System".to_string()];
+        for (name, ..) in &table[0] {
+            header.push(if bs {
+                format!("{name} (\u{3bc} \u{b1} 95% CI)")
+            } else {
+                name.clone()
+            });
+        }
+        let mut body: Vec<Vec<String>> = Vec::with_capacity(keep.len());
+        for (k, entry) in table.iter().enumerate() {
+            let mut cells: Vec<String> = vec![display[keep[k]].clone()];
+            for (_, score, p, mean, ci) in entry {
+                let mut cell = match (mean, ci) {
+                    (Some(m), Some(c)) => format!(
+                        "{} ({} \u{b1} {})",
+                        fixed(*score, width),
+                        fixed(*m, width),
+                        fixed(*c, width)
+                    ),
+                    _ => fixed(*score, width),
+                };
+                if let Some(p) = p {
+                    let star = if *p < 0.05 { "*" } else { "" };
+                    cell.push_str(&format!("\n(p = {p:.4}){star}"));
+                }
+                cells.push(cell);
+            }
+            body.push(cells);
+        }
+        let mut aligns: Vec<Align> = vec![Align::Right];
+        aligns.extend(std::iter::repeat_n(Align::Center, header.len() - 1));
+        if cli.format == "latex" {
+            write!(out, "{}", tabulate::latex_table(&header, &body, &aligns)).map_err(io_err)?;
+        } else {
+            write!(out, "{}", tabulate::fancy_grid(&header, &body, &aligns)).map_err(io_err)?;
+        }
+        writeln!(out).map_err(io_err)?;
+        write!(out, "{}", paired_footer(bs, n_samples, &footer_baseline)).map_err(io_err)?;
+        write!(out, "-----------------\nMetric signatures\n-----------------\n").map_err(io_err)?;
+        for (metric, sig) in table[0].iter().zip(&sigs) {
+            writeln!(out, " - {:<11}{}", metric.0, sig.format(cli.short)).map_err(io_err)?;
+        }
         return Ok(());
     }
 
@@ -409,6 +495,47 @@ fn confidence(
     let (mean, half_width) = bootstrap_ci(rows, width, kind, n, seed);
     let interval = if mean == 0.0 { None } else { Some((mean, half_width)) };
     Ok((interval, Some((n, seed_str))))
+}
+
+/// The explanatory block under the paired table. Every line is measured: the rule is as long as
+/// the title, and the sentence about the baseline names it with an empty string, as sacreBLEU does.
+fn paired_footer(bootstrap: bool, n_samples: usize, baseline: &str) -> String {
+    let title = if bootstrap {
+        format!("Paired bootstrap resampling test with {n_samples} resampling trials")
+    } else {
+        format!("Paired approximate randomization test with {n_samples} trials")
+    };
+    let detail = if bootstrap {
+        "   Actual system score / bootstrap estimated true mean / 95% CI are provided for each metric."
+    } else {
+        "   Actual system score is provided for each metric."
+    };
+    let rule = "-".repeat(title.chars().count());
+    let mut s = String::new();
+    s.push_str(&format!("{rule}\n{title}\n{rule}\n"));
+    s.push_str(&format!(" - Each system is pairwise compared to {baseline}.\n"));
+    s.push_str(detail);
+    s.push_str("\n\n");
+    s.push_str(" - Null hypothesis: the system and the baseline translations are essentially\n");
+    s.push_str("   generated by the same underlying process. For a given system and the baseline,\n");
+    s.push_str("   the p-value is roughly the probability of the absolute score difference (delta)\n");
+    s.push_str(
+        "   or higher occurring due to chance, under the assumption that the null hypothesis is correct.\n",
+    );
+    s.push('\n');
+    s.push_str(" - Assuming a significance threshold of 0.05, the null hypothesis can be rejected\n");
+    s.push_str(
+        "   for p-values < 0.05 (marked with \"*\"). This means that the delta is unlikely to be attributed\n",
+    );
+    s.push_str("   to chance, hence the system is significantly \"different\" than the baseline.\n");
+    s.push_str("   Otherwise, the p-values are highlighted in red.\n");
+    s.push('\n');
+    s.push_str(" - NOTE: Significance does not tell whether a system is \"better\" than the baseline but rather\n");
+    s.push_str(
+        "   emphasizes the \"difference\" of the systems in terms of the replicability of the delta.\n",
+    );
+    s.push('\n');
+    s
 }
 
 fn io_err(e: std::io::Error) -> Fail {
