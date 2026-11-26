@@ -39,6 +39,12 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
         eprintln!("sacreBLEU: Only one metric can be used in sentence-level mode.");
         return Err(Fail { code: 1, msg: String::new() });
     }
+    // `--citation` needs a test set: sacreBLEU has no default citation, and the check comes before
+    // the reference checks but after the sentence-level one (both measured).
+    if cli.citation {
+        eprintln!("sacreBLEU: I need a test set (-t).");
+        return Err(Fail { code: 1, msg: String::new() });
+    }
     if cli.num_refs != 1 && cli.refs.len() > 1 {
         return fail(
             1,

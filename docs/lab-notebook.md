@@ -4281,3 +4281,37 @@ selection on 3.11.14: 673 passed / 58 skipped in group A
 `--detail`), which still waits on the downloader decision recorded in the previous entry; then
 slice 3 (the Python significance orchestration onto `swadesh-core`) and slice 4 (the console script
 onto the binary).
+
+## 2026-11-26 (continued) - `--citation`, the item-1 flag that needs no downloader
+
+**Attempted.** `--citation` / `--cite`. Of the flags the goal still lists under item 1 - `-t`,
+`--download`, `--echo`, `--origlang`, `--subset`, `--citation`, `--detail` - every one except
+`--citation` needs the `-t` downloader, still waiting on the dependency decision recorded two entries
+up. `--citation` needs only the catalogue, which is already in the tree.
+
+**What the oracle does, measured.** Without a test set it refuses: `sacreBLEU: I need a test set
+(-t).` on stderr, exit 1, nothing on stdout - and it has no default citation. With a test set it
+**crashes**: `TypeError: argument of type 'WMTXMLDataset' is not iterable`, at
+`sacrebleu.py:269`, from a `'citation' not in DATASETS[test_set]` test whose values are `Dataset`
+objects rather than dicts. So the only `--citation` invocation the oracle survives is the one that
+reports the missing `-t`, and that is the one reproduced byte for byte, stderr included.
+
+The check's position is observable, and was measured rather than guessed: it comes *after* the
+sentence-level check (`--citation -m bleu chrf -sl` reports the metric, `--citation -sl` the test
+set) and *before* the reference checks (bare `--citation` reports the test set, not the missing
+references), while `--list` short-circuits it in either order.
+
+**Change.** `--citation` and `--cite` are real options now (they leave the "not supported" table and
+the `test_unsupported_options_fail_with_hint` case becomes `["--citation", "-t", "wmt16"]`, which is
+the combination that still needs `-t`). The refusal moved out of the argument table and into the
+pipeline, in the measured place, with sacreBLEU's own `sacreBLEU: ` prefix.
+
+**Measured.** A 10-case byte-diff (bare, aliased, with refs, with `-sl`, with `-m` + `-sl`, with
+`--list` in both orders, with `-cin 0`, and with metrics) is 0 diffs on stdout, stderr and exit code.
+`tests/test_cli.py`: the 20 cases matching `citation` or `unsupported` pass; `cargo test` stays green
+(137 tests).
+
+**Still open, unchanged.** The `-t` group behind the downloader decision, `--detail` (which rides on
+`-t`), the argument-level usage/exit-code parity, `-e` with non-utf8 codecs, and the `test_ter` /
+`test_deep` numbers (running separately; both were timed out by the harness's 10-minute cap when run
+with the rest of the selection, so they are measured on their own).

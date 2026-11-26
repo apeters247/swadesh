@@ -51,6 +51,7 @@ options:
                         resamples for --paired-bs (default: 1000)
   -pj, --paired-jobs N  worker processes for the paired test (default: 1)
   --list                print the available test sets and quit
+  --citation            print the citation for a test set (-t)
   --max-ngram-order N   BLEU maximum n-gram order (default: 4)
   --python-version X.Y  emulate sacreBLEU running on this CPython (float sum()
                         semantics changed in 3.12 and 3.14; default: 3.12)
@@ -130,6 +131,8 @@ const OPTS: &[Opt] = &[
     o("--paired-bs-n", "-pbsn", Nargs::One, "paired_bs_n"),
     o("--paired-jobs", "-pj", Nargs::One, "paired_jobs"),
     o("--list", "", Nargs::Zero, "list"),
+    o("--citation", "", Nargs::Zero, "citation"),
+    o("--cite", "", Nargs::Zero, "citation"),
     o("--max-ngram-order", "", Nargs::One, "max_order"),
     o("--python-version", "", Nargs::One, "pyver"),
     o("--chrf-char-order", "-cc", Nargs::One, "cc"),
@@ -145,8 +148,6 @@ const OPTS: &[Opt] = &[
     o("--no-color", "-nc", Nargs::Zero, "no_color"),
     o("--format", "-f", Nargs::One, "format"),
     // Recognised so that they fail with a helpful message instead of "unknown option".
-    u("--citation", "", Nargs::Zero, "--citation is not supported by swadesh; pip install swadesh"),
-    u("--cite", "", Nargs::Zero, "--cite is not supported by swadesh; pip install swadesh"),
     u("--list", "", Nargs::Zero, "--list (built-in test sets) is not supported by swadesh; the test sets need the Python package: pip install swadesh"),
     u("--test-set", "-t", Nargs::One, "-t/--test-set (built-in test sets) is not supported by swadesh; pip install swadesh"),
     u("--download", "", Nargs::One, "--download (test sets) is not supported by swadesh; pip install swadesh"),
@@ -193,6 +194,8 @@ pub struct Cli {
     pub paired_jobs: i64,
     /// `--list`: print the test-set catalogue and quit.
     pub list: bool,
+    /// `--citation`: print the citation of the test set named by `-t`.
+    pub citation: bool,
     pub max_ngram_order: i64,
     pub python_version: (u32, u32),
     pub chrf_char_order: i64,
@@ -329,6 +332,7 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
         paired_bs_n: 1000,
         paired_jobs: 1,
         list: false,
+        citation: false,
         max_ngram_order: 4,
         python_version: (3, 12),
         chrf_char_order: 6,
@@ -437,6 +441,7 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
             "paired_bs_n" => cli.paired_bs_n = parse_int("--paired-bs-n", &one())?,
             "paired_jobs" => cli.paired_jobs = parse_int("--paired-jobs", &one())?,
             "list" => cli.list = true,
+            "citation" => cli.citation = true,
             "max_order" => cli.max_ngram_order = parse_int("--max-ngram-order", &one())?,
             "pyver" => {
                 let v = one();

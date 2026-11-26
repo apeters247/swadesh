@@ -371,7 +371,7 @@ def test_error_exit_codes_match(tmp_path, args, stdin):
     ["-t", "wmt22", "-l", "en-de"],
     ["-t", "wmt22", "-l", "en-de", "--confidence"],
     ["x.txt", "--detail", "-i", "y.txt", "z.txt"],
-    ["x.txt", "-i", "y.txt", "--citation"],
+    ["--citation", "-t", "wmt16"],
     ["x.txt", "-i", "y.txt", "-tok", "ja-mecab"],
     ["x.txt", "-i", "y.txt", "-tok", "ko-mecab"],
     ["x.txt", "-i", "y.txt", "-tok", "spm"],
@@ -994,3 +994,33 @@ def test_latex_escapes_special_characters_in_names(tmp_path, fmt):
         (tmp_path / name).write_text("The cat sat on the mat.\nA dog barked.\n", encoding="utf-8")
     paths = [str(tmp_path / name) for name in LATEX_NAMES]
     assert_same([str(refs), "-i", *paths, "-m", "bleu", "-f", fmt]) == 0
+
+# --------------------------------------------------------------------------- --citation
+
+CITATION_CASES = [
+    ["--citation"],
+    ["--cite"],
+    ["{refs}", "-i", "{hyp}", "--citation"],
+    ["--citation", "-sl"],
+    ["--citation", "-m", "bleu", "chrf", "-sl"],
+    ["--citation", "--list"],
+    ["--list", "--citation"],
+    ["--citation", "-cin", "0"],
+    ["{refs}", "-i", "{hyp}", "-m", "bleu", "chrf", "--citation"],
+]
+
+
+@pytest.mark.parametrize("args", CITATION_CASES, ids=lambda a: " ".join(a))
+def test_citation(tmp_path, args):
+    """`--citation` without a test set is refused, in sacreBLEU's own words, on stderr.
+
+    The check sits after the sentence-level one and before the reference checks, which is
+    observable: `--citation -m bleu chrf -sl` reports the metric, `--citation -sl` the test set,
+    and `--list` short-circuits both. With a test set the oracle itself crashes, so the
+    set-specific citation stays with the unsupported `-t` (see below).
+    """
+    (tmp_path / "refs.txt").write_text("a\nb\n", encoding="utf-8")
+    (tmp_path / "hyp.txt").write_text("a\nc\n", encoding="utf-8")
+    mapping = {k: str(tmp_path / f"{k}.txt") for k in ("refs", "hyp")}
+    resolved = [a.format(**mapping) for a in args]
+    assert_same_streams(resolved)
