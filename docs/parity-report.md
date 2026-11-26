@@ -67,7 +67,7 @@ Not covered: `--download` (needs network; it fetches a set and quits). `spm`, `f
 | Suite | Result |
 |---|---|
 | `cargo test --release --workspace` | 13 suites, 0 failed (9 of them the CLI's own unit tests) |
-| `tests/test_cli.py` (runs the **Rust binary** against the sacrebleu CLI) | 0 failed (the file was 448 cases at the goal start) |
+| `tests/test_cli.py` (runs the **Rust binary** against the sacrebleu CLI) | 582 passed, 2 xfailed, 0 failed in 6m26s (the file was 448 cases at the goal start) |
 | `tests/test_parity.py` | 436 passed, 58 skipped |
 | `tests/test_frozen_oracle.py`, `test_provenance.py`, `test_score_objects.py`, `test_estimate_ci.py`, `test_dependency_licences.py`, `test_version.py`, `test_base_port.py`, `test_metrics_fallback.py`, `test_ter_preprocess.py`, `test_regressions.py`, `test_numrefs_none_refs.py` | 0 failed (with `test_parity.py`, 673 passed / 58 skipped together) |
 | `tests/test_differential.py` | 79 passed |

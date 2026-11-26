@@ -4381,7 +4381,8 @@ comparison, which fails until the binary implements the test-set group - so the 
 boundary, and the report now says so.
 
 `tests/test_cli.py` (the Rust binary): the fast half (`-k "not ter and not timing"`) is 392 passed,
-3 xfailed, 0 failed; the full file is re-running as this is written.
+3 xfailed, 0 failed, and the **full file is 582 passed, 2 xfailed, 0 failed in 6m26s** (448 cases at
+the goal start).
 
 **Found by measuring, recorded rather than fixed.** A negative `--chrf-word-order` is *accepted* by
 sacreBLEU - `nw:-1` in the signature, order `cc + cw`, and a score that differs from `-cw 0` - where
