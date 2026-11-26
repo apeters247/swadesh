@@ -5,7 +5,7 @@ swadesh is dual-licensed.
 | | licence | cost | file |
 |---|---|---|---|
 | Community | GNU Affero General Public License v3 or later | free | `LICENSE` |
-| Commercial | negotiated per use | paid | `LICENSE.commercial` |
+| Commercial | negotiated per use; free below the revenue threshold | free / paid | `LICENSE.commercial` |
 | Adapter modules | Apache License 2.0 | free | `LICENSE-Apache-2.0` |
 
 ## What AGPL means in practice
@@ -33,12 +33,22 @@ In plain terms:
 If you are unsure which side of a line you are on, ask before you ship. The contact is in
 `LICENSE.commercial`.
 
+## The revenue threshold
+
+The commercial licence is **free of charge** for a licensee whose total annual revenue - across the
+licensee and its affiliates - is **below USD 5,000,000** in the most recent fiscal year. At or above
+that figure it is paid and granted by written agreement. The figure is self-reported: there is no
+audit and nothing to sign, so under the threshold `LICENSE.commercial` is the grant.
+
+This is deliberately not a restriction on the AGPL: the AGPL is free for everyone at any size, and
+the threshold only decides whether the *alternative* licence costs anything.
+
 ## Why dual licensing rather than a source-available licence
 
 PyPI, crates.io and Hugging Face all accept the AGPL. A source-available licence that forbids
 commercial use would be rejected by some of them, and would also stop the research and evaluation
 use that this tool exists to serve. The AGPL keeps it genuinely free for the community while leaving
-one route open for organisations that cannot take the AGPL.
+one route open for organisations that cannot take the AGPL - free for small ones, paid for large ones, so the licence meets a two-person studio and a vendor on the same day.
 
 ## What is Apache-2.0, and why
 

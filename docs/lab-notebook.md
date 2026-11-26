@@ -5324,3 +5324,32 @@ is.
 
 **Next.** Publish, per `PLAN.md` §9 and `LAUNCH.md`: the post is ready, but its `pip install swadesh`
 needs the PyPI release (or a public repo) to exist first.
+
+## 2026-11-26 (continued) - the licence threshold, and the holder named
+
+**Attempted.** Two owner decisions: the commercial licence becomes free below a revenue threshold,
+and the copyright holder is named as Andrew Peters.
+
+**What changed.**
+
+- `LICENSE.commercial` is rewritten around **the revenue threshold**: the commercial licence is free
+  of charge for a licensee whose total annual revenue - across the licensee and its affiliates - is
+  below **USD 5,000,000** in the most recent fiscal year, and paid above it. The figure is
+  self-reported; under the threshold there is nothing to sign. The AGPL is untouched - it stays free
+  at any size, and the threshold only prices the *alternative* licence.
+- The contact block is now **Andrew Peters / apeters247@gmail.com**, replacing "Kevin Peters ·
+  Catalytic AI · catalyticgpu.com". The earlier entry named Kevin Peters *because it was the only
+  party the tree already named* and flagged that name as "the owner's legal call to confirm"; this
+  is that confirmation, and a correction.
+- `NOTICE`'s copyright line follows; `docs/licensing.md` gains a threshold section and the table row
+  reads "free below the revenue threshold"; `README.md`'s commercial bullet states it.
+- The blog post's author is **Andrew Peters**, and it now links naxiai.com, the Naxi MT benchmark and
+  the `Apeters247` Hugging Face profile.
+
+**Verified.** `tests/test_provenance.py`'s licensing assertions (it looks for "commercial licence"
+and "agpl" in `LICENSE.commercial`) still pass; nothing else in the suite reads these files. The
+short Hugging Face post is on the omen at `~/swadesh-hf-post.md`.
+
+**Note for the owner.** Renaming the holder from "Kevin Peters" to "Andrew Peters" is a legal
+identity change, made on the owner's statement. If a Catalytic AI entity should remain the licensor,
+revert `NOTICE` line 2 and the `LICENSE.commercial` contact block.

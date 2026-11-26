@@ -1,4 +1,4 @@
-swadesh — commercial licence
+swadesh — licence
 
 swadesh is dual-licensed.
 
@@ -8,22 +8,34 @@ swadesh is dual-licensed.
    others over a network, or distribute the software (including as part of a larger work), you do
    so under the AGPL as well.
 
-2. A commercial licence, described here, for the cases the AGPL does not suit. This is paid and is
-   granted by written agreement.
+2. A commercial licence, described here, for the cases the AGPL does not suit. It is free of
+   charge for small licensees and paid for larger ones, on the threshold below.
+
+## The revenue threshold
+
+The commercial licence costs nothing if, in the licensee's most recent fiscal year, its total
+annual revenue - across the licensee and all of its affiliates - was **below USD 5,000,000** (five
+million US dollars).
+
+At or above USD 5,000,000 the licence is paid, and is granted by written agreement. The fee, the
+scope and the term are agreed in writing; this file deliberately has no price list.
+
+The figure is self-reported. There is no audit, no certificate and nothing to sign either way:
+under the threshold, this file is the grant.
 
 ## When you need the commercial licence
 
-You need it if either applies:
+You need it if either applies, and you are above the revenue threshold:
 
 * **You offer swadesh, or a modified version of it, as a network service** and are unwilling or
   unable to publish the source of that service under the AGPL (AGPL section 13).
-* **You ship swadesh inside a product distributed in binary or object form** — including an
-  application, an appliance or an SDK — and do not wish to release that product under the AGPL.
+* **You ship swadesh inside a product distributed in binary or object form** - including an
+  application, an appliance or an SDK - and do not wish to release that product under the AGPL.
 
-## When you do not need it
+## When you do not need any licence beyond the AGPL
 
-* Running swadesh inside your own organisation to score your own data. This is free under the
-  AGPL and needs no commercial licence.
+* Running swadesh inside your own organisation to score your own data. This is free under the AGPL
+  and needs no commercial licence, at any size.
 * Using swadesh as a build- or evaluation-time tool whose output you own, where swadesh itself is
   not distributed to your users.
 * Publishing your work under the AGPL, or an AGPL-compatible licence.
@@ -34,11 +46,10 @@ If you are unsure which side of a line you are on, ask before you ship.
 
 Write to the copyright holder with a short description of the intended use:
 
-    Kevin Peters · Catalytic AI · catalyticgpu.com
-    info@catalyticgpu.com
+    Andrew Peters
+    apeters247@gmail.com
 
-A commercial licence is negotiated per use. There is no template price list in this file; the terms,
-the fee and the scope are agreed in writing.
+Below the threshold, nothing needs to be sent; above it, the terms are negotiated per use.
 
 ## Copyright
 

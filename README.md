@@ -188,7 +188,7 @@ swadesh is dual-licensed:
 * **AGPL-3.0-or-later** — free. Running it inside your organisation to score your own data, in CI,
   in research and in open-source work all cost nothing. See `LICENSE`.
 * **Commercial licence** — for shipping swadesh inside a closed product, or offering it (or a
-  modified version) as a network service without publishing that service's source. See
-  `LICENSE.commercial`.
+  modified version) as a network service without publishing that service's source. **Free below
+  USD 5 million annual revenue**, paid above it; see `LICENSE.commercial`.
 
 `docs/licensing.md` sets out which side of that line a given use falls on.

@@ -2,7 +2,7 @@
 title: "I wanted my Naxi translator to be scored faster, then found I couldn't trust the scores"
 thumbnail: docs/img/benchmark.svg
 authors:
-- name: apeters247
+- name: Andrew Peters
 ---
 
 *swadesh is a drop-in replacement for sacreBLEU, written in Rust. It returns exactly the same
@@ -271,6 +271,14 @@ new code, `sentence_scores`, `pairwise` (MBR matrices) and the native bootstrap 
 The name comes from Morris Swadesh, the linguist whose core-vocabulary lists let researchers measure
 how much two languages share. BLEU and chrF do the same for a translation and its reference, which
 felt like the right name for a tool whose job is to be exactly comparable.
+
+swadesh is AGPL-3.0-or-later, free for everyone; the commercial licence for the cases the AGPL
+does not suit is free of charge for organisations under USD 5 million annual revenue, and
+negotiated above that (`LICENSE.commercial`, apeters247@gmail.com).
+
+*More from me: the Naxi project at [naxiai.com](https://naxiai.com), its benchmark at
+[huggingface.co/Apeters247/naxi-mt-benchmark](https://huggingface.co/Apeters247/naxi-mt-benchmark),
+and everything else under [huggingface.co/Apeters247](https://huggingface.co/Apeters247).*
 
 *Thanks for reading. If you re-run this on your own data, `swadesh.verify` prints either "identical"
 or the first mismatch — that report is more useful to me than a star on the repo.*
