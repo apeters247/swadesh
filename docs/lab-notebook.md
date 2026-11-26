@@ -5053,3 +5053,32 @@ byte-identical; and the three failure modes matching on exit code, stdout and th
 
 **Next.** The unconsumed-token list, `-j > 1` status lines, the real-model re-verification, and the
 `.zip`/plain-`.gz` *download* shapes.
+
+## 2026-11-26 (continued) - M0 slice 14: two more CLI edges, found by probing
+
+**Attempted.** Nothing was on the list; I probed 51 odd argv forms against the oracle (missing option
+values, extra positionals, zero and negative numbers, every option that takes one) to see what else
+diverges. Four did.
+
+**Two were real bugs, both about the message, not the behaviour.** `-nr 0` and `-nr 2` on a
+tab-less reference: sacreBLEU prints `sacreBLEU: FATAL: line 1: expected 2 fields, but found 1.` and
+exits 17 - and swadesh printed the same text with swadesh's `swadesh: error: ` prefix and without
+sacreBLEU's, because those two messages go through `fail()` while the other 43 diagnostics are
+written straight to stderr. `error_stderr` now prints a message bare when it already is someone
+else's line: a Python exception *or* a `sacreBLEU: ` diagnostic. Verified: both `-nr` cases are now
+byte-identical, and a new `test_num_refs_field_count_message_matches` compares their stderr.
+
+**Two are the known class.** `-cw -1` (already a strict xfail: sacreBLEU accepts it) and `-cc -1`
+(new): sacreBLEU raises `IndexError: list index out of range` from inside chrF, where swadesh
+refuses a negative character order with a clean message and the same exit code. That is the
+registered "exit code and stdout match; reproducing a traceback is not worth matching" class, so
+`-cc -1` was added to that row and pinned with its own strict xfail
+(`test_negative_chrf_char_order`), the same shape as the `-cw -1` one.
+
+**Result.** 49 of the 51 probed forms are now byte-identical (the two exceptions are the pinned
+negative-order divergences).
+
+**Numbers.** See the code commit.
+
+**Next.** The unconsumed-token list, `-j > 1` status lines, the real-model re-verification, and the
+`.zip`/plain-`.gz` *download* shapes.

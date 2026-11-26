@@ -200,7 +200,12 @@ Documented divergences, each pinned by a strict `xfail` test:
 
 ## Input handling
 
-* `-nr N` splits each reference line on tabs into `N` references.
+* A failure message is printed bare - no `swadesh: error: ` prefix - when it is already someone
+  else's line: a Python exception (`UnicodeDecodeError:`, `FileNotFoundError:`, `gzip.BadGzipFile:`,
+  `EOFError:`, ...) or sacreBLEU's own diagnostic (`sacreBLEU: FATAL: ...`). Every other message is
+  ours and carries the prefix. The exit code is unchanged in either case.
+* `-nr N` splits each reference line on tabs into `N` references, and a line with the wrong field
+  count is `sacreBLEU: FATAL: line N: expected F fields, but found G.` with exit code 17.
 * A reference that is `None` (a missing field in a stream) is not a reference; a segment left with
   none is the metric's error path, which differs by metric (BLEU counts it, TER divides by zero).
 * A file whose name ends in `.gz` is decompressed with gzip, decided by the name and
