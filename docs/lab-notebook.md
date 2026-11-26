@@ -4689,3 +4689,43 @@ fetch and the other four families remain), and the register has a row for the un
 from the cached `wmt22`/`wmt24` raw trees exactly as this one was, and is the largest remaining
 family), or add the feature-gated fetch (crates) so a cold cache downloads. The parsers are the
 bigger half of `-t` and need no crates, so they come first.
+
+## 2026-11-26 (continued) - M0 slice 5: the WMT XML parser, and three measured traps
+
+**Attempted.** The other big parser family: `wmt20`..`wmt24`, whose archives hold
+`xml/wmttest20<NN>.<pair>.all.xml`. Still no crates.
+
+**The structure.** `<doc origlang=".." id=".." domain="..">` blocks contain `<src>`, `<ref
+translator="A">` and `<hyp system="Online-A">` elements of `<seg>` lines; the processed layout is the
+same columns as the SGML family, with a reference named `ref:<translator>` and a system named by its
+`<hyp system=...>`. Three traps came out of the acceptance loop, each caught by a byte-diff rather
+than by reading:
+
+1. **Streams repeat once per document**, so a file has 170 `<src>` elements, not one. Writing by
+   stream name therefore wrote 170 files in turn and kept the last - a 28-line "src" for wmt24. They
+   are now merged in document order.
+2. **The `txt/` tree beside the XML is not the source.** `txt/sources/generaltest2022.de-fr.src.de`
+   differs from the processed `.src` in whitespace ("von  ihrem" against "von ihrem"), and
+   `txt/system-outputs/...hyp.Online-A.fr` differs the same way while `LT22`'s is identical. Copying
+   `txt/` would have been right for some systems and wrong for others; the XML is the only source.
+3. **The diagnostic documents must be excluded.** wmt22 en-de's XML holds 17,618 `<doc testsuite="...">`
+   documents (176k of its 200k segments) and the oracle's processed files contain no `tsuite` id at
+   all - 2037 lines, the news part. Skipping documents that carry `testsuite` fixed it.
+
+Two more rules, measured: the segment text is **whitespace-collapsed** (the XML's `von  ihrem`
+becomes `von ihrem`, a literal tab becomes a space, and a seg spanning lines becomes one line), and
+`&amp;` is replaced **last**, which is visible in three nested forms the wmt24 XML contains:
+`A&amp;E;` -> `A&E;`, `AT&amp;amp;T` -> `AT&amp;T`, `&amp;#39;` -> `&#39;` - all three verified
+against the oracle's own files. And a self-closing `<seg/>` is an *empty* segment (89 of them), not a
+swallowed next segment: without that, one stream came out a line short with a literal `<seg id=...>`
+inside its text.
+
+**Verification.** With `raw/` symlinked into a scratch cache and no processed files: every field file
+the oracle has for wmt22 en-de (15), wmt22 de-fr (11) and wmt24 en-de (32) is **byte-identical** to
+ours, `--echo` matches for each of them, and scoring, `-d` and `-ol` match on the rebuilt wmt24 cache.
+That is 58 files, zero differences, and it includes the entity and self-closing-segment cases by
+construction - those *are* the files that differ if the rules are wrong. `cargo test` 13 suites green.
+
+**Next.** The remaining families (TSV, plain text, IWSLT XML) and the SGML variants (`B`, `tworefs`,
+`dev`), then the feature-gated fetch so a cold cache downloads - at which point `-t` is complete for
+the sets the catalogue can fetch, and `--download` becomes reachable.

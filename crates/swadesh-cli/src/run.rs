@@ -106,7 +106,11 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
     if let Some((found, pair)) = &test_set {
         let fields = found.fields_of(pair).cloned().unwrap_or_default();
         if fields.iter().any(|field| !dataset::field_path(found, pair, field).exists()) {
-            crate::sgml::rebuild(found, pair)?;
+            // Each family says whether it recognises the layout; an unmeasured one leaves the
+            // refusal below intact.
+            if !crate::sgml::rebuild(found, pair)? {
+                crate::wmtxml::rebuild(found, pair)?;
+            }
         }
     }
 

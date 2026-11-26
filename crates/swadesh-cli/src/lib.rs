@@ -5,6 +5,7 @@
 pub mod args;
 pub mod dataset;
 pub mod sgml;
+pub mod wmtxml;
 pub mod datasets;
 pub mod input;
 mod lower;

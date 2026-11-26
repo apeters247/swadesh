@@ -1531,3 +1531,63 @@ def test_a_family_the_measured_rule_does_not_cover_still_refuses(tmp_path):
     (cache / "wmt16" / "raw" / "newstest2016-ende-src.en.sgm").write_text("", encoding="utf-8")
     proc = _run_env(SWADESH, ["-t", "wmt16/B", "-l", "en-fi", "--echo", "src", "--python-version", PYVER], env)
     assert proc.returncode == 1 and b"no downloader yet" in proc.stderr
+
+# ------------------------------------------------- the WMT XML family (wmt20 and later)
+
+def test_wmtxml_set_is_rebuilt_from_its_raw_tree(tmp_path):
+    """wmt22/wmt24 rebuild from `raw/xml` alone, and every generated file is byte-identical to
+    sacreBLEU's own.
+
+    The measured traps this covers: the diagnostic `testsuite` documents are excluded (wmt22 en-de
+    holds 17,618 of them and the oracle's files contain no `tsuite` id at all); `&amp;` is replaced
+    *last*, so `A&amp;E;` becomes `A&E;`, `AT&amp;amp;T` becomes `AT&amp;T` and `&amp;#39;` becomes
+    `&#39;`; whitespace collapses (`von  ihrem` becomes `von ihrem`, and a tab becomes a space,
+    `wmt24.en-de.src` holding no tab); and a self-closing `<seg/>` is an *empty* segment (89 of them
+    in wmt24 en-de) rather than a swallowed next segment.
+    """
+    home = Path(os.environ.get("SACREBLEU", Path.home() / ".sacrebleu"))
+    root = tmp_path / "cache"
+    env = dict(ENV)
+    env["SACREBLEU"] = str(root)
+    checked = 0
+    for set_name, pair in (("wmt22", "en-de"), ("wmt22", "de-fr"), ("wmt24", "en-de")):
+        raw = home / set_name / "raw"
+        if not raw.is_dir():
+            continue
+        (root / set_name).mkdir(parents=True, exist_ok=True)
+        link = root / set_name / "raw"
+        if not link.exists():
+            link.symlink_to(raw)
+        for theirs in sorted((home / set_name).glob(f"{set_name}.{pair}.*")):
+            field = theirs.name.split(f"{set_name}.{pair}.", 1)[1]
+            wire = f"ref:{field[len('ref-'):]}" if field.startswith("ref-") else field
+            args = ["-t", set_name, "-l", pair, "--echo", wire, "--python-version", PYVER]
+            ours = _run_env(SWADESH, args, env)
+            assert ours.returncode == 0, (set_name, pair, wire, ours.stderr)
+            assert ours.stdout == theirs.read_bytes(), (set_name, pair, wire)
+            generated = root / set_name / f"{set_name}.{pair}.{field}"
+            assert generated.read_bytes() == theirs.read_bytes(), (set_name, pair, field)
+            checked += 1
+    if checked == 0:
+        pytest.skip("no cached wmt22/wmt24 raw tree under $SACREBLEU")
+
+
+def test_wmtxml_scores_and_breaks_down_identically(tmp_path):
+    """Scoring, `-d` and a filter on the rebuilt wmt24 cache match the oracle's bytes."""
+    home = Path(os.environ.get("SACREBLEU", Path.home() / ".sacrebleu"))
+    raw = home / "wmt24" / "raw"
+    if not raw.is_dir():
+        pytest.skip("the wmt24 raw tree is not cached under $SACREBLEU")
+    root = tmp_path / "cache"
+    (root / "wmt24").mkdir(parents=True)
+    (root / "wmt24" / "raw").symlink_to(raw)
+    env = dict(ENV)
+    env["SACREBLEU"] = str(root)
+    hyp = tmp_path / "hyp.txt"
+    hyp.write_bytes(run(SACREBLEU, ["-t", "wmt24", "-l", "en-de", "--echo", "ref"])[1])
+    for flags in (["-m", "bleu", "chrf"], ["-d"], ["-ol", "en", "-m", "bleu"]):
+        args = ["-t", "wmt24", "-l", "en-de", "-i", str(hyp), *flags]
+        theirs = run(SACREBLEU, args)
+        ours = _run_env(SWADESH, [*args, "--python-version", PYVER], env)
+        assert ours.returncode == theirs[0], flags
+        assert ours.stdout == theirs[1], flags
