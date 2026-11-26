@@ -445,6 +445,20 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
     names.sort();
     names.dedup();
 
+    // Two BLEU advisories, measured in this order on stderr and printed once:
+    //   `-tok none` *with a test set* is the oracle's "you are supplying your own tokenized files" case
+    //   (with positional references it stays silent), and a Japanese *target* with any tokenizer but
+    //   mecab/spm gets its own line. Both only when BLEU is being computed (`-m chrf` prints neither).
+    if names.iter().any(|n| n == "BLEU") {
+        if cli.tokenize.as_deref() == Some("none") && cli.test_set.is_some() {
+            eprintln!("sacreBLEU: You are turning off BLEU's internal tokenizer presumably to supply your own tokenized files.");
+            eprintln!("sacreBLEU: Published numbers will not be comparable to other papers.");
+        }
+        if cli.langpair.as_deref().and_then(|p| p.split_once('-')).map(|(_, tgt)| tgt) == Some("ja") {
+            eprintln!("sacreBLEU: Consider using the 'ja-mecab' or 'spm' tokenizer for Japanese.");
+        }
+    }
+
     // Paired significance testing: the first system is the baseline, the others are compared to it.
     if paired {
         let bs = cli.paired_bs;
@@ -1245,6 +1259,7 @@ fn bleu_corpus(
         if tokenized >= 100 {
             eprintln!("sacreBLEU: That's 100 lines that end in a tokenized period ('.')");
             eprintln!("sacreBLEU: It looks like you forgot to detokenize your test data, which may hurt your score.");
+            eprintln!("sacreBLEU: If you insist your data is detokenized, or don't care, you can suppress this message with the `force` parameter.");
         }
     }
     let hyps: Vec<Cow<str>> = system.iter().map(|h| maybe_lower(h, cli.lowercase)).collect();

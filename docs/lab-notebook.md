@@ -5353,3 +5353,44 @@ short Hugging Face post is on the omen at `~/swadesh-hf-post.md`.
 **Note for the owner.** Renaming the holder from "Kevin Peters" to "Andrew Peters" is a legal
 identity change, made on the owner's statement. If a Catalytic AI entity should remain the licensor,
 revert `NOTICE` line 2 and the `LICENSE.commercial` contact block.
+
+## 2026-11-26 (continued) - multilingual parity: ten pairs, and the three advisories they found
+
+**Attempted.** Ten language pairs beyond the English-German axis the main suites use, weighted towards
+what metric code is tested on least: Gujarati, Kazakh and Lithuanian (`wmt19/dev`), Arabic in both
+directions, Japanese in both directions and Korean (`iwslt17`, with `intl` because mecab is not
+installed), German-to-French (`wmt22`) and Turkish (`wmt16`).
+
+**Method.** `tools/multilingual_parity.py`, new and reproducible: references from the oracle's own
+cache, a deterministic perturbation as the hypothesis (drop a middle word, swap two, suffix the last,
+on every third line), then three comparisons - CLI corpus for BLEU/chrF/TER byte for byte **including
+stderr**, CLI sentence level for BLEU and chrF byte for byte, and the Python API's corpus scores with
+`==` plus 400 sentence scores per metric with `==`.
+
+**Result.** 10/10 pairs identical on every axis, 0 of 4,000 sentence scores differing, corpus scores
+`==` to the last bit: en-gu 90.450189, kk-en 92.804065, lt-en 92.527146, en-ar 87.694881, ar-en
+90.425271, en-ja 67.195800 (`intl`), ja-en 90.550464, ko-en 90.648839, de-fr 90.487422, en-tr
+89.006015. Scores and method are recorded in `docs/multilingual-parity.md`.
+
+**What it found.** The scores were identical from the first run; the **stderr advisories** were not.
+Three were missing:
+
+- `Consider using the 'ja-mecab' or 'spm' tokenizer for Japanese.` - a Japanese **target** with BLEU;
+  `-m chrf` alone prints nothing.
+- the detokenized block's third line, `If you insist your data is detokenized, or don't care, you can
+  suppress this message with the \`force\` parameter.` - the block fires at 100 hypothesis lines ending
+  in ` .`, prints a fixed count of 100, and `--force` silences it.
+- `You are turning off BLEU's internal tokenizer ...` plus `Published numbers will not be comparable to
+  other papers.` - only when `-tok none` is combined with a **test set**; positional references get
+  neither line.
+
+The measured order is turning-off, then the Japanese line, then the detokenized block. All three are
+implemented in `run.rs` and pinned by `test_bleu_tokenizer_advisories` (six comparisons: positional,
+`--force`, below-threshold, Japanese with BLEU, Japanese with chrF, and `-tok none` with `-t`).
+
+**Why it was worth doing.** Every divergence found in this session up to now lived in English-German
+data, where the oracle is quiet. These advisories only fire on a Japanese target or on data that looks
+tokenized - exactly what a cross-language sweep surfaces, and exactly what a user scoring Arabic or
+Japanese would have seen.
+
+**Next.** Nothing open on the parity axis; the remaining work is the release checklist.

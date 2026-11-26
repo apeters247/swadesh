@@ -429,6 +429,46 @@ def test_sentence_level_refuses_statistical_tests(tmp_path, flags):
     assert_same_streams([str(refs), "-i", str(hyp), "-sl", *flags])
 
 
+# ------------------------------------------------- BLEU tokenizer advisories (stderr)
+
+def test_bleu_tokenizer_advisories(tmp_path):
+    """The three tokenizer advisories on stderr, byte for byte, wherever they fire.
+
+    Measured on the oracle: a **Japanese target** with BLEU prints one line (`-m chrf` alone prints
+    nothing); **100 hypothesis lines ending in ` .`** print the three-line detokenized block (the
+    count printed is fixed at 100, and `--force` suppresses the whole block); and **`-tok none` with
+    a test set** adds two more lines that positional references do not get. The order is
+    turning-off, then the Japanese line, then the detokenized block.
+    """
+    ref = tmp_path / "r.txt"
+    hyp = tmp_path / "h.txt"
+    ref.write_text("a b c d\n" * 150, encoding="utf-8")
+    hyp.write_text("a b .\n" * 100 + "a b c\n" * 50, encoding="utf-8")
+
+    # Positional references: the detokenized block only, and `--force` silences it.
+    assert_same_streams([str(ref), "-i", str(hyp), "-m", "bleu", "-b"])
+    assert_same_streams([str(ref), "-i", str(hyp), "-m", "bleu", "-b", "--force"])
+    # 99 such lines is below the threshold: nothing at all.
+    quiet = tmp_path / "q.txt"
+    quiet.write_text("a b .\n" * 99 + "a b c\n" * 51, encoding="utf-8")
+    assert_same_streams([str(ref), "-i", str(quiet), "-m", "bleu", "-b"])
+
+    # A Japanese target with BLEU gets its advisory; with chrF it does not.
+    assert_same_streams(["-l", "en-ja", "-tok", "intl", str(ref), "-i", str(hyp), "-m", "bleu", "-b"])
+    assert_same_streams(["-l", "en-ja", "-tok", "intl", str(ref), "-i", str(hyp), "-m", "chrf", "-b"])
+
+    # `-tok none` *and* a test set: the two turning-off lines come first.
+    if not _have_set("wmt16"):
+        pytest.skip("no cached test set under $SACREBLEU")
+    ref_text = run(SACREBLEU, ["-t", "wmt16", "-l", "en-de", "--echo", "ref"])[1].decode("utf-8")
+    lines = ref_text.split("\n")
+    if lines and lines[-1] == "":
+        lines.pop()
+    big = tmp_path / "big.txt"
+    big.write_text("\n".join(x + " ." if i < 100 else x for i, x in enumerate(lines)) + "\n", encoding="utf-8")
+    assert_same_streams(["-t", "wmt16", "-l", "en-de", "-tok", "none", "-i", str(big), "-m", "bleu", "-b"])
+
+
 # -------------------------------------------------------- `-t A,B`: concatenated sets
 
 def test_comma_separated_test_sets_are_concatenated(tmp_path):

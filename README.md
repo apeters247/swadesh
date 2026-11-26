@@ -6,8 +6,11 @@ and the same CLI, and much faster: up to 316× on a 24-thread desktop and 11–3
 **Status (2026-11-26).** Bit-exact on the WMT-style corpora, on the 494-case parity suite and on the
 seven-file differential selection (**0 failing cases**): TER, BLEU, chrF and chrF++ match sacreBLEU on
 every input exercised, including the long unrelated-reference cases that were the last divergence.
-`TESTING.md` records the evidence; `docs/lab-notebook.md` records the work. The CLI suite is green
-too - `tests/test_cli.py` 667 passed, 3 skipped, 3 xfailed - when its fixtures are pointed at the checkout's data
+Ten more language pairs - Gujarati, Kazakh, Lithuanian, Arabic in both directions, Japanese and
+Korean, German-to-French and Turkish - are byte-identical too, on the evidence in
+`docs/multilingual-parity.md`. `TESTING.md` records the evidence; `docs/lab-notebook.md` records
+the work. The CLI suite is green
+too - `tests/test_cli.py` 685 passed, 5 skipped, 4 xfailed - when its fixtures are pointed at the checkout's data
 with `SWADESH_DATA=bench/data` (they default to `/var/www/llmeval/bench/data`).
 
 <p align="center"><img src="docs/img/benchmark.svg" alt="swadesh vs sacreBLEU on 100k segments: BLEU 117x, chrF 314x, chrF++ 283x faster, identical scores" width="720"></p>
