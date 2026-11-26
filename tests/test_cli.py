@@ -759,3 +759,66 @@ def test_multi_system_duplicate_name(wmt_files):
     assert ref_out == sw_out == b""
     assert ref_err == sw_err, f"{ref_err!r} != {sw_err!r}"
     assert (sw_rc == 0) == (ref_rc == 0)
+
+
+# ------------------------------------------------------------------ paired significance
+
+PAIRED_CASES = [
+    ["-m", "bleu", "--paired-ar"],
+    ["-m", "bleu", "--paired-bs"],
+    ["-m", "bleu", "--paired-ar", "--paired-ar-n", "50"],
+    ["-m", "bleu", "--paired-bs", "--paired-bs-n", "250"],
+    ["-m", "ter", "--paired-ar"],
+    ["-m", "bleu", "-par"],
+    ["-m", "bleu", "-pbs"],
+]
+
+
+@pytest.mark.parametrize("flags", PAIRED_CASES, ids=[" ".join(f) for f in PAIRED_CASES])
+def test_paired_significance(wmt_files, flags):
+    """The paired tests: p_value, and mean/ci for the bootstrap one."""
+    refs = wmt_files / "en-de.ref"
+    a = wmt_files / "en-de.short.hyp"
+    b = wmt_files / "en-de.drop.hyp"
+    assert assert_same([str(refs), "-i", str(a), str(b), *flags]) == 0
+
+
+def test_paired_ignores_a_repeated_baseline(wmt_files):
+    """A system named like the baseline is dropped with a note, not compared with itself."""
+    refs = wmt_files / "en-de.ref"
+    a = wmt_files / "en-de.short.hyp"
+    b = wmt_files / "en-de.drop.hyp"
+    assert assert_same([str(refs), "-i", str(a), str(b), str(a), "-m", "bleu", "--paired-bs"]) == 0
+
+
+def test_confidence_with_several_systems_is_refused(wmt_files):
+    """`-ci` is a single-system report; sacreBLEU points at the paired tests instead."""
+    refs = wmt_files / "en-de.ref"
+    a = wmt_files / "en-de.short.hyp"
+    b = wmt_files / "en-de.drop.hyp"
+    args = [str(refs), "-i", str(a), str(b), "-m", "bleu", "-ci"]
+    ref_rc, ref_out, ref_err = run(SACREBLEU, args)
+    sw_rc, sw_out, sw_err = run(SWADESH, args)
+    assert ref_out == sw_out == b""
+    assert ref_err == sw_err, f"{ref_err!r} != {sw_err!r}"
+    assert (sw_rc == 0) == (ref_rc == 0)
+
+
+def test_paired_bootstrap_with_a_float32_metric(wmt_files):
+    """A documented divergence: sacreBLEU cannot serialise its own interval and crashes.
+
+    `sacrebleu ... -m chrf --paired-bs` (and TER) raises
+    `TypeError: Object of type float32 is not JSON serializable` and exits non-zero with no output,
+    because the result's fields are numpy `float32` and `json.dumps` refuses them. swadesh reports
+    the interval instead of reproducing a Python traceback; its arithmetic is checked against the
+    oracle where the oracle works, in the `-ci` parity cases and `tests/test_estimate_ci.py`.
+    """
+    refs = wmt_files / "en-de.ref"
+    a = wmt_files / "en-de.short.hyp"
+    b = wmt_files / "en-de.drop.hyp"
+    args = [str(refs), "-i", str(a), str(b), "-m", "chrf", "--paired-bs"]
+    ref_rc, ref_out, ref_err = run(SACREBLEU, args)
+    sw_rc, sw_out, _ = run(SWADESH, args)
+    assert ref_rc != 0 and ref_out == b""
+    assert b"not JSON serializable" in ref_err
+    assert sw_rc == 0 and sw_out.startswith(b"[") and b'"ci"' in sw_out

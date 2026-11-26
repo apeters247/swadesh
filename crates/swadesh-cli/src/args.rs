@@ -43,6 +43,13 @@ options:
   -ci, --confidence     report a bootstrap confidence interval
   -cin, --confidence-n N
                         bootstrap resamples for the confidence interval (default: 1000)
+  -par, --paired-ar     paired approximate-randomisation test between systems
+  -pbs, --paired-bs     paired bootstrap resampling test between systems
+  -parn, --paired-ar-n N
+                        trials for --paired-ar (default: 10000)
+  -pbsn, --paired-bs-n N
+                        resamples for --paired-bs (default: 1000)
+  -pj, --paired-jobs N  worker processes for the paired test (default: 1)
   --max-ngram-order N   BLEU maximum n-gram order (default: 4)
   --python-version X.Y  emulate sacreBLEU running on this CPython (float sum()
                         semantics changed in 3.12 and 3.14; default: 3.12)
@@ -116,6 +123,11 @@ const OPTS: &[Opt] = &[
     o("--force", "", Nargs::Zero, "force"),
     o("--confidence", "-ci", Nargs::Zero, "confidence"),
     o("--confidence-n", "-cin", Nargs::One, "confidence_n"),
+    o("--paired-ar", "-par", Nargs::Zero, "paired_ar"),
+    o("--paired-bs", "-pbs", Nargs::Zero, "paired_bs"),
+    o("--paired-ar-n", "-parn", Nargs::One, "paired_ar_n"),
+    o("--paired-bs-n", "-pbsn", Nargs::One, "paired_bs_n"),
+    o("--paired-jobs", "-pj", Nargs::One, "paired_jobs"),
     o("--max-ngram-order", "", Nargs::One, "max_order"),
     o("--python-version", "", Nargs::One, "pyver"),
     o("--chrf-char-order", "-cc", Nargs::One, "cc"),
@@ -171,6 +183,12 @@ pub struct Cli {
     /// `-ci`: report a bootstrap confidence interval.
     pub confidence: bool,
     pub confidence_n: i64,
+    /// `--paired-ar` / `--paired-bs`: a paired significance test between systems.
+    pub paired_ar: bool,
+    pub paired_bs: bool,
+    pub paired_ar_n: i64,
+    pub paired_bs_n: i64,
+    pub paired_jobs: i64,
     pub max_ngram_order: i64,
     pub python_version: (u32, u32),
     pub chrf_char_order: i64,
@@ -301,6 +319,11 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
         force: false,
         confidence: false,
         confidence_n: 1000,
+        paired_ar: false,
+        paired_bs: false,
+        paired_ar_n: 10000,
+        paired_bs_n: 1000,
+        paired_jobs: 1,
         max_ngram_order: 4,
         python_version: (3, 12),
         chrf_char_order: 6,
@@ -403,6 +426,11 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
             "force" => cli.force = true,
             "confidence" => cli.confidence = true,
             "confidence_n" => cli.confidence_n = parse_int("--confidence-n", &one())?,
+            "paired_ar" => cli.paired_ar = true,
+            "paired_bs" => cli.paired_bs = true,
+            "paired_ar_n" => cli.paired_ar_n = parse_int("--paired-ar-n", &one())?,
+            "paired_bs_n" => cli.paired_bs_n = parse_int("--paired-bs-n", &one())?,
+            "paired_jobs" => cli.paired_jobs = parse_int("--paired-jobs", &one())?,
             "max_order" => cli.max_ngram_order = parse_int("--max-ngram-order", &one())?,
             "pyver" => {
                 let v = one();

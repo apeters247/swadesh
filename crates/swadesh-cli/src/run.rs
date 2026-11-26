@@ -3,7 +3,7 @@
 use std::borrow::Cow;
 use std::io::Write;
 
-use swadesh_core::significance::{bootstrap_ci, ScoreKind};
+use swadesh_core::significance::{bootstrap_ci, paired_ar, paired_ar_f64, paired_bs, ScoreKind};
 use swadesh_core::stats::{BleuConfig, ChrfConfig};
 use swadesh_core::stats_dispatch::{bleu_stats as bleu_segment, chrf_stats as chrf_segment};
 use swadesh_core::ter_clean::ter_segment as ter_segment_clean;
@@ -17,6 +17,7 @@ use crate::args::{Cli, TOKENIZE_CHOICES};
 use crate::input;
 use crate::lower::py_lower;
 use crate::pyfmt::fixed;
+use crate::pyfmt::json_float;
 use crate::report::{json_str, print_single, Score, Signature};
 use crate::{fail, Fail};
 
@@ -75,6 +76,140 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
     let mut names: Vec<String> = cli.metrics.iter().map(|m| m.to_uppercase()).collect();
     names.sort();
     names.dedup();
+
+    // sacreBLEU refuses `-ci` with more than one system: the interval is a single-system report and
+    // the paired tests are the multi-system one.
+    if cli.confidence && systems.len() > 1 {
+        eprintln!("sacreBLEU: Use paired tests (--paired) for multiple systems.");
+        return Err(Fail { code: 1, msg: String::new() });
+    }
+
+    // Paired significance testing: the first system is the baseline, the others are compared to it.
+    if cli.paired_ar || cli.paired_bs {
+        if cli.sentence_level {
+            return fail(1, "sentence-level output is not available for paired significance testing");
+        }
+        if !json {
+            return fail(1, "the paired report is implemented for --format json so far");
+        }
+        let bs = cli.paired_bs;
+        let n_samples = if bs { cli.paired_bs_n } else { cli.paired_ar_n };
+        if n_samples <= 0 {
+            return fail(1, "the paired test needs at least one sample");
+        }
+        let n_samples = n_samples as usize;
+        let (seed, _) = bootstrap_seed()?;
+        let n_ar_conf = 0usize; // `-ci` with several systems is refused above, as in sacreBLEU
+
+        // A system named like the baseline is dropped, with a note, before anything is counted.
+        let mut keep: Vec<usize> = vec![0];
+        for i in 1..systems.len() {
+            if sys_names[i] == sys_names[0] {
+                eprintln!(
+                    "sacreBLEU: Ignoring '{}' as it was also given as the baseline.",
+                    sys_names[i]
+                );
+            } else {
+                keep.push(i);
+            }
+        }
+        // Any other repeated name is an error.
+        let mut seen = std::collections::HashSet::new();
+        for i in keep.iter().skip(1) {
+            if !seen.insert(sys_names[*i].as_str()) {
+                eprintln!("sacreBLEU: '{}' already used to name a system.", sys_names[*i]);
+                eprintln!("sacreBLEU: Make sure to have a different basename for each system.");
+                return Err(Fail { code: 1, msg: String::new() });
+            }
+        }
+        if keep.len() < 2 {
+            return fail(1, "You must provide at least 2 systems for paired testing.");
+        }
+        eprintln!("sacreBLEU: Found {} systems.", keep.len());
+        let bl_display = format!("Baseline: {}", sys_names[0]);
+
+        // sacreBLEU pre-computes the baseline for *every* metric first, then walks the systems, so
+        // the status lines come out in two passes.
+        let mut baselines: Vec<CorpusRows> = Vec::with_capacity(names.len());
+        for metric in &names {
+            let bl = corpus_rows(cli, metric, &systems[0], &refs, nrefs)?;
+            eprintln!("sacreBLEU: Pre-computing {} statistics for '{}'", metric, bl_display);
+            baselines.push(bl);
+        }
+
+        // Per system, the per-metric result: (name, score, p_value, mean, ci).
+        type Entry = (String, f64, Option<f64>, Option<f64>, Option<f64>);
+        let mut table: Vec<Vec<Entry>> = (0..keep.len()).map(|_| Vec::new()).collect();
+
+        for (mi, metric) in names.iter().enumerate() {
+            let bl = &baselines[mi];
+            let (bl_mean, bl_ci) = if bs {
+                let (m, c) = bootstrap_ci(&bl.f64_rows, bl.width, &bl.kind, n_samples, seed);
+                (Some(m), Some(c))
+            } else if n_ar_conf > 0 {
+                let (m, c) = bootstrap_ci(&bl.f64_rows, bl.width, &bl.kind, n_ar_conf, seed);
+                (Some(m), Some(c))
+            } else {
+                (None, None)
+            };
+            table[0].push((bl.name.clone(), bl.score, None, bl_mean, bl_ci));
+
+            for (k, i) in keep.iter().enumerate().skip(1) {
+                let sys = corpus_rows(cli, metric, &systems[*i], &refs, nrefs)?;
+                eprintln!(
+                    "sacreBLEU: Computing {} for '{}' and extracting sufficient statistics",
+                    sys.name, sys_names[*i]
+                );
+                // sacreBLEU says "paired bootstrap resampling test" but plain "approximate
+                // randomization test": the word "paired" is only in the bootstrap wording.
+                if bs {
+                    eprintln!("sacreBLEU:  > Performing paired bootstrap resampling test (# resamples: {n_samples})");
+                } else {
+                    eprintln!("sacreBLEU:  > Performing approximate randomization test (# trials: {n_samples})");
+                }
+                let diff = (bl.score - sys.score).abs();
+                let (p, mean, ci) = if bs {
+                    let (p, mean, ci) = paired_bs(
+                        &bl.f64_rows, &sys.f64_rows, sys.width, &sys.kind, n_samples, seed, diff,
+                    );
+                    (p, Some(mean), Some(ci))
+                } else if bl.i64_rows.is_empty() {
+                    // TER's statistics are not integral: sacreBLEU shuffles the floats instead.
+                    let p = paired_ar_f64(
+                        &bl.f64_rows, &sys.f64_rows, sys.width, &sys.kind, n_samples, seed, diff,
+                    );
+                    (p, None, None)
+                } else {
+                    paired_ar(
+                        &bl.i64_rows, &sys.i64_rows, sys.width, &sys.kind, n_samples, n_ar_conf, seed, diff,
+                    )
+                };
+                table[k].push((sys.name.clone(), sys.score, Some(p), mean, ci));
+            }
+        }
+
+        let mut rows_out: Vec<String> = Vec::with_capacity(keep.len());
+        for (k, entry) in table.iter().enumerate() {
+            let shown = if k == 0 { bl_display.clone() } else { sys_names[keep[k]].clone() };
+            let mut lines: Vec<String> = vec![format!("        \"system\": {}", json_str(&shown))];
+            for (name, score, p, mean, ci) in entry {
+                let opt = |v: &Option<f64>| match v {
+                    Some(x) => json_float(*x),
+                    None => "null".to_string(),
+                };
+                let fields = vec![
+                    format!("            \"score\": {}", json_float(*score)),
+                    format!("            \"p_value\": {}", opt(p)),
+                    format!("            \"mean\": {}", opt(mean)),
+                    format!("            \"ci\": {}", opt(ci)),
+                ];
+                lines.push(format!("        {}: {{\n{}\n        }}", json_str(name), fields.join(",\n")));
+            }
+            rows_out.push(format!("    {{\n{}\n    }}", lines.join(",\n")));
+        }
+        writeln!(out, "[\n{}\n]", rows_out.join(",\n")).map_err(io_err)?;
+        return Ok(());
+    }
 
     // Multi-system mode: sacreBLEU reports every system side by side instead of one score. Only the
     // JSON form is implemented so far; the text/latex forms need a faithful `tabulate` port.
@@ -197,7 +332,7 @@ fn confidence(
     cli: &Cli,
     rows: &[f64],
     width: usize,
-    kind: &ScoreKind<'_>,
+    kind: &ScoreKind,
 ) -> Result<(Option<(f64, f64)>, Option<String>), Fail> {
     if !cli.confidence {
         return Ok((None, None));
@@ -325,6 +460,107 @@ fn read_systems(cli: &Cli) -> Result<(Vec<Vec<String>>, Vec<String>), Fail> {
     }
 }
 
+
+/// The per-segment statistics of one system for one metric: the rows (as `f64`, and as `i64` for the
+/// metrics whose statistics are integral), the metric's kind and the corpus score.
+struct CorpusRows {
+    f64_rows: Vec<f64>,
+    i64_rows: Vec<i64>,
+    width: usize,
+    kind: ScoreKind,
+    score: f64,
+    name: String,
+}
+
+fn corpus_rows(
+    cli: &Cli,
+    metric: &str,
+    system: &[String],
+    refs: &[Vec<String>],
+    nrefs: usize,
+) -> Result<CorpusRows, Fail> {
+    let _ = nrefs;
+    match metric {
+        "BLEU" => {
+            let tok = bleu_tokenizer(cli)?;
+            let hyps: Vec<Cow<str>> = system.iter().map(|h| maybe_lower(h, cli.lowercase)).collect();
+            let hyp_view: Vec<&str> = hyps.iter().map(|c| c.as_ref()).collect();
+            let seg_owned = segment_refs(refs, cli.lowercase);
+            let seg_refs = as_views(&seg_owned);
+            let (bcfg, scfg) = bleu_config(cli, tok, false);
+            let width = 2 + 2 * bcfg.max_order;
+            let rows = bleu_corpus_stats(&bcfg, &hyp_view, &seg_refs);
+            let mut total = vec![0i64; width];
+            for row in rows.chunks(width) {
+                for (t, v) in total.iter_mut().zip(row) {
+                    *t += v;
+                }
+            }
+            let stats: Vec<f64> = total.iter().map(|&v| v as f64).collect();
+            let score = compute_bleu(&stats, &scfg).score;
+            Ok(CorpusRows {
+                f64_rows: rows.iter().map(|&v| v as f64).collect(),
+                i64_rows: rows,
+                width,
+                kind: ScoreKind::Bleu(scfg),
+                score,
+                name: "BLEU".into(),
+            })
+        }
+        "TER" => {
+            let cfg = ter_config(cli);
+            let lower = !cli.ter_case_sensitive;
+            let hyps: Vec<Cow<str>> = system.iter().map(|h| maybe_lower(h, lower)).collect();
+            let hyp_view: Vec<&str> = hyps.iter().map(|c| c.as_ref()).collect();
+            let seg_owned = segment_refs(refs, lower);
+            let seg_refs = as_views(&seg_owned);
+            let rows = ter_corpus_stats(&cfg, &hyp_view, &seg_refs).map_err(ter_err)?;
+            let mut total = [0.0f64; 2];
+            for row in rows.chunks(2) {
+                total[0] += row[0];
+                total[1] += row[1];
+            }
+            Ok(CorpusRows {
+                score: ter_score_value(total[0], total[1]),
+                f64_rows: rows,
+                i64_rows: Vec::new(),
+                width: 2,
+                kind: ScoreKind::Ter,
+                name: "TER".into(),
+            })
+        }
+        _ => {
+            check_chrf_orders(cli)?;
+            let cfg = chrf_config(cli);
+            let order = cfg.char_order + cfg.word_order;
+            if order == 0 {
+                return fail(1, "IndexError: list index out of range (chrF with no n-gram orders)");
+            }
+            let hyps: Vec<Cow<str>> = system.iter().map(|h| maybe_lower(h, cli.chrf_lowercase)).collect();
+            let hyp_view: Vec<&str> = hyps.iter().map(|c| c.as_ref()).collect();
+            let seg_owned = segment_refs(refs, cli.chrf_lowercase);
+            let seg_refs = as_views(&seg_owned);
+            let width = 3 * order;
+            let rows = chrf_corpus_stats(&cfg, &hyp_view, &seg_refs);
+            let mut total = vec![0i64; width];
+            for row in rows.chunks(width.max(1)) {
+                for (t, v) in total.iter_mut().zip(row) {
+                    *t += v;
+                }
+            }
+            let score = chrf_f_score(&total, order, cfg.beta, cfg.eps_smoothing);
+            Ok(CorpusRows {
+                f64_rows: rows.iter().map(|&v| v as f64).collect(),
+                i64_rows: rows,
+                width,
+                kind: ScoreKind::Chrf { order, beta: cfg.beta, eps_smoothing: cfg.eps_smoothing },
+                score,
+                name: chrf_name(cli),
+            })
+        }
+    }
+}
+
 fn bleu_tokenizer_sig(tok: Tokenizer) -> &'static str {
     match tok {
         Tokenizer::None => "none",
@@ -412,7 +648,7 @@ fn bleu_corpus(
     let res = compute_bleu(&stats, &scfg);
     let verbose = bleu_verbose(total[0], total[1], res.bp, &res.precisions);
     let rows_f: Vec<f64> = rows.iter().map(|&v| v as f64).collect();
-    let (conf, seed_str) = confidence(cli, &rows_f, width, &ScoreKind::Bleu(&scfg))?;
+    let (conf, seed_str) = confidence(cli, &rows_f, width, &ScoreKind::Bleu(scfg))?;
     let mut sig = bleu_signature(cli, tok, nrefs, false);
     if let Some(seed) = &seed_str {
         sig = sig.with_confidence(confidence_samples(cli)?, seed);

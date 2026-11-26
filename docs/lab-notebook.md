@@ -4021,3 +4021,39 @@ different. The paired tests' default format is JSON, so this does not block slic
 
 **Next.** The paired AR/BS numbers on top of this mode (`--paired-ar`, `--paired-bs`,
 `--paired-ar-n`, `--paired-bs-n`, `--paired-jobs`), then the text/latex table.
+
+## 2026-11-26 (continued) - slice 1c-ii, second part: the paired significance tests
+
+**Done.** `swadesh_core::significance` gained `p_value`, `paired_bs`, `paired_ar`, `paired_ar_f64`
+and `paired_result`-shaped reporting; the CLI gained `-par/--paired-ar`, `-pbs/--paired-bs`,
+`-parn/--paired-ar-n` (10000), `-pbsn/--paired-bs-n` (1000) and `-pj/--paired-jobs`, plus the
+per-system statistics helper (`corpus_rows`) they need. The AR mask stays the emulated
+`integers(2, dtype=bool)`, the BS sums the seeded kernel, and `bootstrap_ci` now takes numpy's
+pairwise mean because the paired report prints full floats.
+
+**A real bug found while diffing.** My first `paired_bs` computed the resample differences after
+calling `estimate_ci_np`, which sorts its input in place: the system's resample `k` was then
+compared with the baseline's resample `k` *of a different index*, and the p-value came out 5/1001
+where sacreBLEU's is 32/1001. Taking the differences first fixed it. That is the kind of thing only
+a byte-diff finds.
+
+**Four more behaviours, each measured rather than guessed.** sacreBLEU pre-computes the baseline for
+*every* metric before walking the systems, so the status lines come in two passes; the
+"Computing X for ..." line uses the score object's name (`chrF2`) while "Pre-computing X statistics"
+uses the upper-case metric name; a system named like the baseline is dropped with
+`Ignoring '<name>' as it was also given as the baseline.`; and `-ci` with more than one system is
+refused with `Use paired tests (--paired) for multiple systems.` and exit 1. TER needed the float AR
+path, because its statistics are not integral and sacreBLEU falls back to `pos_sel @ bl + neg_sel @ sys`.
+
+**Verified.** A 13-case byte-diff of stdout, stderr and exit status is **3 differences, all the same
+oracle bug**: any `--paired-bs` run whose metric produces `float32` scores (chrF, TER) makes
+sacreBLEU itself crash with `TypeError: Object of type float32 is not JSON serializable`, because
+`json.dumps` refuses the numpy scalars in the result. Reproducing a Python traceback is not a
+behaviour worth matching, so swadesh reports the interval and the divergence is recorded as a test
+(`test_paired_bootstrap_with_a_float32_metric`) that asserts both sides: the oracle exits non-zero
+with no output, and ours produces the array. Permanent coverage: 10 new parity tests (suite 470 ->
+480), including the two-pass ordering, the baseline-duplicate note and the `-ci` refusal, comparing
+stderr byte-for-byte where the message is sacreBLEU's own.
+
+**Next.** Slice 1c-iii: the multi-system `-f text`/`-f latex` table (the `tabulate` port). Then test
+sets, which unlock `--citation` and `--detail`.
