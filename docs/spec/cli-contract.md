@@ -143,6 +143,21 @@ JSON is a list of objects carrying `"system"` and, per metric, an object with `"
 * the signature gains `bs:<n>` (`--paired-bs`) or `ar:<n>` (`--paired-ar`) and `seed:<seed>` between
   `nrefs` and the metric-specific pairs.
 
+### `--citation`
+
+`--citation` (alias `--cite`) prints the citation of a test set, so sacreBLEU has no default for it
+and refuses the flag without `-t`: `sacreBLEU: I need a test set (-t).` on stderr, exit 1. The place
+of that check is measured: it runs after the sentence-level one, so `--citation -m bleu chrf -sl`
+reports the metric and `--citation -sl` reports the test set; it runs before the reference checks, so
+bare `--citation` reports the test set rather than the missing references; and `--list`
+short-circuits it entirely.
+
+With a test set, sacreBLEU 2.6.0 **crashes** - `TypeError: argument of type 'WMTXMLDataset' is not
+iterable`, from a `'citation' not in DATASETS[test_set]` test whose values are `Dataset` objects - so
+the set-specific citation is not reproduced. `-t` stays unsupported and the combination is refused
+with the `-t` hint, which is a documented divergence: the oracle exits 1 with a traceback where
+swadesh exits 2 with the hint.
+
 ## Input handling
 
 * `-nr N` splits each reference line on tabs into `N` references.
