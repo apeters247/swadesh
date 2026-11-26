@@ -3930,3 +3930,36 @@ and an exotic tokenizer all fail with the message written for the occasion, not 
 **0 failures.** `test_dependency_licences` + `test_version` + `test_provenance`: 21 passed.
 
 **Next.** One final seven-file gate on this frozen tree, then the goal is done.
+
+## 2026-11-26 - new goal: one engine, three faces. Slice 1, first increment: `estimate_ci` in Rust
+
+**Goal.** swadesh gets two faces from one engine: the Python package becomes compatibility only
+(`import swadesh as sacrebleu`, `patch()`, the MCP server, the sacreBLEU-shaped classes) and the
+compiled Rust CLI becomes a complete drop-in, with all logic in `swadesh-core`.
+
+**Measured first.** The Rust half of significance was already there (`nprng.rs` emulates numpy's
+`default_rng` exactly, `resample.rs` holds the bootstrap/AR kernels); what was Python was the
+orchestration. The reference outputs to reproduce: `-ci` adds `bs:1000|seed:12345` to the signature,
+`confidence_mean`/`confidence_var`/`confidence` to the JSON and ` (mu = 37.1 +/- 14.3)` to the text
+line; `--paired-ar` runs 10000 trials by default and its p-value floor is `9.999000099990002e-05`,
+which is exactly `(k+1)/(n+1)`.
+
+**This increment.** `swadesh_core::resample::estimate_ci` (mean + the 1/40..39/40 half-spread),
+exposed to Python as `_swadesh.estimate_ci`, with a differential test.
+
+**Two numeric findings, both measured rather than assumed.** sacreBLEU's bootstrap scores are
+Python floats for BLEU and numpy `float32` for chrF/TER, because BLEU's scorer goes through
+`math.exp` and chrF's does not. And CPython's `statistics.mean` sums floats *exactly* (rational
+arithmetic), so no floating-point sum can be assumed identical to it. So the question was whether
+that ulp ever reaches the printed output: over 200,000 realistic samples (n = 50..10,000, scores in
+0..100, 5% near-zero) a plain `f64` sum, `math.fsum` and a Neumaier-compensated sum each agreed with
+`statistics.mean` at the two printed decimals **0 times differing**. The compensated sum is what
+landed, since it costs nothing.
+
+**Verified.** `cargo test -p swadesh-core --lib` 82 passed (two new `estimate_ci` unit tests);
+`tests/test_estimate_ci.py` 6 passed; and a 20,000-trial differential against CPython reports
+**0 differences** in the printed mean and **0** in the exact interval.
+
+**Next.** Slice 1 continues: wire `-ci`/`--confidence`/`--confidence-n` in the Rust CLI (signature
+`bs`/`seed` pairs, the JSON confidence fields, the text `mu = x +/- y`), then the paired AR/BS tests
+and their seven flags, byte-diffing each against `sacrebleu` and extending the CLI parity suite.

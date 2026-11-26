@@ -620,6 +620,12 @@ fn chrf_stats_one(
     Ok(out)
 }
 
+/// sacreBLEU's `estimate_ci` over the resample scores: `(mean, half_width)`.
+#[pyfunction]
+fn estimate_ci(mut scores: Vec<f64>) -> (f64, f64) {
+    swadesh_core::resample::estimate_ci(&mut scores)
+}
+
 /// Tokenize one line exactly like sacreBLEU's tokenizer of that name
 /// (`13a`, `intl`, `zh`, `char`, `none`), returning the same string.
 #[pyfunction]
@@ -730,6 +736,7 @@ fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(bleu_stats, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_stats, m)?)?;
     m.add_function(wrap_pyfunction!(ter_stats, m)?)?;
+    m.add_function(wrap_pyfunction!(estimate_ci, m)?)?;
     m.add_function(wrap_pyfunction!(ter_preprocess, m)?)?;
     m.add_function(wrap_pyfunction!(bleu_sentence_scores, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_sentence_scores, m)?)?;
