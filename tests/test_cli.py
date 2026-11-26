@@ -429,6 +429,39 @@ def test_sentence_level_refuses_statistical_tests(tmp_path, flags):
     assert_same_streams([str(refs), "-i", str(hyp), "-sl", *flags])
 
 
+# -------------------------------------------------------- `-t A,B`: concatenated sets
+
+def test_comma_separated_test_sets_are_concatenated(tmp_path):
+    """`-t A,B` concatenates the sets in the order given, each keeping its own fields.
+
+    Measured: no de-duplication (`wmt16,wmt16` is twice as long); `--echo all` uses *each set's own*
+    field list, so the rows have different column counts; a named field must exist in every set and
+    the error names the first that lacks it; a pair missing from a set fails with that set's own
+    "No such language pair" block; an unknown name fails with the usual unknown-set lines; and
+    `-t A,B --list` prints nothing at all. `-ol` filters per set (only compared here when every
+    set has the annotation: on a non-WMT set it is the registered raw-file divergence), and
+    `-d` merges the groups by (origlang, domain) over the concatenation.
+    """
+    if not (_have_set("wmt16") and _have_set("multi30k/2017")):
+        pytest.skip("needs wmt16 and multi30k/2017 cached under $SACREBLEU")
+    for args in (
+        ["-t", "multi30k/2017,wmt16", "-l", "en-de", "--echo", "src"],
+        ["-t", "multi30k/2017,wmt16", "-l", "en-de", "--echo", "all"],
+        ["-t", "multi30k/2017,wmt16", "-l", "en-de", "--echo", "src", "ref"],
+        ["-t", "wmt16,wmt16", "-l", "en-de", "--echo", "ref"],
+        ["-t", "wmt16,multi30k/2017", "-l", "en-de", "--echo", "all"],
+        ["-t", "wmt16,wmt16", "-l", "en-de", "-ol", "en", "--echo", "src"],
+        ["-t", "multi30k/2017,wmt16", "-l", "en-de", "--echo", "docid"],
+        ["-t", "wmt16,multi30k/2017", "--list"],
+        ["-t", "wmt16,multi30k/2017", "-l", "en-fr", "--echo", "src"],
+        ["-t", "wmt16,bogus", "-l", "en-de", "--echo", "src"],
+    ):
+        assert_same_streams(args)
+    ref = run(SACREBLEU, ["-t", "wmt16,wmt16", "-l", "en-de", "--echo", "ref"])[1]
+    assert_same(["-t", "wmt16,wmt16", "-l", "en-de", "-f", "text"], stdin=ref)
+    assert_same(["-t", "wmt16,wmt16", "-l", "en-de", "-d", "-f", "text"], stdin=ref)
+
+
 # ------------------------------------------------------------------- .gz input
 
 def _assert_same_error_line(args):

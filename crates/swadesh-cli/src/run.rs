@@ -33,6 +33,10 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
         // With `-t`, list that set's pairs and fields; an unknown set prints nothing at all and
         // exits 0, which is what the oracle does (measured).
         if let Some(name) = &cli.test_set {
+            // Measured: a comma-separated list makes `--list` print nothing at all.
+            if name.contains(',') {
+                return Ok(());
+            }
             if let Some(found) = dataset::lookup(name) {
                 for (pair, fields) in &found.pairs {
                     // With `-l` only that pair is listed (measured); a pair the set does not have
@@ -94,21 +98,25 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
     // The test set, when `-t` names one: the references come from it, so the reference checks
     // below do not apply. Measured order: the `-t`-versus-positional conflict, then the missing
     // language pair, then the set lookup, then the pair.
-    let mut test_set: Option<(dataset::Found, String)> = None;
+    // `-t A,B` concatenates the sets in the order given (measured); each keeps its own fields and the
+    // filters apply per set, so the segments are joined and every index is global afterwards.
+    let mut test_sets: Vec<(dataset::Found, String)> = Vec::new();
     if let Some(name) = cli.test_set.clone() {
         if !cli.refs.is_empty() {
             eprintln!("sacreBLEU: I need exactly one of (a) a predefined test set (-t) or (b) a list of references");
             return Err(Fail { code: 1, msg: String::new() });
         }
-        let found = dataset::lookup(&name).ok_or_else(|| dataset::unknown_set(&name))?;
+        let first = name.split(',').next().unwrap_or(&name).to_string();
+        let first_found = dataset::lookup(&first).ok_or_else(|| dataset::unknown_set(&first))?;
         if cli.citation {
             // The citation of a built-in set is in the catalogue; a user set may carry `.citation`.
-            let citation = dataset::citation_of(&name)
-                .or_else(|| dataset::read_field(&found.dir.join("citation")).ok().map(|l| l.join("\n")));
+            // With a comma list the oracle crashes; swadesh prints the first set's citation.
+            let citation = dataset::citation_of(&first)
+                .or_else(|| dataset::read_field(&first_found.dir.join("citation")).ok().map(|l| l.join("\n")));
             match citation {
                 Some(text) => writeln!(out, "{text}").map_err(io_err)?,
                 None => {
-                    eprintln!("sacreBLEU: No citation for test set '{name}'.");
+                    eprintln!("sacreBLEU: No citation for test set '{first}'.");
                     return Err(Fail { code: 1, msg: String::new() });
                 }
             }
@@ -118,17 +126,26 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
             eprintln!("sacreBLEU: I need a language pair (-l). Use --list to see available language pairs for this test set.");
             return Err(Fail { code: 1, msg: String::new() });
         };
-        if found.fields_of(&pair).is_none() {
-            let available: Vec<String> = found.pairs.iter().map(|(p, _)| p.clone()).collect();
-            return Err(dataset::unknown_pair(&name, &pair, &available));
+        for (index, part) in name.split(',').enumerate() {
+            // The first name was already resolved above, so its errors keep their order.
+            let found = if index == 0 {
+                dataset::lookup(&first).ok_or_else(|| dataset::unknown_set(&first))?
+            } else {
+                dataset::lookup(part).ok_or_else(|| dataset::unknown_set(part))?
+            };
+            if found.fields_of(&pair).is_none() {
+                let available: Vec<String> = found.pairs.iter().map(|(p, _)| p.clone()).collect();
+                return Err(dataset::unknown_pair(part, &pair, &available));
+            }
+            test_sets.push((found, pair.clone()));
         }
-        test_set = Some((found, pair));
     }
+
 
     // A cached set whose processed files are missing is rebuilt from its raw tree when the family
     // is the measured SGML one - sacreBLEU regenerates them the same way, which is why removing a
     // sidecar brings it back. A family the measured rule does not cover keeps the usual refusal.
-    if let Some((found, pair)) = &test_set {
+    for (found, pair) in &test_sets {
         let fields = found.fields_of(pair).cloned().unwrap_or_default();
         if fields.iter().any(|field| !dataset::field_path(found, pair, field).exists()) {
             // Each family says whether it recognises the layout. A raw tree may already be there; if
@@ -154,67 +171,88 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
         }
     }
 
+    // Each set's start in the concatenation, and its length, which every later index needs.
+    let mut offsets: Vec<usize> = Vec::with_capacity(test_sets.len());
+    let mut lengths: Vec<usize> = Vec::with_capacity(test_sets.len());
+    let mut running = 0usize;
+    for (found, pair) in &test_sets {
+        let length = set_length(found, pair)?;
+        offsets.push(running);
+        lengths.push(length);
+        running += length;
+    }
+
     // `-ol`/`--subset` are segment filters, and they apply to the whole segment set: the reference,
     // the system output *by position*, and what `--echo` prints. Both need a test set - without one
     // the oracle raises a traceback, so swadesh reports a clean error instead (registered).
     let mut filter_without_set = false;
-    let mask: Option<Vec<usize>> = match (&test_set, cli.origlang.as_deref(), cli.subset.as_deref()) {
-        (None, None, None) => None,
-        (None, _, _) => {
-            filter_without_set = true;
-            None
+    let wants_filter = cli.origlang.is_some() || cli.subset.is_some();
+    let mask: Option<Vec<usize>> = if test_sets.is_empty() {
+        filter_without_set = wants_filter;
+        None
+    } else if !wants_filter {
+        None
+    } else {
+        let mut kept: Vec<usize> = Vec::new();
+        for (index, (found, pair)) in test_sets.iter().enumerate() {
+            let local = dataset::segment_filter(found, pair, cli.origlang.as_deref(), cli.subset.as_deref())?;
+            kept.extend(local.iter().map(|&i| offsets[index] + i));
         }
-        (Some((found, pair)), origlang, subset) => {
-            if origlang.is_none() && subset.is_none() {
-                None
-            } else {
-                Some(dataset::segment_filter(found, pair, origlang, subset)?)
-            }
-        }
+        Some(kept)
     };
     if let Some(kept) = &mask {
         // Nothing matched: `--echo` prints nothing and exits 0 (measured), scoring refuses with the
         // oracle's line - including its doubled subset value.
         if kept.is_empty() && cli.echo.is_empty() {
-            let name = &test_set.as_ref().expect("a test set implies a mask").0.name;
-            return Err(dataset::no_sentence(name, cli.origlang.as_deref(), cli.subset.as_deref()));
+            let name = cli.test_set.clone().unwrap_or_default();
+            return Err(dataset::no_sentence(&name, cli.origlang.as_deref(), cli.subset.as_deref()));
         }
     }
 
     // `--echo FIELD...`: print the set's text and quit. `all` means every field, in the set's own
     // order; anything else must be a field the pair has.
-    if let Some((found, pair)) = &test_set {
-        if !cli.echo.is_empty() {
+    // `--echo FIELD...`: print the sets' text and quit. `all` means every field, in each set's own
+    // order; a named field must exist in *every* set (the error names the first that lacks it), and
+    // with a comma list each set prints its own rows, in order.
+    if !cli.echo.is_empty() && !test_sets.is_empty() {
+        if cli.echo.iter().any(|e| e == "all") && cli.echo.len() > 1 {
+            eprintln!("sacreBLEU: Cannot use --echo all with other fields");
+            return Err(Fail { code: 1, msg: String::new() });
+        }
+        // `all` is per set (`--echo all` prints each set's own field list), so only named fields are
+        // validated, and they must exist in every set.
+        for (found, pair) in test_sets.iter().filter(|_| !cli.echo.iter().any(|e| e == "all")) {
             let fields = found.fields_of(pair).expect("the pair was checked above");
             let default_ref = found.default_reference(pair);
-            // Measured: `all` is exclusive, and even `--echo all all` is refused; the -t/-l
-            // checks above come first.
-            if cli.echo.iter().any(|e| e == "all") && cli.echo.len() > 1 {
-                eprintln!("sacreBLEU: Cannot use --echo all with other fields");
-                return Err(Fail { code: 1, msg: String::new() });
+            for field in &cli.echo {
+                if !fields.contains(field) && !(field == "ref" && default_ref.is_some()) {
+                    return Err(dataset::unknown_field(
+                        &found.name,
+                        pair,
+                        field,
+                        fields,
+                        default_ref.as_deref(),
+                    ));
+                }
             }
+        }
+        for (index, (found, pair)) in test_sets.iter().enumerate() {
+            let fields = found.fields_of(pair).expect("the pair was checked above");
+            let default_ref = found.default_reference(pair);
             let wanted: Vec<String> = if cli.echo.iter().any(|e| e == "all") {
                 fields.clone()
             } else {
-                let mut wanted = Vec::with_capacity(cli.echo.len());
-                for field in &cli.echo {
-                    if fields.contains(field) {
-                        wanted.push(field.clone());
-                    } else if field == "ref" && default_ref.is_some() {
-                        // `ref` stays accepted as an alias for the default reference, which the
-                        // oracle documents in its own field error ("will return ref:A").
-                        wanted.push(default_ref.clone().expect("checked"));
-                    } else {
-                        return Err(dataset::unknown_field(
-                            &found.name,
-                            pair,
-                            field,
-                            fields,
-                            default_ref.as_deref(),
-                        ));
-                    }
-                }
-                wanted
+                cli.echo
+                    .iter()
+                    .map(|field| {
+                        if fields.contains(field) {
+                            field.clone()
+                        } else {
+                            // `ref` stays accepted as an alias for the default reference.
+                            default_ref.clone().expect("checked above")
+                        }
+                    })
+                    .collect()
             };
             let mut columns: Vec<Vec<String>> = Vec::with_capacity(wanted.len());
             for field in &wanted {
@@ -225,7 +263,13 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
                 columns.push(dataset::read_field(&path)?);
             }
             let rows: Vec<usize> = match &mask {
-                Some(kept) => kept.clone(),
+                Some(kept) => kept
+                    .iter()
+                    .filter(|&&global| {
+                        global >= offsets[index] && global < offsets[index] + lengths[index]
+                    })
+                    .map(|&global| global - offsets[index])
+                    .collect(),
                 None => (0..columns.iter().map(|c| c.len()).max().unwrap_or(0)).collect(),
             };
             for i in rows {
@@ -233,8 +277,8 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
                     columns.iter().map(|c| c.get(i).map(String::as_str).unwrap_or("")).collect();
                 writeln!(out, "{}", line.join("\t")).map_err(io_err)?;
             }
-            return Ok(());
         }
+        return Ok(());
     }
     if cli.num_refs != 1 && cli.refs.len() > 1 {
         return fail(
@@ -243,7 +287,7 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
              in a single file. You cannot then provide multiple reference files.",
         );
     }
-    if cli.refs.is_empty() && test_set.is_none() {
+    if cli.refs.is_empty() && test_sets.is_empty() {
         eprintln!(
             "sacreBLEU: If manual references given, make sure to provide them before the \
              -i/--input argument to avoid confusion."
@@ -279,16 +323,20 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
     }
 
     // The references: the set's default reference when `-t` was used, else the positional files.
-    let refs: Vec<Vec<String>> = match &test_set {
-        Some((found, pair)) => {
+    let refs: Vec<Vec<String>> = if test_sets.is_empty() {
+        read_refs(cli)?
+    } else {
+        // The concatenation: each set's default reference, in order.
+        let mut all: Vec<String> = Vec::new();
+        for (found, pair) in &test_sets {
             let field = found.default_reference(pair).unwrap_or_else(|| "ref".to_string());
             let path = dataset::field_path(found, pair, &field);
             if !path.exists() {
                 return Err(dataset::not_cached(found, pair, &field, &path));
             }
-            vec![dataset::read_field(&path)?]
+            all.extend(dataset::read_field(&path)?);
         }
-        None => read_refs(cli)?,
+        vec![all]
     };
     let (systems, sys_names) = read_systems(cli)?;
     // A segment filter keeps the same indices in the reference and in every system, which is why a
@@ -378,7 +426,7 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
     if systems.iter().any(|s| refs.iter().any(|r| r.len() != s.len())) {
         eprintln!("sacreBLEU: System and reference streams have different lengths.");
         // With a test set the oracle adds a cache hint naming the set's directory (measured).
-        if let Some((found, _)) = &test_set {
+        if let Some((found, _)) = test_sets.first() {
             eprintln!("sacreBLEU: This could be an issue with your system output or with sacreBLEU's reference database if -t is given.");
             eprintln!("sacreBLEU: For the latter, try cleaning out the cache by typing:");
             eprintln!();
@@ -699,16 +747,51 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
     }
     print_single(&results, json, out).map_err(io_err)?;
     if detail {
-        match &test_set {
+        if test_sets.is_empty() {
             // Without a test set there is nothing to group by, and the oracle says so on stdout.
-            None => writeln!(out, "No subset information found. Consider using --origlang argument.")
-                .map_err(io_err)?,
-            Some((found, pair)) => write_detail(
-                cli, out, found, pair, &names, &systems[0], &refs, nrefs, width, &mask,
-            )?,
+            writeln!(out, "No subset information found. Consider using --origlang argument.")
+                .map_err(io_err)?;
+        } else {
+            // With a comma list the oracle groups the *concatenated* columns, so the groups are
+            // merged by (origlang, domain) over global indices - the same as grouping each set and
+            // summing (measured: `wmt16,wmt16` prints de 2998 and en 3000).
+            let mut groups: Vec<(String, String, Vec<usize>)> = Vec::new();
+            for (index, (found, pair)) in test_sets.iter().enumerate() {
+                for (lang, domain, local) in dataset::groups(found, pair)? {
+                    let global: Vec<usize> = local.iter().map(|&i| offsets[index] + i).collect();
+                    match groups.iter_mut().find(|(l, d, _)| *l == lang && *d == domain) {
+                        Some((_, _, existing)) => existing.extend(global),
+                        None => groups.push((lang, domain, global)),
+                    }
+                }
+            }
+            groups.sort_by(|a, b| {
+                (a.0.clone(), a.1.clone()).cmp(&(b.0.clone(), b.1.clone()))
+            });
+            write_detail(cli, out, &groups, &names, &systems[0], &refs, nrefs, width, &mask)?;
         }
     }
     Ok(())
+}
+
+/// The number of segments a set contributes to the concatenation: its default reference's lines.
+fn set_length(found: &dataset::Found, pair: &str) -> Result<usize, Fail> {
+    // Any one of the set's streams has one line per segment; a user set may carry only `src`, so the
+    // default reference is preferred and then the source and then whatever field exists.
+    let declared = found.fields_of(pair).cloned().unwrap_or_default();
+    let mut candidates: Vec<String> = Vec::new();
+    if let Some(field) = found.default_reference(pair) {
+        candidates.push(field);
+    }
+    candidates.push("src".to_string());
+    candidates.extend(declared.iter().cloned());
+    for field in candidates {
+        let path = dataset::field_path(found, pair, &field);
+        if path.exists() {
+            return Ok(dataset::read_field(&path)?.len());
+        }
+    }
+    Err(dataset::not_cached(found, pair, "src", &dataset::field_path(found, pair, "src")))
 }
 
 /// The `-d/--detail` block: one line per group per metric, in sacreBLEU's measured layout. The
@@ -719,8 +802,7 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
 fn write_detail(
     cli: &Cli,
     out: &mut dyn Write,
-    found: &dataset::Found,
-    pair: &str,
+    groups: &[(String, String, Vec<usize>)],
     names: &[String],
     system: &[String],
     refs: &[Vec<String>],
@@ -728,8 +810,7 @@ fn write_detail(
     width: usize,
     mask: &Option<Vec<usize>>,
 ) -> Result<(), Fail> {
-    let groups = dataset::groups(found, pair)?;
-    // `groups` indexes the unfiltered set; `system`/`refs` are already masked, so the group is
+    // `groups` indexes the unfiltered concatenation; `system`/`refs` are already masked, so the group is
     // translated into positions within the mask. (A segment filter and `-d` together make the
     // oracle raise a traceback; swadesh reports the groups of the filtered set instead - registered.)
     let positions_of = |idx: &Vec<usize>| -> Vec<usize> {
@@ -751,7 +832,7 @@ fn write_detail(
         score: f64,
     }
     let mut rows: Vec<Row> = Vec::new();
-    for (lang, domain, idx) in &groups {
+    for (lang, domain, idx) in groups {
         let idx = positions_of(idx);
         if idx.is_empty() {
             continue;
