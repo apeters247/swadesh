@@ -114,6 +114,35 @@ All six print with sacreBLEU's own `sacreBLEU: ` prefix on stderr.
   case for the signature, so the two are separate behaviours.
 * `--paired-ar-n` / `--paired-bs-n` at or below zero fall back to their defaults (10000 / 1000).
 
+### The paired report (`--paired-ar` / `--paired-bs`)
+
+With several systems the first is the baseline and every other one is compared with it, per metric.
+JSON is a list of objects carrying `"system"` and, per metric, an object with `"score"`, `"p_value"`,
+`"mean"` and `"ci"` (`null` where an option does not produce one). Text is `fancy_grid` and -f latex
+`latex_booktabs` again, with these differences from the multi-system report, all measured:
+
+* the `System` column carries `Baseline` for the first system and the system's name for the rest;
+* a metric column's heading is `<NAME> (μ ± 95% CI)` for `--paired-bs` and plain `<NAME>` for
+  `--paired-ar`;
+* a baseline row is `<score> (<mean> ± <ci>)` for `--paired-bs` and `<score>` for `--paired-ar`;
+* every other system takes **two** grid rows: the score row, then a row whose first cell is empty
+  and whose metric cells hold `(p = 0.2941)` - four decimals, with `*` appended when the p-value is
+  below the 0.05 significance threshold. No row separator separates those two rows; the separator
+  divides systems;
+* LaTeX has one row per system, so the p-value is appended to the score cell there instead:
+  `58.1 (46.8 ± 38.0) (p = 0.2941)`, and the heading's `%` is escaped as `\%`;
+* the footer is a titled block whose dashes are as long as the title, then four paragraphs: the
+  "Each system is pairwise compared to ." line (the baseline name is printed empty - kept, it is
+  what sacreBLEU prints), a null-hypothesis paragraph, a significance-threshold paragraph that also
+  mentions the `*` marker and red highlighting, and a NOTE paragraph. The title and second line
+  differ between the two tests:
+  `Paired bootstrap resampling test with <n> resampling trials` plus
+  `Actual system score / bootstrap estimated true mean / 95% CI are provided for each metric.`, or
+  `Paired approximate randomization test with <n> trials` plus
+  `Actual system score is provided for each metric.`;
+* the signature gains `bs:<n>` (`--paired-bs`) or `ar:<n>` (`--paired-ar`) and `seed:<seed>` between
+  `nrefs` and the metric-specific pairs.
+
 ## Input handling
 
 * `-nr N` splits each reference line on tabs into `N` references.
