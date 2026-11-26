@@ -68,6 +68,7 @@ Not covered: `--download` (needs network; it fetches a set and quits). `spm`, `f
 |---|---|
 | `cargo test --release --workspace` | 13 suites, 0 failed (9 of them the CLI's own unit tests) |
 | the `swadesh` console script | runs the compiled code (`_swadesh.run_cli`), no sacreBLEU and no second binary needed | the same: `swadesh.cli` calls `_swadesh.run_cli`, with sacreBLEU's own parser kept only as a fallback when the extension is missing | 2026-11-26: `tests/test_parity.py`'s CLI section is 76 passed / 1 xfailed (the unbuilt tokenizer) with `SWADESH_DATA` pointing at the cache |
+| the real-model harness (`/home/kpeters/eval-compare/work/compare_real.py`) | qwen3.8-27b and llama3.3:70b, 150 en-de segments each, 12 configurations apiece: **24/24 bit-exact, 0/300 sentence-level differences**, and 10/10 byte-identical CLI invocations (`total mismatches: 0` on both) | re-measured 2026-11-26 on the extension rebuilt from this tree; the translations are cached, so this is scoring evidence |
 | `tests/test_cli.py` (runs the **Rust binary** against the sacrebleu CLI) | 582 passed, 2 xfailed, 0 failed in 6m26s (the file was 448 cases at the goal start) |
 | `tests/test_parity.py` | 436 passed, 58 skipped |
 | `tests/test_frozen_oracle.py`, `test_provenance.py`, `test_score_objects.py`, `test_estimate_ci.py`, `test_dependency_licences.py`, `test_version.py`, `test_base_port.py`, `test_metrics_fallback.py`, `test_ter_preprocess.py`, `test_regressions.py`, `test_numrefs_none_refs.py` | 0 failed (with `test_parity.py`, 673 passed / 58 skipped together) |

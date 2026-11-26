@@ -5164,9 +5164,17 @@ TER 62.013786, TER case_sensitive 62.506155, TER normalized 56.782883. The CLI h
 chrF++, all metrics, floor+intl, sentence-level chrF++ json - was byte-identical on stdout and exit
 code in all five.
 
-**Provenance note.** The extension loaded by the harness was built at 10:55, before slices 12-15
-(codecs, `.gz`, the error-line printing, the parsing and refusal fixes). None of those touch scoring,
-and the scores above are byte-identical, but the *nearest* statement is "the metric code has not
-changed since that build". A rebuild and re-run is recorded below.
+**Provenance, resolved by re-running.** The first pass loaded the extension built at 10:55, before
+slices 12-15 (codecs, `.gz`, the error-line printing, the parsing and refusal fixes). The extension was
+rebuilt from this tree and both models re-run: **12 configurations each, all bit-exact, 0 of 150
+sentence-level differences each, and the harness's `total mismatches: 0` for both, including five
+byte-identical CLI invocations each.**
+
+* qwen3.8-27b: BLEU 26.434178, intl 27.013552, floor 0.1 26.434178, lowercase 26.689483; chrF
+  59.604976, char0/word0 59.604976, beta=3 59.703728, lowercase 60.856375, chrF++ 56.114313; TER
+  62.370753, case-sensitive 62.900049, normalized 56.381014.
+* llama3.3:70b: BLEU 26.423190, intl 26.783183, floor 0.1 26.423190, lowercase 26.723305; chrF
+  59.171230, char0/word0 59.171230, beta=3 59.173297, lowercase 60.352480, chrF++ 55.716776; TER
+  62.013786, case-sensitive 62.506155, normalized 56.782883.
 
 **Next.** `-t A,B` (concatenated sets), then the `.zip`/plain-`.gz` download shapes.
