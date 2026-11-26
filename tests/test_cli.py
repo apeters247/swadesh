@@ -371,7 +371,7 @@ def test_error_exit_codes_match(tmp_path, args, stdin):
     ["-t", "wmt22", "-l", "en-de"],
     ["-t", "wmt22", "-l", "en-de", "--confidence"],
     ["x.txt", "--paired-bs", "-i", "y.txt", "z.txt"],
-    ["x.txt", "-i", "y.txt", "--confidence"],
+    ["x.txt", "-i", "y.txt", "--citation"],
     ["x.txt", "-i", "y.txt", "-tok", "ja-mecab"],
     ["x.txt", "-i", "y.txt", "-tok", "ko-mecab"],
     ["x.txt", "-i", "y.txt", "-tok", "spm"],
