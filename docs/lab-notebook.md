@@ -5282,3 +5282,45 @@ it was removed; the malformed-layout refusal it sat next to is still covered by
 `test_an_unparsable_layout_still_refuses`.
 
 **Next.** Nothing left on the download list; what remains is the documented divergence list.
+
+## 2026-11-26 (continued) - the speed re-run, and the docs brought up to date
+
+**Attempted.** Re-measure the speed claims on the current tree rather than trusting the 2026-11-19
+numbers, then bring every document that quotes them into line, and check that everything still
+passes before committing.
+
+**Suites first.** `cargo test --release --workspace` 13 suites 0 failed; `tests/test_cli.py` 684
+passed, 5 skipped (opt-in download tests), 4 xfailed, 0 failed; the parity CLI section 76 passed /
+1 xfailed; the Python selection (parity, the 13-file fast set, fuzz+coverage+mutation, and
+`test_ter`/`test_deep`/`test_differential_long`) all green; the real-model harness 24/24
+configurations bit-exact with 0/300 sentence-level differences.
+
+**Speed, on an idle Ryzen 9 7900X (load 0.39 at the start), CPython 3.11.14, sacreBLEU 2.6.0.**
+Every timed case is compared `==` against sacreBLEU; `extra_speed.py` reports `MISMATCHES 0`.
+
+* 24 threads, 20k WMT22 en-de: BLEU 140.1x, chrF 316.4x, chrF++ 280.3x, TER (10k) 116.2x; sentence
+  BLEU 91.7x, sentence chrF 235.2x; BLEU + 1000 bootstrap 23.9x.
+* 24 threads, 100k: BLEU 117.1x, chrF 314.1x, chrF++ 282.9x.
+* One core (`taskset -c 0`), 20k: BLEU 13.7x, chrF 28.4x, chrF++ 24.1x, TER 35.6x, sentence BLEU
+  11.0x, sentence chrF 22.7x, bootstrap 15.0x - so **11-36x**, not the "roughly 10-25x" the post
+  said.
+* The workloads: batch `sentence_scores` 13.5x (BLEU) and 23.1x (chrF), MBR 40.4x, bootstrap 10.6x,
+  naive loop 3.8x, `PairedTest` 0.8x, and **the CLI at 0.9-1.0x** (it used to be 0.6-0.7x): the
+  console script running the compiled code removed the adapter overhead, which is the one place
+  this session's code changes moved a benchmark.
+
+**Docs updated.** `README.md` (the headline range, the 20k/100k table, the chart's alt text),
+`docs/blog-post.md` (front matter in the huggingface.co/blog shape, the tl;dr, both tables, the
+single-core range, and the CLI bullet rewritten as parity rather than a 60-90 ms deficit),
+`bench/results/SUMMARY.md` (a dated section with all three runs), and the regenerated
+`docs/img/benchmark.svg` (from `bench/results/troy1-100k.json`, which now holds today's 100k run;
+matplotlib came from a throwaway `/tmp/plotenv` so the test venvs are untouched). `PLAN.md`'s
+WS0.2/WS0.3 rows now say done - every catalogue format fetches.
+
+**What the stale numbers were hiding.** The old README said 41-331x and the post 78/258/241/145x;
+the corpus cases are now faster (the machine was idle) but TER is slower than the old 164x (115-116x
+today), and the honest negatives changed shape: the CLI is no longer a deficit, `PairedTest` still
+is.
+
+**Next.** Publish, per `PLAN.md` §9 and `LAUNCH.md`: the post is ready, but its `pip install swadesh`
+needs the PyPI release (or a public repo) to exist first.

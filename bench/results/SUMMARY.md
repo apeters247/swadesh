@@ -192,3 +192,56 @@ DONE
 | sentence chrF x20000 | 4.251 | 0.1139 | 37.3x | yes |
 | BLEU + bootstrap(1000) x5000 | 0.619 | 0.0907 | 6.8x | yes |
 
+## 2026-11-26 re-run (current tree, `speed-2026-11-26-*.json`)
+
+Same machine (`troy1`, Ryzen 9 7900X, 24 threads), CPython 3.11.14, sacreBLEU 2.6.0, numpy 2.4.6,
+load average 0.39 at the start - i.e. an idle machine, which is why the corpus numbers are higher
+than the 2026-11-19 run above. Every row compared its result exactly (`exact yes` throughout, and
+`extra_speed.py` reports `MISMATCHES 0`).
+
+### 24 threads, WMT22 en-de
+
+| case | sacreBLEU | swadesh | speedup |
+|---|---:|---:|---:|
+| BLEU corpus, 20k | 1.168 s | 0.0083 s | 140.1x |
+| chrF corpus, 20k | 3.458 s | 0.0109 s | 316.4x |
+| chrF++ corpus, 20k | 4.006 s | 0.0143 s | 280.3x |
+| TER corpus, 10k | 6.406 s | 0.0552 s | 116.2x |
+| sentence BLEU, 20k | 0.967 s | 0.0105 s | 91.7x |
+| sentence chrF, 20k | 2.801 s | 0.0119 s | 235.2x |
+| BLEU + bootstrap(1000), 5k | 0.460 s | 0.0193 s | 23.9x |
+| BLEU corpus, 100k | 5.816 s | 0.0497 s | 117.1x |
+| chrF corpus, 100k | 18.559 s | 0.0591 s | 314.1x |
+| chrF++ corpus, 100k | 20.802 s | 0.0735 s | 282.9x |
+| BLEU + bootstrap(1000), 100k-run 5k | 0.472 s | 0.0102 s | 46.3x |
+
+### One core (`taskset -c 0`), WMT22 en-de, 20k
+
+| case | sacreBLEU | swadesh | speedup |
+|---|---:|---:|---:|
+| BLEU corpus | 1.169 s | 0.0853 s | 13.7x |
+| chrF corpus | 3.430 s | 0.1208 s | 28.4x |
+| chrF++ corpus | 3.969 s | 0.1644 s | 24.1x |
+| TER corpus, 10k | 6.429 s | 0.1805 s | 35.6x |
+| sentence BLEU, 20k | 0.966 s | 0.0874 s | 11.0x |
+| sentence chrF, 20k | 2.783 s | 0.1227 s | 22.7x |
+| BLEU + bootstrap(1000), 5k | 0.462 s | 0.0309 s | 15.0x |
+
+### The workloads (`bench/extra_speed.py --json extra-2026-11-26.json`)
+
+| case | sacreBLEU | swadesh | speedup |
+|---|---:|---:|---:|
+| BLEU `sentence_scores` batch, 20k | 0.126 s | 0.0093 s | 13.5x |
+| chrF `sentence_scores` batch, 20k | 0.283 s | 0.0123 s | 23.1x |
+| naive loop, 2,000 `sentence_score` calls | 0.062 s | 0.0162 s | 3.8x |
+| MBR chrF++ 10x10 | 0.346 s | 0.0086 s | 40.4x |
+| BLEU + bootstrap(1000), 5k | 0.195 s | 0.0184 s | 10.6x |
+| `PairedTest` bs, 2,000 segments, 2 metrics | 0.666 s | 0.7901 s | 0.8x |
+| `PairedTest` ar, 2,000 segments, 2 metrics | 0.618 s | 0.7503 s | 0.8x |
+| CLI BLEU, 20,000 lines, process start to output | 0.057 s | 0.0639 s | 0.9x |
+| CLI chrF++, 20,000 lines | 0.062 s | 0.0650 s | 1.0x |
+
+The two CLI rows improved from 0.6-0.7x to 0.9-1.0x when `python -m swadesh.cli` stopped being a
+sacreBLEU adapter and started running the compiled code in process. `PairedTest` remains the honest
+negative: sacreBLEU's numpy implementation is already good at this size.
+

@@ -1,0 +1,76 @@
+{
+ "rows": [
+  {
+   "case": "BLEU sentence_scores batch x20000",
+   "sacrebleu_s": 0.12632830580696464,
+   "swadesh_s": 0.009337159804999828,
+   "speedup": 13.529628757057239,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "case": "chrF sentence_scores batch x20000",
+   "sacrebleu_s": 0.2828741488046944,
+   "swadesh_s": 0.012269864324480295,
+   "speedup": 23.054382780770958,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "case": "BLEU sentence_score loop x2000",
+   "sacrebleu_s": 0.06204628199338913,
+   "swadesh_s": 0.016150057315826416,
+   "speedup": 3.841861411388691,
+   "exact": true,
+   "note": "per-call Python overhead on both sides"
+  },
+  {
+   "case": "MBR chrF++ pairwise 10x10",
+   "sacrebleu_s": 0.34599615167826414,
+   "swadesh_s": 0.008559458889067173,
+   "speedup": 40.422666451520456,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "case": "BLEU + bootstrap(1000) x5000",
+   "sacrebleu_s": 0.19487759098410606,
+   "swadesh_s": 0.018441603053361177,
+   "speedup": 10.567280426773287,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "case": "PairedTest bs x2000, 2 metrics",
+   "sacrebleu_s": 0.6656323987990618,
+   "swadesh_s": 0.7901286548003554,
+   "speedup": 0.8424354625731798,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "case": "PairedTest ar x2000, 2 metrics",
+   "sacrebleu_s": 0.6183909298852086,
+   "swadesh_s": 0.7503388659097254,
+   "speedup": 0.8241488719039756,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "case": "CLI BLEU corpus x20000",
+   "sacrebleu_s": 0.05724590923637152,
+   "swadesh_s": 0.06391632603481412,
+   "speedup": 0.8956382944349877,
+   "exact": true,
+   "note": "process start + read + score + print"
+  },
+  {
+   "case": "CLI chrF++ corpus x20000",
+   "sacrebleu_s": 0.06189192924648523,
+   "swadesh_s": 0.06496830005198717,
+   "speedup": 0.9526481252697047,
+   "exact": true,
+   "note": ""
+  }
+ ]
+}

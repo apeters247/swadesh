@@ -1,7 +1,7 @@
 # swadesh
 
 **sacreBLEU, bit for bit, in Rust.** BLEU, chrF, chrF++ and TER with the same scores, the same signatures
-and the same CLI, and much faster: 22–46× on one core and 41–331× on a 24-thread desktop.
+and the same CLI, and much faster: up to 316× on a 24-thread desktop and 11–36× on one core (measured 2026-11-26).
 
 **Status (2026-11-26).** Bit-exact on the WMT-style corpora, on the 494-case parity suite and on the
 seven-file differential selection (**0 failing cases**): TER, BLEU, chrF and chrF++ match sacreBLEU on
@@ -10,7 +10,7 @@ every input exercised, including the long unrelated-reference cases that were th
 too - `tests/test_cli.py` 667 passed, 3 skipped, 3 xfailed - when its fixtures are pointed at the checkout's data
 with `SWADESH_DATA=bench/data` (they default to `/var/www/llmeval/bench/data`).
 
-<p align="center"><img src="docs/img/benchmark.svg" alt="swadesh vs sacreBLEU on 100k segments: BLEU 129x, chrF 331x, chrF++ 326x faster, identical scores" width="720"></p>
+<p align="center"><img src="docs/img/benchmark.svg" alt="swadesh vs sacreBLEU on 100k segments: BLEU 117x, chrF 314x, chrF++ 283x faster, identical scores" width="720"></p>
 
 ```bash
 pip install swadesh
@@ -88,19 +88,20 @@ Every swadesh result below was checked `==` against sacreBLEU 2.6.0 on the same 
 Times are best of 3 (BLEU/chrF corpus) or a single run (TER, sentence-level, bootstrap).
 Source: [`bench/results/SUMMARY.md`](bench/results/SUMMARY.md) · reproduce with `bench/get_data.sh && python bench/bench.py`.
 
-**AMD Ryzen 9 7900X, idle machine** (`bench/results/final4-troy1-*.json`)
+**AMD Ryzen 9 7900X, idle machine** (`bench/results/speed-2026-11-26-100k.json`,
+`speed-2026-11-26-20k.json`, `speed-2026-11-26-20k-1core.json`; load average 0.39 at the start)
 
 | | sacreBLEU | swadesh, 24 threads | speedup | swadesh, 1 core (20k) | speedup |
 |---|---:|---:|---:|---:|---:|
-| corpus BLEU (100k) | 5.94 s | 0.046 s | **129×** | 0.045 s | 25.9× |
-| corpus chrF (100k) | 20.10 s | 0.061 s | **331×** | 0.075 s | 45.8× |
-| corpus chrF++ (100k) | 22.87 s | 0.070 s | **326×** | 0.108 s | 36.4× |
-| corpus TER (10k) | 6.43 s | 0.039 s | **164×** | 0.163 s | 38.8× |
-| sentence BLEU ×20k | 0.97 s | 0.0073 s | **131×** | 0.044 s | 22.6× |
-| sentence chrF ×20k | 2.72 s | 0.0087 s | **312×** | 0.073 s | 37.8× |
-| BLEU + 1000 bootstrap resamples (5k) | 0.47 s | 0.011 s | **41×** | 0.021 s | 22.0× |
+| corpus BLEU (100k) | 5.82 s | 0.050 s | **117×** | 0.085 s | 13.7× |
+| corpus chrF (100k) | 18.56 s | 0.059 s | **314×** | 0.121 s | 28.4× |
+| corpus chrF++ (100k) | 20.80 s | 0.074 s | **283×** | 0.164 s | 24.1× |
+| corpus TER (10k) | 6.39 s | 0.056 s | **115×** | 0.181 s | 35.6× |
+| sentence BLEU ×20k | 0.97 s | 0.0108 s | **90×** | 0.087 s | 11.0× |
+| sentence chrF ×20k | 2.82 s | 0.0120 s | **234×** | 0.123 s | 22.7× |
+| BLEU + 1000 bootstrap resamples (5k) | 0.47 s | 0.0102 s | **46×** | 0.031 s | 15.0× |
 
-The single-core column was measured on 20k segments against sacreBLEU's 20k timings in the same JSON file.
+The single-core column is the 20k run pinned with `taskset -c 0`, against sacreBLEU's 20k timings.
 A feature-by-feature comparison with sacreBLEU (52 rows: every tokenizer and metric option, sentence-level,
 significance tests, MBR, the three CLIs, import time and peak memory; all identical) is in
 [`bench/results/compare-macmini-m4-v2.md`](bench/results/compare-macmini-m4-v2.md); regenerate it with

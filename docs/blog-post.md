@@ -1,4 +1,9 @@
-# I wanted my Naxi translator to be scored faster, then found I couldn't trust the scores
+---
+title: "I wanted my Naxi translator to be scored faster, then found I couldn't trust the scores"
+thumbnail: docs/img/benchmark.svg
+authors:
+- name: apeters247
+---
 
 *swadesh is a drop-in replacement for sacreBLEU, written in Rust. It returns exactly the same
 numbers — every float compares `==`, the signatures and CLI output are byte-identical — and it is
@@ -13,10 +18,12 @@ tl;dr
 
 - sacreBLEU's numbers are the thing people trust, so a faster scorer is useful only if it produces
   *identical* numbers.
-- On real model output from five models on one GPU box, swadesh and sacreBLEU agree exactly on every
-  metric, corpus and sentence level: 0 differing sentence scores in ~10,000 paired comparisons.
-- Typical speedups on 20k WMT22 segments on a 24-core desktop: BLEU 78×, chrF 258×, chrF++ 241×,
-  TER 145×. On a single core: roughly 10–25×.
+- On real model output — qwen3.8-27b and llama3.3:70b, 150 English→German segments each, 12
+  configurations apiece, re-verified on this build — swadesh and sacreBLEU agree exactly on every
+  metric, corpus and sentence level: **24/24 corpus scores bit-exact, 0 of 300 sentence scores
+  differing**, and the same for five more cached model outputs in the earlier pass.
+- Typical speedups on 20k WMT22 segments on a 24-core desktop: BLEU 140×, chrF 316×, chrF++ 280×,
+  TER 116×. On a single core: 11–36×.
 - The Naxi project is why the speed matters: it is scored on chrF++ *plus* NTQS on the same rows,
   with paired bootstrap CIs clustered by reference — 3000 resamples, every time a checkpoint
   is considered.
@@ -147,35 +154,39 @@ All numbers below are from the same machine, same data, back to back, with the r
 exactly each time. Sources: `bench/bench.py`, `bench/stress/`, and the extra harness I added for
 this post.
 
-Corpus scores, WMT22 en-de, 20,000 segments, 24-core Ryzen, sacreBLEU 2.6.0 on CPython 3.14.4:
+Corpus scores, WMT22 en-de, 24-core Ryzen 9 7900X, sacreBLEU 2.6.0 on CPython 3.11.14, idle machine
+(`bench/results/speed-2026-11-26-*.json`, 2026-11-26):
 
 | case | sacreBLEU | swadesh | speedup | exact |
 |---|---|---|---|---|
-| BLEU corpus | 0.795 s | 0.0102 s | **77.9×** | yes |
-| chrF corpus | 2.793 s | 0.0108 s | **257.9×** | yes |
-| chrF++ corpus | 3.200 s | 0.0133 s | **240.8×** | yes |
-| TER corpus, 10,000 segments | 5.299 s | 0.0367 s | **144.5×** | yes |
+| BLEU corpus, 20,000 | 1.168 s | 0.0083 s | **140×** | yes |
+| chrF corpus, 20,000 | 3.458 s | 0.0109 s | **316×** | yes |
+| chrF++ corpus, 20,000 | 4.006 s | 0.0143 s | **280×** | yes |
+| TER corpus, 10,000 | 6.406 s | 0.0552 s | **116×** | yes |
+| BLEU corpus, 100,000 | 5.816 s | 0.0497 s | **117×** | yes |
+| chrF corpus, 100,000 | 18.559 s | 0.0591 s | **314×** | yes |
+| chrF++ corpus, 100,000 | 20.802 s | 0.0735 s | **283×** | yes |
 
-On one core the same cases are ~10–25×; the rest is parallelism, and segments are independent so it
-doesn't change a result.
+Pinned to one core (`taskset -c 0`) the same 20,000-segment cases are **11–36×**; the rest is
+parallelism, and segments are independent so it does not change a result.
 
 Now the workloads that actually hurt in a fine-tuning loop. The first two are what the Naxi
 promotion gate does: batch the sentence scores, then a paired test.
 
 | workload | sacreBLEU | swadesh | speedup | exact |
 |---|---|---|---|---|
-| BLEU sentence scores, 20,000 (per-sample reward shape) | 0.249 s | 0.0083 s | **30×** | yes |
-| chrF sentence scores, 20,000 | 0.494 s | 0.0128 s | **39×** | yes |
-| BLEU + 1000-resample bootstrap CI, 5,000 segments | 0.496 s | 0.0278 s | **18×** | yes |
-| MBR chrF++, 10 candidates per input, 20 inputs | 0.613 s | 0.0183 s | **33×** | yes |
-| naive loop of 2,000 `sentence_score` calls | 0.111 s | 0.0204 s | **5.5×** | yes |
-| `PairedTest` (bs), 2,000 segments, 2 metrics | 1.162 s | 1.458 s | 0.8× | yes |
-| `PairedTest` (ar), 2,000 segments, 2 metrics | 1.119 s | 1.406 s | 0.8× | yes |
-| CLI `BLEU` corpus, 20,000 lines, process start to output | 0.111 s | 0.197 s | 0.6× | yes |
-| CLI `chrF++` corpus, 20,000 lines | 0.135 s | 0.197 s | 0.7× | yes |
+| BLEU `sentence_scores` batch, 20,000 (per-sample reward shape) | 0.126 s | 0.0093 s | **13.5×** | yes |
+| chrF `sentence_scores` batch, 20,000 | 0.283 s | 0.0123 s | **23.1×** | yes |
+| MBR chrF++, 10 candidates × 10 inputs | 0.346 s | 0.0086 s | **40.4×** | yes |
+| BLEU + 1000-resample bootstrap CI, 5,000 segments | 0.195 s | 0.0184 s | **10.6×** | yes |
+| naive loop of 2,000 `sentence_score` calls | 0.062 s | 0.0162 s | **3.8×** | yes |
+| `PairedTest` (bs), 2,000 segments, 2 metrics | 0.666 s | 0.790 s | 0.8× | yes |
+| `PairedTest` (ar), 2,000 segments, 2 metrics | 0.618 s | 0.750 s | 0.8× | yes |
+| CLI `BLEU` corpus, 20,000 lines, process start to output | 0.057 s | 0.064 s | 0.9× | yes |
+| CLI `chrF++` corpus, 20,000 lines | 0.062 s | 0.065 s | 1.0× | yes |
 
-These are from an 8-core VPS, so the absolute numbers are higher than the desktop table above;
-the ratios are what matter. Every row compared its result exactly.
+Same machine, back to back (`bench/results/extra-2026-11-26.json`); every row compared its result
+exactly.
 
 Three rows are honest negatives, and I left them in:
 
@@ -183,13 +194,12 @@ Three rows are honest negatives, and I left them in:
   good at 2,000 segments and 500 resamples; my version is exact but comes out level. It may still
   win when the resamples or the segment count are much larger, where sacreBLEU's tensor
   materialisation dominates, but I have not measured that here. Do not quote it as a win.
-- **The CLI is slower than sacreBLEU's CLI** start-to-finish, by about 60–90 ms on these machines, and
-  that's pure import cost: a venv that has numpy imports it before any scoring happens, whichever
-  tool runs, and both installs measure 45–55 MByte of RSS before a single hypothesis is read. I
-  chased this in three separate directions; each one ended at the same wall that the interpreter
-  loads its own import graph. A longer run is dominated by scoring and the gap disappears; a batch of
-  short CLI invocations would be slower with swadesh. If you are scripting one call per file, use
-  the library, not the CLI, on either implementation.
+- **The CLI is at parity, not ahead.** Start-to-finish on 20,000 lines it is 0.9–1.0×: both tools
+  pay the interpreter's import graph, and at that size the scoring is a few tens of milliseconds
+  either way. It used to be 0.6–0.7×, because `python -m swadesh.cli` was an adapter that patched
+  sacreBLEU and ran *its* parser; the console script now runs the compiled code in process, which
+  removed that overhead. A longer run is dominated by scoring; a batch of short invocations is
+  interpreter startup on both sides. If you are scripting one call per file, use the library.
 
 Where it *is* dramatic is the inside-the-API workloads. Sentence-level TER is the funny one:
 sacreBLEU takes about **2.6 seconds per sentence** on that data, so a 150-segment normalized-TER
@@ -238,17 +248,19 @@ I don't think the speedup is the interesting claim; the exactness is, so here is
   long-sentence TER shifts.
 - **Env matrix**: CPython 3.11, 3.12 and 3.14; numpy 2 on the VPS and the GPU box. The full parity
   suite passes on all three interpreters.
-- **Real model output**, as above: five models, four metric families, corpus and sentence level.
+- **Real model output**, as above: qwen3.8-27b and llama3.3:70b re-verified on this build (12
+  configurations each, 24/24 corpus scores bit-exact, 0/300 sentence scores differing), and five
+  cached model outputs compared in the earlier pass.
 - **My own data**: `python -m swadesh.verify -r ref.txt -i hyp.txt` runs the same comparison on
   yours and prints either "identical" or the first mismatch.
 
-What is not yet verified: the GitHub Actions matrix has not run (the repo isn't published), and
-macOS/ARM runners are unexercised. The claims above are from x86-64 machines I own.
+What is not yet verified: the GitHub Actions matrix has not run (the repo is private until the
+release), and macOS/ARM runners are unexercised. The claims above are from x86-64 machines I own.
 
 ## Try it
 
 ```bash
-pip install swadesh                      # or: pip install "swadesh" from the repo's wheel
+pip install swadesh                      # once the vX.Y.Z release is on PyPI
 python -c "import swadesh; swadesh.patch()"     # makes existing `import sacrebleu` fast
 python -c "import swadesh as sacrebleu; print(sacrebleu.corpus_bleu(['the cat sat'], [['the cat sat down']]))"
 ```
