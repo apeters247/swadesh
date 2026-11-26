@@ -1130,3 +1130,12 @@ def test_unrecognized_arguments_lists_every_token(tmp_path):
     sw_rc, _, sw_err = run(SWADESH, args)
     assert ref_rc == sw_rc == 2
     assert _norm_argerr(sw_err) == _norm_argerr(ref_err)
+@pytest.mark.xfail(strict=True, reason=(
+    "documented divergence: sacreBLEU accepts a negative --chrf-word-order (`nw:-1` in the "
+    "signature, a reduced order and a different score); swadesh refuses it with a hint"))
+def test_negative_chrf_word_order(tmp_path):
+    refs = tmp_path / "r.txt"
+    refs.write_text("the cat sat on the mat\nhello world here\n", encoding="utf-8")
+    hyp = tmp_path / "h.txt"
+    hyp.write_text("the cat sat on a mat\nhello there world\n", encoding="utf-8")
+    assert_same_streams([str(refs), "-i", str(hyp), "-m", "chrf", "-cw", "-1", "-f", "text"])

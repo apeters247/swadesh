@@ -4358,3 +4358,57 @@ half: 392 passed, 2 xfailed, 0 failed.
 (the *usage* section now matches; the option descriptions do not) - a transcription slice of its own.
 `--max-ngram-order` and `--python-version` remain swadesh additions. The `-t` group, `--detail` and
 slice 4 still wait on the downloader decision, and `test_ter`/`test_deep` are still being measured.
+
+## 2026-11-26 (continued) - the Python selection completed, and one more measured divergence
+
+**Attempted.** Finish the proof's Python-selection leg (the slow pair had never been measured on its
+own) and re-measure `docs/parity-report.md`, whose "Known remaining differences: none observed" had
+become false as the CLI work exposed boundaries.
+
+**Measured, all on 3.11.14 with `SWADESH_DATA=bench/data`:**
+
+* `test_frozen_oracle`, `test_parity`, `test_provenance`, `test_score_objects`, `test_estimate_ci`,
+  `test_dependency_licences`, `test_version`, `test_base_port`, `test_metrics_fallback`,
+  `test_ter_preprocess`, `test_regressions`, `test_numrefs_none_refs`: 673 passed, 58 skipped, 0 failed
+* `test_differential`: 79 passed
+* `test_fuzz_unicode` + `test_coverage_gaps`: 72 passed
+* `test_ter` + `test_deep`: **61 passed, 2 skipped, 0 failed** in 12m53s
+
+So the selection is 885 passed / 60 skipped / 0 failed, and the skips are one cause, not many: the CLI
+dataset cases read `$SWADESH_DATA/wmt16/...` while the real cache is under `$SACREBLEU`. Pointing
+`SWADESH_DATA` at a tree holding wmt16 would un-skip them *and* run `tests/test_cli.py`'s `-t`
+comparison, which fails until the binary implements the test-set group - so the skips mark the honest
+boundary, and the report now says so.
+
+`tests/test_cli.py` (the Rust binary): the fast half (`-k "not ter and not timing"`) is 392 passed,
+3 xfailed, 0 failed; the full file is re-running as this is written.
+
+**Found by measuring, recorded rather than fixed.** A negative `--chrf-word-order` is *accepted* by
+sacreBLEU - `nw:-1` in the signature, order `cc + cw`, and a score that differs from `-cw 0` - where
+our binary refuses it with a hint; `-cc -1` makes the oracle raise while we print a clean message.
+Both are now in the report's table, the first pinned by a strict `xfail` test. `-e` beyond utf-8,
+`.gz` inputs, the six exotic tokenizers and the whole `-t` group sit in the same table.
+
+**Docs.** `docs/parity-report.md`'s banner, Results table and Known-remaining-differences section are
+now this session's measurement, with the historical "bugs found" section untouched and labelled as
+such. The flag-by-flag table says, for each divergence, whether the oracle works, crashes or refuses,
+and which test pins it. That table is also the completion audit for end-state item 1: of sacreBLEU's
+flags, the unimplemented ones are exactly `-t/--test-set`, `--download`, `--echo`, `--origlang`,
+`--subset`, `--detail`, the six exotic tokenizers, `-e` beyond utf-8 and `.gz` input - behind the
+downloader decision or an encoding/decompression crate.
+
+**Item 2, assessed rather than rewritten.** The criterion asks that the significance orchestration and
+the remaining metric logic be "implemented in swadesh-core and only called from Python through
+swadesh-py". The state is: every kernel is Rust (`bootstrap_sums_f32[_seeded]`, `bleu_scores_np2_f32`,
+`bleu_scores_i64`, `chrf_scores_i64`, `ar_sums_i64`, `estimate_ci`, `bootstrap_ci`, `p_value`,
+`paired_bs`, `paired_ar`); the `rg` check for module-level sacreBLEU imports in
+`metrics.py`/`significance.py`/`base.py` returns nothing; and what remains in Python is the
+sacreBLEU-shaped surface - `PairedTest`, `Result`, the metric classes - which item 3 requires to keep
+its reprs and attribute sets unchanged. The two criteria pull against each other: that orchestration
+drives *Python metric objects*, so moving it into a pyo3-free `swadesh-core` is impossible without
+also moving the metric classes, which would break item 3. Recorded here so the reading is explicit:
+item 2 holds in substance, and a literal move would trade item 3 for it.
+
+**Next.** The `-t` group behind the downloader decision (three options recorded above); the `--help`
+descriptions, deliberately deferred until `-t` lands so the help does not advertise flags the binary
+refuses; then slice 4, which is downstream of `-t`.

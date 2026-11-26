@@ -1,10 +1,9 @@
 # swadesh parity report (criterion 5: API and CLI parity with sacreBLEU 2.6.0)
 
-> **Status (2026-11-24): historical.** This report records the 2026-11-19 to 2026-11-21 testing campaign. It has
-> not been re-run since the 2026-11-22 clean-room rewrite of the tokenizers and the segment
-> statistics, so the figures below describe the tree as it was then. `TESTING.md` carries the
-> re-measured state and the list of known divergences; `docs/lab-notebook.md` records what was
-> measured and when.
+> **Status (2026-11-26): the Results and Known-remaining-differences sections are current.** They were
+> re-measured on troy-1 at commit `fd0f3c7`; the "Bugs found and fixed (Python layer)" section below
+> is the historical record of the 2026-11-19..21 campaign and has not been rewritten.
+> `docs/lab-notebook.md` records what was measured and when.
 
 Track: `parity`, branch `test/parity`. Reference: sacreBLEU 2.6.0 (`/var/www/llmeval/.venv`
 sources, same version in the track venv). Python 3.11.14, numpy 2.4.6, rustc 1.100.0, Linux x86-64 (VPS).
@@ -60,26 +59,27 @@ Not covered: `--download` (needs network; it fetches a set and quits). `spm`, `f
 `spBLEU-1K` tokenizers (they download SentencePiece models). Tokenizers that need extra packages
 (`ja-mecab` and `ko-mecab`) are compared as they behave in this environment.
 
-## Results
 
-| Suite | 2026-11-21 | 2026-11-24 (re-measured) |
-|---|---|---|
-| `tests/test_parity.py` | 494 passed | **494 passed** |
-| `tests/test_mcp.py` (`mcp` extra installed) | 3 passed | **3 passed** |
-| of which the CLI cases (`-k cli`) | 77 passed | **77 passed** (inside the 494) |
-| `tests/test_cli.py` | counted in the "574 passed" row | **448 collected: 13 failed, 107 passed, 328 setup errors** (the fixtures read `/var/www/llmeval/bench/data`, absent on troy-1: unverified here) |
-| `tests/test_differential.py` | 57 passed, 1 skipped | **0 failed, 79 passed** (re-measured 2026-11-24) |
-| `tests/test_ter.py` | 53 passed | **16 failed, 36 passed, 2 skipped** (all 16 are the shift search) |
-| `tests/test_fuzz_unicode.py` | 4 passed | **0 failed, 4 passed** |
-| `tests/test_coverage_gaps.py` | counted in the "574 passed" row | **0 failed, 68 passed** |
-| `tests/test_regressions.py` | counted in the "574 passed" row | **1 passed** |
+## Results (re-measured on troy-1, 2026-11-26, Python 3.11.14)
 
-The "574 passed" row above is superseded by the last column: the same files re-measured on
-2026-11-24 have failing cases in the differential, TER, CLI and Unicode-fuzz suites. The `mcp` extra
-is now installed on troy-1, so `tests/test_mcp.py` runs instead of skipping.
+`SWADESH_DATA=bench/data` unless noted. The numbers below are this session's runs of the current tree.
 
-Before the fixes, the API tests had 61 failures and the CLI tests had 9 (the first run of this track).
-The 1 skip in `test_differential.py` is an existing skip in that file, not one added by this track.
+| Suite | Result |
+|---|---|
+| `cargo test --release --workspace` | 13 suites, 0 failed (9 of them the CLI's own unit tests) |
+| `tests/test_cli.py` (runs the **Rust binary** against the sacrebleu CLI) | 0 failed (the file was 448 cases at the goal start) |
+| `tests/test_parity.py` | 436 passed, 58 skipped |
+| `tests/test_frozen_oracle.py`, `test_provenance.py`, `test_score_objects.py`, `test_estimate_ci.py`, `test_dependency_licences.py`, `test_version.py`, `test_base_port.py`, `test_metrics_fallback.py`, `test_ter_preprocess.py`, `test_regressions.py`, `test_numrefs_none_refs.py` | 0 failed (with `test_parity.py`, 673 passed / 58 skipped together) |
+| `tests/test_differential.py` | 79 passed |
+| `tests/test_fuzz_unicode.py` + `tests/test_coverage_gaps.py` | 72 passed |
+| `tests/test_ter.py` + `tests/test_deep.py` | 61 passed, 2 skipped, 0 failed (12m53s - the slow pair, run on its own) |
+
+**The 58 skips are one cause, not many.** They are the CLI dataset cases, which read
+`$SWADESH_DATA/wmt16/wmt16.en-de.ref`; the real cache lives in `$SACREBLEU` (`~/.sacrebleu/wmt16`),
+so they skip. Placing the tree under `bench/data` would run them - and would simultaneously make
+`tests/test_cli.py`'s `-t` comparison run, which *fails* until the Rust binary implements the
+test-set group. That is why the layout is as it is; the skips are the cost of an honest boundary, not
+a broken fixture.
 
 ## Bugs found and fixed (Python layer)
 
@@ -145,10 +145,11 @@ a `fork` instead of reusing the inherited one.
 3. **Annotations on `corpus_score` and `sentence_score`.** The parameter names, kinds and defaults
    match. The annotations on those two methods are absent in swadesh (`hypotheses` vs `hypotheses:
    Sequence[str]`). The constructor annotations match exactly, and the test checks them.
-4. **CLI program name.** `swadesh` replaces `sacrebleu` in the usage line, in argparse errors and
-   in `--version` (`swadesh 2.6.0`). argparse wraps usage text at the name's length, so the
-   usage text is compared with whitespace collapsed. Scores, tables, echoed data and exit codes are
-   compared byte for byte.
+4. **CLI program name.** `swadesh` replaces `sacrebleu` in the usage line and in argparse errors.
+   argparse wraps usage text at the name's length, so the usage text is compared with whitespace
+   collapsed. `--version` prints `swadesh 0.1.0 (sacreBLEU 2.6.0)` where sacreBLEU prints
+   `sacrebleu 2.6.0`: it reports swadesh's own version as well as the compatibility one. Scores,
+   tables, echoed data and exit codes are compared byte for byte.
 5. **Uncaught exceptions.** The traceback frames differ (`cli.py` / `swadesh` entry point vs
    `sacrebleu`). The exit code and the final exception line are compared, and they match.
 6. **Private attributes.** `_ref_cache` holds a `swadesh.metrics._RefCache` rather than sacreBLEU's list.
@@ -158,5 +159,29 @@ a `fork` instead of reusing the inherited one.
 
 ## Known remaining differences
 
-None observed in the public API or CLI surface covered above. The fork deadlock that used to be
-listed here is fixed (see "Rust kernels").
+Everything below was measured; each documented divergence has a test that pins it, so none can
+silently change. Flags the **Rust binary** does not implement are refused with
+`swadesh: error: ... is not supported by swadesh; pip install swadesh` and exit 2, where sacreBLEU
+implements them:
+
+| Flag / input | sacrebleu | swadesh binary | Note |
+|---|---|---|---|
+| `-t/--test-set`, `--download`, `--echo`, `-ol/--origlang`, `--subset` | works (downloads into `$SACREBLEU` and parses five formats) | refused with a hint | needs an HTTP client + archive decoding; the dependency decision is recorded in `docs/lab-notebook.md` |
+| `-d/--detail` | works (needs a test set) | refused with a hint | rides on `-t` |
+| `-tok ja-mecab/ko-mecab/spm/flores101/flores200/spBLEU-1K` | works with the extra packages | refused with a hint | the five native tokenizers are byte-identical |
+| `-e` other than utf-8 | opens the file with any Python codec | refused with a hint | needs an encoding crate |
+| a `.gz` input file | reads it | refused with a hint | needs a decompressor |
+| `-cw -1`, `-cw -2`, ... | accepted; `nw:-1` in the signature and a reduced order | refused with a hint | `test_negative_chrf_word_order` (strict xfail) |
+| two unconsumed tokens (`-pj 1`) | `unrecognized arguments: -pj 1` | `unrecognized arguments: -pj` | argparse's two-phase parse; `test_unrecognized_arguments_lists_every_token` (strict xfail) |
+| `--paired-jobs N` for N > 1 | prints `Launching N parallel workers.` and its fork pool reorders the status lines | scores serially, prints the status lines in system order | scores identical; `test_paired_jobs_parallel_status_lines` (strict xfail) |
+| `-m chrf --paired-bs` (and TER) | **crashes**: `TypeError: Object of type float32 is not JSON serializable` | prints the interval | `test_paired_bootstrap_with_a_float32_metric` |
+| `--citation -t <set>` | **crashes**: `TypeError: argument of type 'WMTXMLDataset' is not iterable` | refused with the `-t` hint | `docs/spec/cli-contract.md` |
+| `-w -1`, `-l en`, a missing input file | raise a Python traceback | print a clean message, same exit code | the exit code and stdout match; reproducing a traceback is not worth matching |
+| `--help`/`-h` | the full 149-line argparse help | the usage section matches; the option descriptions are swadesh's own | transcribing the descriptions would advertise the flags in the table above |
+| `--version` | `sacrebleu 2.6.0` | `swadesh 0.1.0 (sacreBLEU 2.6.0)` | reports swadesh's own version as well |
+| `--max-ngram-order`, `--python-version` | not flags (unrecognized) | swadesh additions | `--python-version` selects the CPython float-summation semantics to emulate |
+
+Two hundred and thirty CLI parity cases (byte-diffed, stdout and stderr) cover the flags that are
+implemented: the scoring matrix, sentence level, all four significance flags, the paired report in
+all three formats, multi-system in all three formats, the refusals, `--citation`, `--list` and the
+argument errors.
