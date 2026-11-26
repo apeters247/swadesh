@@ -65,6 +65,55 @@ is a tabular row.
 Signatures are `key:value` triples joined by `|`, in a fixed order per metric, ending with
 `version:2.6.0`. They are part of the output contract because tooling parses them.
 
+### Several systems
+
+Two or more systems - `-i A B`, or one tab-separated field per line on stdin, named `System 1`,
+`System 2`, ... - get a report rather than a single score. JSON is a list of objects carrying
+`"system"` and one `"<METRIC>"` key per metric, the score as a string. Text is `tabulate`'s
+`fancy_grid` and LaTeX its `latex_booktabs`; both were measured against sacreBLEU 2.6.0 and obey:
+
+* column content width is `max(len(heading) + 2, longest cell)`, and each cell is then drawn with one
+  space of padding on either side (so `BLEU` alone makes a 6-wide column, and only a value longer
+  than `len(heading) + 2` widens it);
+* the `System` column is right-aligned, in the heading and the body; each metric column is centred;
+* the headings are the score objects' own names - `BLEU`, `chrF2`, `chrF2++` (`-cw 2`), `TER`;
+* the cells are `f"{score:.{w}f}"`, as in the single-system report;
+* the report ends with a blank line and the `Metric signatures` block, which `-sh` shortens;
+* `-b` is ignored in this form, and `-sl` is refused.
+
+LaTeX is the same grid with `&` between cells, `\\` at the end, and `\begin{tabular}{r...}`: `r` for
+the system column and `c` per metric.
+
+### The order of the refusals
+
+With several systems the checks are ordered, and the order is observable when more than one would
+fire. Measured, it is:
+
+1. the paired tests name the first system the baseline and drop a later system with the same name
+   (`Ignoring '<name>' as it was also given as the baseline.`);
+2. duplicate names, for plain multi-system runs only (`'<name>' already used to name a system.` plus
+   `Make sure to have a different basename for each system.`) - the paired tests allow a repeated
+   baseline and check the rest separately;
+3. `-sl` with more than one system (`Only one system can be evaluated in sentence-level mode.`),
+   which beats `-ci` and beats the paired tests;
+4. in the paired path only, `-sl` (`Statistical tests are unavailable in sentence-level mode.`) and
+   then the count (`Paired tests require multiple input systems given to --input (-i).`);
+5. `-ci` with more than one system (`Use paired tests (--paired) for multiple systems.`), even when
+   `--paired-bs` was also given;
+6. the stream checks: `Test set None contains no sentence`, then
+   `System and reference streams have different lengths.`
+
+All six print with sacreBLEU's own `sacreBLEU: ` prefix on stderr.
+
+### Confidence-interval edge cases
+
+* `--confidence-n` of **1 or less drops `-ci` silently**: no interval is printed and the `bs`/`seed`
+  pairs are absent from the signature. It is not an error.
+* A resampled mean of exactly `0.0` leaves sacreBLEU's interval undefined: the score is printed
+  alone, but the `bs`/`seed` pairs *are* still in the signature. This is the opposite of the first
+  case for the signature, so the two are separate behaviours.
+* `--paired-ar-n` / `--paired-bs-n` at or below zero fall back to their defaults (10000 / 1000).
+
 ## Input handling
 
 * `-nr N` splits each reference line on tabs into `N` references.
