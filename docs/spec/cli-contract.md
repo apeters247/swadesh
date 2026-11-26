@@ -203,6 +203,12 @@ Documented divergences, each pinned by a strict `xfail` test:
 * `-nr N` splits each reference line on tabs into `N` references.
 * A reference that is `None` (a missing field in a stream) is not a reference; a segment left with
   none is the metric's error path, which differs by metric (BLEU counts it, TER divides by zero).
+* A file whose name ends in `.gz` is decompressed with gzip, decided by the name and
+  **case-sensitively** (`.GZ` is read raw). Measured rules: an empty `.gz` is an empty stream; a file
+  that is not gzip gives `gzip.BadGzipFile: Not a gzipped file (b'pl')` with the first two bytes
+  repr'd; a truncated stream gives `EOFError: Compressed file ended before the end-of-stream marker
+  was reached`. All exit 1 with nothing on stdout, and the final stderr line is Python's own. A
+  complete-but-corrupt stream (a bad CRC) is unmeasured.
 * `--python-version X.Y` emulates that CPython's float summation semantics. CPython changed
   `sum()` precision in 3.12 and 3.14, and BLEU's score depends on it; the default is 3.12.
 

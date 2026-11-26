@@ -5024,3 +5024,32 @@ without the `downloader` feature, so it is a small Cargo change plus input handl
 
 **Next.** `.gz` input, the unconsumed-token list, `-j > 1` status lines, the real-model
 re-verification, and the `.zip`/plain-`.gz` download shapes.
+
+## 2026-11-26 (continued) - M0 slice 13: `.gz` input
+
+**Attempted.** `.gz` inputs were refused. sacreBLEU decompresses them transparently, for references
+and hypotheses alike, so gzipped data could not be scored from the binary.
+
+**Measured first.** The rule is the *name*, case-sensitively: `x.gz` is decompressed, `x.GZ` is read
+raw (and then fails to decode); an empty `.gz` is an empty stream (Python short-circuits before the
+header); a file that is not gzip gives `gzip.BadGzipFile: Not a gzipped file (b'pl')` with the first
+two bytes repr'd (`b'\x00\x01'` for a binary one); a truncated stream gives `EOFError: Compressed file
+ended before the end-of-stream marker was reached`. All exit 1 with nothing on stdout.
+
+**What was built.** `input.rs` decompresses a `.gz` name with `flate2` and reproduces those three
+lines (plus a small Python bytes-repr helper). `flate2` moved out of the optional `downloader`
+feature, since `.gz` input is part of the plain CLI contract; the downloader's heavier crates
+(`ureq`, `tar`, `md-5`) stay optional. `error_stderr`'s "print this bare, it is a Python exception
+line" list gained `gzip.BadGzipFile:` and `EOFError:`.
+
+**Verification.** Five cases against the oracle: a good `.gz` (as reference and as hypothesis, in
+text and with `-e latin-1`) byte-identical on stdout, stderr and exit code; an empty `.gz`
+byte-identical; and the three failure modes matching on exit code, stdout and the final stderr line
+(the traceback frames above it are the documented divergence). `tests/test_cli.py` gained
+`test_gzip_input_matches_python`; that area is 23 passed.
+
+**Still unmeasured:** a complete-but-corrupt gzip stream (a bad CRC), where Python says
+`gzip.BadGzipFile: CRC check failed ...`; recorded in `docs/parity-report.md`.
+
+**Next.** The unconsumed-token list, `-j > 1` status lines, the real-model re-verification, and the
+`.zip`/plain-`.gz` *download* shapes.
