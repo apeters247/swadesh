@@ -62,11 +62,13 @@ pub fn error_stderr(f: &Fail) -> String {
 }
 
 fn is_python_error(msg: &str) -> bool {
-    const CLASSES: [&str; 4] = [
+    const CLASSES: [&str; 6] = [
         "UnicodeDecodeError: ",
         "FileNotFoundError: ",
         "PermissionError: ",
         "IsADirectoryError: ",
+        "gzip.BadGzipFile: ",
+        "EOFError: ",
     ];
     CLASSES.iter().any(|c| msg.starts_with(c))
 }

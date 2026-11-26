@@ -180,15 +180,67 @@ fn decode_with(codec: Codec, bytes: &[u8]) -> Result<String, Fail> {
 /// Lines of a file, rstripped, as `for line in open(path, newline="\n")`.
 pub fn file_lines(path: &str, encoding: &str) -> Result<Vec<String>, Fail> {
     let codec = codec(encoding)?;
-    if path.ends_with(".gz") {
-        return fail(1, format!("gzip input ({path}) is not supported by swadesh; decompress it first"));
-    }
     let bytes = match virtual_file(path) {
         Some(b) => b,
         None => std::fs::read(path).or_else(|e| fail(1, io_error(path, &e)))?,
     };
+    // A `.gz` name means gzip, decided by the name and case-sensitively, exactly as Python's
+    // `gzip.open` is reached by sacreBLEU (`.GZ` is *not* decompressed).
+    let bytes = if path.ends_with(".gz") { gunzip(&bytes)? } else { bytes };
     let text = decode_with(codec, &bytes)?;
     Ok(text.split_inclusive('\n').map(|l| py_rstrip(l).to_string()).collect())
+}
+
+/// Python's `b'...'` repr of a short byte string, for `gzip.BadGzipFile`'s message.
+fn py_bytes_repr(bytes: &[u8]) -> String {
+    let mut out = String::from("b'");
+    for &b in bytes {
+        match b {
+            b'\\' => out.push_str("\\\\"),
+            b'\'' => out.push_str("\\'"),
+            b'\t' => out.push_str("\\t"),
+            b'\n' => out.push_str("\\n"),
+            b'\r' => out.push_str("\\r"),
+            0x20..=0x7e => out.push(b as char),
+            _ => out.push_str(&format!("\\x{b:02x}")),
+        }
+    }
+    out.push('\'');
+    out
+}
+
+/// Decode a `.gz` stream the way Python's `gzip` module does, error lines included.
+///
+/// Measured: an empty file is empty (Python short-circuits before reading the header); anything else
+/// must begin with the gzip magic or Python raises `BadGzipFile: Not a gzipped file (b'XX')` with the
+/// first two bytes repr'd; a truncated stream is `EOFError: Compressed file ended before the
+/// end-of-stream marker was reached`.
+fn gunzip(bytes: &[u8]) -> Result<Vec<u8>, Fail> {
+    if bytes.is_empty() {
+        return Ok(Vec::new());
+    }
+    if !bytes.starts_with(&[0x1f, 0x8b]) {
+        return fail(
+            1,
+            format!(
+                "gzip.BadGzipFile: Not a gzipped file ({})",
+                py_bytes_repr(&bytes[..bytes.len().min(2)])
+            ),
+        );
+    }
+    let mut out = Vec::new();
+    let mut decoder = flate2::read::GzDecoder::new(bytes);
+    match std::io::Read::read_to_end(&mut decoder, &mut out) {
+        Ok(_) => Ok(out),
+        Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => fail(
+            1,
+            "EOFError: Compressed file ended before the end-of-stream marker was reached"
+                .to_string(),
+        ),
+        // A complete-but-corrupt stream (a bad CRC, say) is unmeasured; Python's wording for it is
+        // not reproduced (`docs/parity-report.md`).
+        Err(e) => fail(1, format!("gzip.BadGzipFile: {e}")),
+    }
 }
 
 /// Lines of stdin with universal newlines, rstripped.

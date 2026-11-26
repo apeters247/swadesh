@@ -385,6 +385,55 @@ def test_unsupported_options_fail_with_hint(tmp_path, args):
     assert err.startswith(b"swadesh: error:"), err
 
 
+# ------------------------------------------------------------------- .gz input
+
+def _assert_same_error_line(args):
+    """For the cases where sacreBLEU raises: exit code, stdout and the *final* stderr line.
+
+    The traceback frames above that line differ (different entry points) and are the documented
+    divergence in `docs/parity-report.md`; everything else must match.
+    """
+    ref_rc, ref_out, ref_err = run(SACREBLEU, args)
+    sw_rc, sw_out, sw_err = run(SWADESH, args)
+    assert sw_rc == ref_rc, (args, ref_rc, sw_rc)
+    assert sw_out == ref_out, args
+    assert sw_err.strip().splitlines()[-1] == ref_err.strip().splitlines()[-1], (args, ref_err, sw_err)
+
+
+def test_gzip_input_matches_python(tmp_path):
+    """`-i x.gz` decompresses exactly as sacreBLEU does, error lines included.
+
+    Measured: a `.gz` *name* means gzip, case-sensitively (`.GZ` is read raw and fails to decode); an
+    empty `.gz` is an empty stream; a file that is not gzip raises
+    `gzip.BadGzipFile: Not a gzipped file (b'pl')` with the first two bytes repr'd; and a truncated
+    stream raises `EOFError: Compressed file ended before the end-of-stream marker was reached`.
+    """
+    import gzip as gziplib
+
+    text = "The cat sat on the mat.\nHello world.\n"
+    plain = tmp_path / "lines.txt"
+    plain.write_text(text, encoding="utf-8")
+    good = tmp_path / "lines.txt.gz"
+    good.write_bytes(gziplib.compress(text.encode("utf-8")))
+
+    assert_same_streams([str(good), "-i", str(plain), "-f", "text"])
+    assert_same_streams([str(good), "-i", str(good), "-f", "text"])
+    assert_same_streams(["-e", "latin-1", str(good), "-i", str(plain), "-f", "text"])
+
+    upper = tmp_path / "lines.GZ"
+    upper.write_bytes(good.read_bytes())
+    _assert_same_error_line([str(upper), "-i", str(plain), "-f", "text"])
+
+    empty = tmp_path / "empty.gz"
+    empty.write_bytes(b"")
+    assert_same_streams([str(empty), "-i", str(plain), "-f", "text"])
+
+    for payload in (b"plain\n", b"\x00\x01abc\n", gziplib.compress(text.encode("utf-8"))[:12]):
+        bad = tmp_path / "bad.gz"
+        bad.write_bytes(payload)
+        _assert_same_error_line([str(bad), "-i", str(plain), "-f", "text"])
+
+
 # --------------------------------------------------------------- -e / --encoding
 
 # The payloads are bytes: cp1252's 0x80..=0x9F block cannot be written as a Python str.
