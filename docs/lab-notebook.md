@@ -5178,3 +5178,37 @@ byte-identical CLI invocations each.**
   62.013786, case-sensitive 62.506155, normalized 56.782883.
 
 **Next.** `-t A,B` (concatenated sets), then the `.zip`/plain-`.gz` download shapes.
+
+## 2026-11-26 (continued) - M0 slice 17: `-t A,B`, concatenated test sets
+
+**Attempted.** The last CLI feature the probes had found: a comma-separated `-t`, which sacreBLEU's
+own help documents ("or a comma-separated list of test sets to be concatenated") and swadesh refused
+as an unknown set.
+
+**Measured first.** The sets are concatenated **in the order given**, with no de-duplication
+(`multi30k/2017,wmt16` en-de = 1000 + 2999 = 3999 rows; `wmt16,wmt16` = 5998). `--echo all` uses each
+set's own field list, so the rows have different column counts; a named field must exist in every set
+and the error names the first that lacks it; `-t A,B --list` prints nothing; `-d` groups the
+*concatenated* columns (`wmt16,wmt16` prints `de 2998` and `en 3000`, i.e. the two sets' groups summed).
+
+**What was built.** `test_set: Option<(Found, String)>` became `test_sets: Vec<(Found, String)>` with
+per-set `offsets`/`lengths` computed after the rebuild (so a cold cache still works). Each later use
+follows from those: the mask is each set's filter shifted by its offset; `--echo` validates named
+fields against every set and then prints each set's own rows; the reference is the concatenation of
+each set's default reference; the length-mismatch cache hint uses the first set; and `write_detail`
+now takes precomputed groups, which the caller merges by (origlang, domain) over global indices.
+
+**Verification.** Sixteen cases against the oracle: `--echo src`/`all`/`src ref`/a missing field/a
+bogus field across mixed and duplicate sets, both orders, an unknown second set, a pair missing from
+the first, `--list`, `-ol` with a list, scoring and `-d` over the concatenation, and the length
+mismatch hint - all byte-identical except two that are the registered traceback class (`--subset` on
+a set with no annotation, and the length-mismatch hint: same exit code, same final line, different
+frames). One measured nuance recorded rather than matched: with a *mixed* list and `-ol`, the oracle
+prints the first set's filtered output and *then* raises on the second's raw file, where swadesh
+computes the whole mask first and prints nothing; both exit 1 and both name the failing set, so this
+sits with the other "filters on a non-WMT set" divergence.
+
+New test: `test_comma_separated_test_sets_are_concatenated` (11 echo/list cases plus scoring and
+`-d`).
+
+**Next.** The `.zip`/plain-`.gz` download shapes.

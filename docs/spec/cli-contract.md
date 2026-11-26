@@ -8,6 +8,19 @@ written before the Phase 4 work and records the contract the code is held to.
 
     swadesh [-h] [-V] [-m {bleu,chrf,ter} ...] [-i INPUT] [options] [REF ...]
 
+A `-t` argument may be a **comma-separated list**, and the sets are concatenated in the order given
+with no de-duplication (`-t wmt16,wmt16` is twice as long). Measured 2026-11-26:
+
+* every set must be known and must have the language pair; the errors are that set's own, raised at
+  the first one that fails (`-t wmt16,bogus` reports the unknown `bogus`, `-t wmt16,multi30k/2017 -l
+  en-fr` reports wmt16's missing pair);
+* `--echo all` uses **each set's own** field list, so the rows have different column counts; a named
+  field must exist in every set and the error names the first that lacks it;
+* `-ol`/`--subset` filter per set over the concatenation, and `-d` merges the groups by
+  (origlang, domain) - the same as grouping the concatenated columns;
+* `-t A,B --list` prints nothing at all;
+* the signature is the ordinary single-set one.
+
 References are positional files, one segment per line. Hypotheses come from stdin unless `-i` is
 given. Both are read as UTF-8; other encodings are refused (`-e` accepts only `utf-8`).
 
