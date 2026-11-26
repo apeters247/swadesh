@@ -5212,3 +5212,30 @@ New test: `test_comma_separated_test_sets_are_concatenated` (11 echo/list cases 
 `-d`).
 
 **Next.** The `.zip`/plain-`.gz` download shapes.
+
+## 2026-11-26 (continued) - M0 slice 18: the plain-`.gz` download shape (`multi30k/2018`)
+
+**Attempted.** `multi30k/2018` refused whole because its registry lists one tar+gzip *and* three plain
+`.gz` files, and the downloader refused any set whose URLs were not all tar+gzip.
+
+**Measured first.** The oracle downloads all four, prints `Downloading` **and** `Extracting` for each,
+and leaves the plain `.gz` files **compressed** on disk (the "extraction" is a no-op); the processed
+reference comes from reading the `.gz` file gzip-aware. On a warm cache it prints nothing.
+
+**What was built.** `fetch.rs` accepts a plain `.gz` URL: it downloads to `raw/<prefix>.<basename>`,
+verifies the md5, prints the "Extracting" line and does not decompress. `plain.rs` gunzips a `.gz`
+path before applying its per-line `rstrip` rule, and no longer excludes `.gz` from the plain-text
+family. `input::gunzip` became public so both users share one implementation and one set of error
+lines.
+
+**Verification.** A cold download of `multi30k/2018` against the oracle's own cold download: stderr
+identical with the cache root normalised (eight lines, four archives), and all fifteen content
+comparisons - `--echo src`/`ref`/`all` for en-fr, en-de and en-cs, plus the six generated files -
+byte-identical.
+
+**Still open, and why.** The four `wmt20/robust/*` sets ship as a `.zip`. Supporting them needs zip
+decoding: either the `zip` crate (a new dependency, which the goal's stop rule says to report rather
+than add) or a hand-written reader over the existing `flate2`. Recorded as the one remaining
+download shape.
+
+**Next.** The zip decision.
