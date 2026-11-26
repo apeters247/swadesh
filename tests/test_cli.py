@@ -715,3 +715,47 @@ def test_confidence_seed_env(wmt_files, monkeypatch):
     for seed in ("12345", "7", "999"):
         monkeypatch.setenv("SACREBLEU_SEED", seed)
         assert assert_same([str(refs), "-i", str(hyp), "-m", "bleu", "-ci", "-f", "text"]) == 0
+
+
+# ------------------------------------------------------------------ multi-system mode
+
+MULTI_CASES = [
+    ["-m", "bleu"],
+    ["-m", "bleu", "chrf", "ter"],
+    ["-m", "bleu", "-w", "3"],
+    ["-m", "chrf", "-b"],
+    ["-m", "ter"],
+]
+
+
+@pytest.mark.parametrize("flags", MULTI_CASES, ids=[" ".join(f) for f in MULTI_CASES])
+def test_multi_system_json(wmt_files, flags):
+    """Several `-i` files switch sacreBLEU to its per-system report, not one score."""
+    refs = wmt_files / "en-de.ref"
+    a = wmt_files / "en-de.short.hyp"
+    b = wmt_files / "en-de.drop.hyp"
+    assert assert_same([str(refs), "-i", str(a), str(b), *flags]) == 0
+
+
+def test_multi_system_stdin_tabs(tmp_path):
+    """Tab-separated hypotheses read several systems from stdin, named `System 1`, `System 2`."""
+    refs = tmp_path / "r.txt"
+    refs.write_text("The cat sat on the mat.\nA dog barked.\nPrices rose.\n", encoding="utf-8")
+    stdin = (
+        "The cat sits on the mat.\tThe cat sat on the mat.\n"
+        "A dog barked loudly.\tA dog barked.\n"
+        "Prices fell.\tPrices rose.\n"
+    ).encode("utf-8")
+    assert assert_same([str(refs), "-m", "bleu", "chrf"], stdin=stdin) == 0
+
+
+def test_multi_system_duplicate_name(wmt_files):
+    """Two systems with the same name: sacreBLEU prints two lines and exits 1, stderr included."""
+    refs = wmt_files / "en-de.ref"
+    a = wmt_files / "en-de.short.hyp"
+    args = [str(refs), "-i", str(a), str(a), "-m", "bleu"]
+    ref_rc, ref_out, ref_err = run(SACREBLEU, args)
+    sw_rc, sw_out, sw_err = run(SWADESH, args)
+    assert ref_out == sw_out == b""
+    assert ref_err == sw_err, f"{ref_err!r} != {sw_err!r}"
+    assert (sw_rc == 0) == (ref_rc == 0)

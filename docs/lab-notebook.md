@@ -3990,3 +3990,34 @@ assuming.
 **Next.** Slice 1c-ii: the paired tests (`--paired-ar`, `--paired-bs`, `--paired-ar-n`,
 `--paired-bs-n`, `--paired-jobs`) with their `-par`/`-pbs`/`-parn`/`-pbsn` short forms, the p-value
 `(k+1)/(n+1)`, the per-system JSON array and the four stderr status lines.
+
+## 2026-11-26 (continued) - slice 1c-ii, first part: multi-system mode (JSON)
+
+**Attempted.** Before the paired flags can mean anything, the CLI has to support several systems at
+once, which sacreBLEU switches on for more than one `-i` file (or tab-separated hypotheses on
+stdin). `read_system` refused both with a "pip install swadesh" stub.
+
+**Measured first.** One `-i` file keeps the ordinary single-score output; more than one switches to a
+per-system report: `sacreBLEU: Found N systems.` on stderr, and a `json.dumps(..., indent=4)` array
+of `{system, <score name>: "<score at width>"}` — the score a JSON **string**, unlike the paired
+report's raw float. Systems from stdin are named `System 1`, `System 2`; from files, the path as
+given. Two systems with the same name are refused before any output with sacreBLEU's own two lines.
+
+**Done.** `read_systems` handles both sources; `execute` takes the multi-system path and prints the
+array. The duplicate-name check reproduces sacreBLEU's two stderr lines exactly (which needed a
+`Fail` with an empty message to print nothing of its own, since our other errors carry a `swadesh:`
+prefix by design).
+
+**Measured.** A 9-case byte-diff of stdout, stderr and exit status against `sacrebleu` is **1
+difference**, and that one is the text/latex table. Eight cases match exactly: two and three systems,
+one to three metrics, `-w 3`, `-b`, tab-separated stdin, a single `-i` (still the single report) and
+the duplicate-name error. Permanent as 7 new parity tests (suite 463 -> 470).
+
+**The known gap, recorded rather than hidden.** Multi-system `-f text` and `-f latex` print a table
+built by the third-party **`tabulate`** library (`fancy_grid` / `latex_booktabs`). Reproducing it
+byte-for-byte is a faithful port of tabulate's column-width and alignment rules, which is its own
+job; until it lands the binary errors with a clear message there instead of printing something
+different. The paired tests' default format is JSON, so this does not block slice 1c-ii.
+
+**Next.** The paired AR/BS numbers on top of this mode (`--paired-ar`, `--paired-bs`,
+`--paired-ar-n`, `--paired-bs-n`, `--paired-jobs`), then the text/latex table.

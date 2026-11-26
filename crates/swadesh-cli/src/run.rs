@@ -17,7 +17,7 @@ use crate::args::{Cli, TOKENIZE_CHOICES};
 use crate::input;
 use crate::lower::py_lower;
 use crate::pyfmt::fixed;
-use crate::report::{print_single, Score, Signature};
+use crate::report::{json_str, print_single, Score, Signature};
 use crate::{fail, Fail};
 
 
@@ -60,11 +60,11 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
     }
 
     let refs = read_refs(cli)?;
-    let system = read_system(cli)?;
-    if system.is_empty() {
+    let (systems, sys_names) = read_systems(cli)?;
+    if systems.iter().any(|s| s.is_empty()) {
         return fail(1, "Test set None contains no sentence");
     }
-    if refs.iter().any(|r| r.len() != system.len()) {
+    if systems.iter().any(|s| refs.iter().any(|r| r.len() != s.len())) {
         return fail(1, "System and reference streams have different lengths.");
     }
     let nrefs = refs.len();
@@ -76,26 +76,68 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
     names.sort();
     names.dedup();
 
+    // Multi-system mode: sacreBLEU reports every system side by side instead of one score. Only the
+    // JSON form is implemented so far; the text/latex forms need a faithful `tabulate` port.
+    if systems.len() > 1 {
+        // sacreBLEU refuses two systems with the same name, printing both lines itself and
+        // exiting 1 before any output.
+        let mut seen = std::collections::HashSet::new();
+        for name in &sys_names {
+            if !seen.insert(name.as_str()) {
+                eprintln!("sacreBLEU: '{name}' already used to name a system.");
+                eprintln!("sacreBLEU: Make sure to have a different basename for each system.");
+                return Err(Fail { code: 1, msg: String::new() });
+            }
+        }
+        eprintln!("sacreBLEU: Found {} systems.", systems.len());
+        if cli.sentence_level {
+            return fail(1, "sentence-level output for several systems is not implemented yet");
+        }
+        if !json {
+            return fail(1, "the multi-system report is implemented for --format json so far");
+        }
+        let mut rows: Vec<String> = Vec::with_capacity(systems.len());
+        for (system, name) in systems.iter().zip(&sys_names) {
+            let mut entries: Vec<String> =
+                vec![format!("        \"system\": {}", json_str(name))];
+            for metric_name in &names {
+                let (score, _sig) = match metric_name.as_str() {
+                    "BLEU" => bleu_corpus(cli, bleu_tokenizer(cli)?, system, &refs, nrefs)?,
+                    "TER" => ter_corpus(cli, system, &refs, nrefs)?,
+                    _ => chrf_corpus(cli, system, &refs, nrefs)?,
+                };
+                entries.push(format!(
+                    "        {}: {}",
+                    json_str(&score.name),
+                    json_str(&fixed(score.score, width))
+                ));
+            }
+            rows.push(format!("    {{\n{}\n    }}", entries.join(",\n")));
+        }
+        writeln!(out, "[\n{}\n]", rows.join(",\n")).map_err(io_err)?;
+        return Ok(());
+    }
+
     if cli.sentence_level {
         let metric = &names[0];
         let bleu_tok = if metric == "BLEU" { Some(bleu_tokenizer(cli)?) } else { None };
         if metric == "CHRF" {
             check_chrf_orders(cli)?;
         }
-        let mut lines = Vec::with_capacity(system.len());
+        let mut lines = Vec::with_capacity(systems[0].len());
         let sig_short = cli.short;
-        for i in 0..system.len() {
+        for i in 0..systems[0].len() {
             let seg_refs: Vec<&str> = refs.iter().map(|r| r[i].as_str()).collect();
             let (score, sig) = match bleu_tok {
                 Some(tok) => {
-                    let hyp = maybe_lower(&system[i], cli.lowercase);
+                    let hyp = maybe_lower(&systems[0][i], cli.lowercase);
                     let hyp_refs: Vec<Cow<str>> = seg_refs.iter().map(|r| maybe_lower(r, cli.lowercase)).collect();
                     let refs_view: Vec<&str> = hyp_refs.iter().map(|c| c.as_ref()).collect();
                     bleu_sentence(cli, tok, &hyp, &refs_view, nrefs)
                 }
-                None if metric == "TER" => ter_sentence(cli, &system[i], &seg_refs, nrefs)?,
+                None if metric == "TER" => ter_sentence(cli, &systems[0][i], &seg_refs, nrefs)?,
                 None => {
-                    let hyp = maybe_lower(&system[i], cli.chrf_lowercase);
+                    let hyp = maybe_lower(&systems[0][i], cli.chrf_lowercase);
                     let hyp_refs: Vec<Cow<str>> = seg_refs.iter().map(|r| maybe_lower(r, cli.chrf_lowercase)).collect();
                     let refs_view: Vec<&str> = hyp_refs.iter().map(|c| c.as_ref()).collect();
                     chrf_sentence(cli, &hyp, &refs_view, nrefs)?
@@ -112,9 +154,9 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
     let mut results: Vec<String> = Vec::new();
     for name in &names {
         let (score, sig) = match name.as_str() {
-            "BLEU" => bleu_corpus(cli, bleu_tokenizer(cli)?, &system, &refs, nrefs)?,
-            "TER" => ter_corpus(cli, &system, &refs, nrefs)?,
-            _ => chrf_corpus(cli, &system, &refs, nrefs)?,
+            "BLEU" => bleu_corpus(cli, bleu_tokenizer(cli)?, &systems[0], &refs, nrefs)?,
+            "TER" => ter_corpus(cli, &systems[0], &refs, nrefs)?,
+            _ => chrf_corpus(cli, &systems[0], &refs, nrefs)?,
         };
         // sacreBLEU: the short signature only applies outside JSON output.
         let short = !json && cli.short;
@@ -243,28 +285,43 @@ fn read_refs(cli: &Cli) -> Result<Vec<Vec<String>>, Fail> {
 }
 
 /// The single hypothesis stream (`-i FILE` or stdin).
-fn read_system(cli: &Cli) -> Result<Vec<String>, Fail> {
+/// The systems to score, with the names sacreBLEU reports for them.
+///
+/// One system per `-i` file (named by the path as given), or the tab-separated columns of stdin
+/// (named `System 1`, `System 2`, ...). A single file or tab-free stdin is one system, which keeps
+/// the ordinary single-score output.
+fn read_systems(cli: &Cli) -> Result<(Vec<Vec<String>>, Vec<String>), Fail> {
     match &cli.input {
         None => {
             let lines = input::stdin_lines(&cli.encoding)?;
-            if lines[0].contains('\t') {
-                return fail(
-                    2,
-                    "tab-separated hypotheses (several systems) are not supported by swadesh; \
-                     use one system per run, or pip install swadesh",
-                );
+            if lines.is_empty() {
+                return Ok((vec![lines], vec!["System 1".to_string()]));
             }
-            if lines.iter().any(|l| l.contains('\t')) {
+            if !lines.iter().any(|l| l.contains('\t')) {
+                return Ok((vec![lines], vec!["System 1".to_string()]));
+            }
+            // Tab-separated hypotheses: each line holds one segment per system.
+            let n = lines[0].split('\t').count();
+            if lines.iter().any(|l| l.split('\t').count() != n) {
                 return fail(17, "FATAL: the number of tab-delimited fields in the input stream differ across lines.");
             }
-            Ok(lines)
+            let mut systems: Vec<Vec<String>> = vec![Vec::with_capacity(lines.len()); n];
+            for line in &lines {
+                for (k, part) in line.split('\t').enumerate() {
+                    systems[k].push(part.to_string());
+                }
+            }
+            let names = (1..=n).map(|i| format!("System {i}")).collect();
+            Ok((systems, names))
         }
         Some(files) if files.is_empty() => fail(2, "-i/--input needs a file name"),
-        Some(files) if files.len() > 1 => fail(
-            2,
-            "several systems (multiple -i files) are not supported by swadesh; pip install swadesh",
-        ),
-        Some(files) => input::file_lines(&files[0], &cli.encoding),
+        Some(files) => {
+            let mut systems = Vec::with_capacity(files.len());
+            for f in files {
+                systems.push(input::file_lines(f, &cli.encoding)?);
+            }
+            Ok((systems, files.clone()))
+        }
     }
 }
 

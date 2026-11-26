@@ -19,8 +19,11 @@ fn main() -> ExitCode {
             Err(_) => ExitCode::from(1),
         },
         Err(f) => {
-            // Output already written stays on stdout; the error goes to stderr.
-            eprintln!("swadesh: error: {}", f.msg);
+            // Output already written stays on stdout; the error goes to stderr. An empty message
+            // means the diagnostic was already printed, in sacreBLEU's own wording.
+            if !f.msg.is_empty() {
+                eprintln!("swadesh: error: {}", f.msg);
+            }
             ExitCode::from(f.code as u8)
         }
     }
