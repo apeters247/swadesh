@@ -4266,10 +4266,8 @@ an ad-hoc byte-diff must set it too.
 **Measured.** `cargo test --release --workspace`: 137 tests, 0 failed (the tabulate suite is 9 tests
 now, including one for each measured rule above). A 22-case byte-diff of the paired report - text and
 latex, both tests, 1-3 metrics, 1-3 systems, file and stdin sources, `-sh`, and a starred p-value -
-and the 15-case multi-system one are still 0 diffs with stderr compared. `tests/test_cli.py`: the 84
-cases covering the paired report, the latex escaping, the multi-system tables, the refusals and the
-`-ci` edges pass in 15s; the whole file (555 cases) is running as this entry is written, with the
-number to confirm next session.
+and the 15-case multi-system one are still 0 diffs with stderr compared. `tests/test_cli.py`: **550
+passed, 0 failed in 6m11s** (the 448-case file at the goal start).
 
 **Also re-run (the earlier attempt hit the harness's 10-minute cap, so it was split).** The Python
 selection on 3.11.14: 673 passed / 58 skipped in group A
