@@ -4081,3 +4081,48 @@ now records it alongside the Unicode tables, and the file says it is generated, 
 **Next.** `--citation` (which needs `-t` and the catalogue, both now in hand), then the downloader and
 the five format parsers for `-t`/`--download`/`--echo`, then `--origlang`/`--subset`, then
 `--detail`. The multi-system text/latex table is still the one CLI formatting gap.
+
+## 2026-11-26 (continued) - slice 2b blocked on a dependency decision: `-t` needs a downloader
+
+**Attempted.** `-t/--test-set` (and with it `--download`, `--echo`, `--origlang`, `--subset`,
+`--detail`, `--citation`), on top of the catalogue and `--list` that landed in this slice.
+
+**Measured, and it stops there.** sacreBLEU's `-t` path is not a flag: it downloads an archive,
+verifies an md5, extracts it, then parses one of five formats per test set. Concretely:
+
+* the cache is `$SACREBLEU` (default `~/.sacrebleu`) with `<dir>/<test_set>/raw/<archive>` and then
+  per-pair parsed files; this host holds 486 MB of it from earlier sessions;
+* the machinery live in `sacrebleu/dataset/__init__.py` (1981 lines: catalogue, download, md5
+  verify, extraction) plus five format parsers - `wmt_xml` 204, `fake_sgml` 116, `tsv` 61,
+  `plain_text` 36, `iwslt_xml` 8;
+* **`-t` downloads before it validates the pair**: `-t wmt22 -l de-fr` fetched the whole archive and
+  only then failed with `System and reference streams have different lengths.`
+
+**Why that is a decision and not more work.** `crates/swadesh-cli` has exactly one dependency today
+(`swadesh-core`, a path dependency) - no third-party crates at all, which is part of what "standalone
+binary" means here. Downloading and extracting needs an HTTP client plus `flate2`/`tar`/`zip` (or
+shelling out to `curl`/`tar`/`unzip`, or requiring the user to pre-seed the cache). Each option has a
+different cost, and the tests would need the data either way - feasible without the network by
+pointing the cache at the checkout (`bench/data` already holds WMT22 src/ref), but only once the
+cache layout is reproduced.
+
+The goal's stop rule says a piece that needs a dependency outside the repo stops and reports rather
+than widening scope, so the downloader is left here for the owner to choose between:
+
+1. **Add crates** (`ureq` + `flate2` + `tar` + `zip`, or similar): full `-t` support with no external
+   tools, at the cost of the CLI's current zero-dependency property.
+2. **Shell out** to `curl` and `tar`/`unzip`: no new crates, but a runtime dependency on those tools
+   being installed, and error handling that has to smooth over their differences.
+3. **No downloader**: accept `-t` only for a pre-populated cache (`$SACREBLEU`), documented as
+   "fetch the data first". The smallest change; least like sacreBLEU.
+
+**Also found.** `--citation` is **broken in sacreBLEU 2.6.0 itself**: `sacrebleu -t wmt22 --citation`
+dies with `TypeError: argument of type 'WMTXMLDataset' is not iterable`, because its own code tests
+`'citation' not in DATASETS[test_set]` while the catalogue's values are `Dataset` objects, not dicts.
+Our catalogue holds the citations, so if `--citation` is implemented it should print them and the
+divergence recorded the same way as the `float32`-paired crash - reproducing a Python traceback is
+not a behaviour worth matching.
+
+**Done in this slice so far.** `--list`, byte-identical, and the catalogue itself (67 test sets,
+generated). `--citation`'s catalogue data is in hand; everything else in the group waits on the
+decision above.
