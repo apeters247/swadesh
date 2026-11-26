@@ -158,6 +158,30 @@ the set-specific citation is not reproduced. `-t` stays unsupported and the comb
 with the `-t` hint, which is a documented divergence: the oracle exits 1 with a traceback where
 swadesh exits 2 with the hint.
 
+### Argument errors
+
+An argument error prints argparse's usage block and exits 2, as sacreBLEU's do. The usage text is
+transcribed from 2.6.0 at the default 80 columns (argparse wraps it to the terminal width) with the
+program name substituted, which is the one intentional difference.
+
+* The option name in the error line is `--long/-short` - the long form first, even when the short one
+  was typed. `--chrf-beta`, `--max-ngram-order` and `--python-version` have no short form, so they
+  appear alone.
+* `-j` is the short form of `--paired-jobs`; `-pj` is not a flag.
+* `--paired-ar` and `--paired-bs` are mutually exclusive, and the message names the one that came
+  **second** as the argument that is not allowed with the first:
+  `argument --paired-bs/-pbs: not allowed with argument --paired-ar/-par`.
+
+Documented divergences, each pinned by a strict `xfail` test:
+
+* with more than one token left unconsumed, argparse lists them all
+  (`unrecognized arguments: -pj 1`) where swadesh stops at the first;
+* with `--paired-jobs N` for N > 1 sacreBLEU prints `Launching N parallel workers.` and its fork pool
+  reorders the per-system status lines; swadesh scores serially and prints them in system order. The
+  scores are identical, and `-j 1`, the default, is byte-identical throughout;
+* `--max-ngram-order` and `--python-version` are swadesh additions with no sacreBLEU equivalent, so
+  the oracle rejects them as unrecognized where swadesh accepts them.
+
 ## Input handling
 
 * `-nr N` splits each reference line on tabs into `N` references.
