@@ -174,7 +174,7 @@ implements them:
 | `-t/--test-set`, `--download`, `--echo`, `-ol/--origlang`, `--subset` | works (downloads into `$SACREBLEU` and parses five formats) | refused with a hint | needs an HTTP client + archive decoding; the dependency decision is recorded in `docs/lab-notebook.md` |
 | `-d/--detail` | works (needs a test set) | refused with a hint | rides on `-t` |
 | `-tok ja-mecab/ko-mecab/spm/flores101/flores200/spBLEU-1K` | works with the extra packages | refused with a hint, exit code 2 | the five native tokenizers are byte-identical; the exit code also differs from the oracle's (it accepts the flag and fails at import time, exit code 1), pinned by `test_cli_unbuilt_tokenizer` as a strict xfail |
-| `-e` other than utf-8 | opens the file with any Python codec | refused with a hint | needs an encoding crate |
+| `-e` other than the built-in codecs | opens the file with any Python codec | utf-8, utf-8-sig, ascii, latin-1 and cp1252 (with their aliases) decode exactly as Python does, on files and on stdin, including Python's own failure line; anything else is refused with a hint, exit code 2 | 2026-11-26: the dependency-free set MT data ships in; Python's codec registry is not reimplemented |
 | a `.gz` input file | reads it | refused with a hint | needs a decompressor |
 | `-cw -1`, `-cw -2`, ... | accepted; `nw:-1` in the signature and a reduced order | refused with a hint | `test_negative_chrf_word_order` (strict xfail) |
 | two unconsumed tokens (`-pj 1`) | `unrecognized arguments: -pj 1` | `unrecognized arguments: -pj` | argparse's two-phase parse; `test_unrecognized_arguments_lists_every_token` (strict xfail) |

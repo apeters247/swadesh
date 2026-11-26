@@ -206,6 +206,26 @@ Documented divergences, each pinned by a strict `xfail` test:
 * `--python-version X.Y` emulates that CPython's float summation semantics. CPython changed
   `sum()` precision in 3.12 and 3.14, and BLEU's score depends on it; the default is 3.12.
 
+## `-e`/`--encoding` (measured 2026-11-26)
+
+sacreBLEU's `-e` names any Python codec, and it decodes both the input files and stdin with it.
+swadesh builds in the codecs that need no dependency beyond `std`, which is the set MT data actually
+ships in, and refuses the rest with a hint:
+
+| `-e` value | rule |
+| --- | --- |
+| `utf-8`, `utf8`, `u8` | UTF-8, with Python's `UnicodeDecodeError` line on failure |
+| `utf-8-sig` | UTF-8 with one leading BOM stripped |
+| `ascii`, `us-ascii`, `646` | identity; a byte > 0x7F is `... can't decode byte 0xNN in position P: ordinal not in range(128)` |
+| `latin-1`, `latin1`, `iso-8859-1`, `8859`, `cp819`, `l1` | the identity byte->code-point map; never fails |
+| `cp1252`, `windows-1252`, `1252` | CP1252; its five undefined bytes (0x81, 0x8D, 0x8F, 0x90, 0x9D) give Python's `'charmap' codec ... character maps to <undefined>` |
+| anything else | refused with a hint and exit code 2 (Python would look the name up in its codec registry) |
+
+Measured against the oracle: `-e latin-1`, `latin1`, `iso-8859-1`, `cp1252`, `windows-1252` and
+`utf-8-sig` all reproduce its stdout, stderr and exit code byte for byte on files **and** on stdin;
+the three failure modes (`'ascii'`, `'charmap'`, `'utf-8'` decode errors) exit 1, print nothing on
+stdout, and end in Python's own line (the traceback frames above it are the documented divergence).
+
 ## Verification
 
 `tests/test_parity.py` runs both programs on the same inputs and compares stdout byte-for-byte,

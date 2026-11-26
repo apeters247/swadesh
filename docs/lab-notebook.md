@@ -4987,3 +4987,34 @@ files): 319 passed. `test_fuzz_unicode` + `test_coverage_gaps` + `test_mutation_
 
 **Next.** The WS0.8 leftovers (`-e` codecs, `.gz` input, the unconsumed-token list, `-j > 1` status
 lines, the real-model re-verification), and the `.zip`/plain-`.gz` download shapes.
+
+## 2026-11-26 (continued) - M0 slice 12: `-e`/`--encoding`, the dependency-free codecs
+
+**Attempted.** `-e` was the last flag swadesh accepted only for `utf-8`. sacreBLEU's `-e` names *any*
+Python codec and decodes both the input files and stdin with it, so Latin-1 or CP1252 data could not
+be scored from the standalone binary at all.
+
+**Measured first, then implemented.** Against the oracle: `-e latin-1`/`latin1`/`iso-8859-1` decode
+and score; `-e cp1252`/`windows-1252` too; `-e utf-8-sig` strips the BOM; `-e ascii` on a high byte
+gives `UnicodeDecodeError: 'ascii' codec can't decode byte 0xe9 in position 3: ordinal not in
+range(128)`; `-e cp1252` on its five undefined bytes gives `'charmap' codec ... character maps to
+<undefined>`; a genuinely unknown name gives `LookupError: unknown encoding: nope`; and stdin is
+decoded the same way as files.
+
+**What was built.** The codecs that need nothing beyond `std` - utf-8, utf-8-sig, ascii, latin-1 and
+cp1252, with Python's alias normalisation (case-insensitive, `-`/`_`/space interchangeable) - plus
+Python's exact failure line for each. Anything else (utf-16, the CJK codecs, a typo) is refused with
+a hint and exit code 2 rather than decoded wrongly: reimplementing Python's codec registry is out of
+scope, and the alternative would be a new dependency.
+
+**Verification.** Eleven cases against the oracle: seven decode-and-score cases (five codecs on files,
+two on stdin) byte-identical on stdout, stderr and exit code, and three failure modes matching on
+exit code, on stdout (empty) and on the final stderr line - the traceback frames above it are the
+documented divergence. `tests/test_cli.py`: the new `test_encoding_flag_decodes_like_python` (7
+cases, files and stdin) and `test_encoding_flag_error_line_matches_python` (3 cases); `-e latin-1`
+left `test_unsupported_options_fail_with_hint`, which no longer covers it. That area: 21 passed.
+
+**Numbers.** See the code commit for the full-suite runs.
+
+**Next.** `.gz` input, the unconsumed-token list, `-j > 1` status lines, the real-model
+re-verification, and the `.zip`/plain-`.gz` download shapes.
