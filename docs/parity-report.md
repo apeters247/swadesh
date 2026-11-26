@@ -73,6 +73,9 @@ Not covered: `--download` (needs network; it fetches a set and quits). `spm`, `f
 | `tests/test_differential.py` | 79 passed |
 | `tests/test_fuzz_unicode.py` + `tests/test_coverage_gaps.py` | 72 passed |
 | `tests/test_ter.py` + `tests/test_deep.py` | 61 passed, 2 skipped, 0 failed (12m53s - the slow pair, run on its own) |
+| `tests/test_differential_long.py` | 46 passed (14m16s) |
+| `tests/test_mutation_kills.py` | 14 passed |
+| `tests/test_mcp.py` + `test_regressions.py` + `test_numrefs_none_refs.py` | 10 passed |
 
 **The 58 skips are one cause, not many.** They are the CLI dataset cases, which read
 `$SWADESH_DATA/wmt16/wmt16.en-de.ref`; the real cache lives in `$SACREBLEU` (`~/.sacrebleu/wmt16`),

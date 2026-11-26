@@ -4413,3 +4413,10 @@ item 2 holds in substance, and a literal move would trade item 3 for it.
 **Next.** The `-t` group behind the downloader decision (three options recorded above); the `--help`
 descriptions, deliberately deferred until `-t` lands so the help does not advertise flags the binary
 refuses; then slice 4, which is downstream of `-t`.
+
+**Every test file, measured.** With the slow pair done, the whole `tests/` tree has now been run on
+troy-1 this session: `test_differential_long` **46 passed** (14m16s) and `test_mutation_kills`
+**14 passed** (1.8s) close the set, so every file in `tests/` is green - `test_cli.py` on the Rust
+binary side, the other nineteen on the Python side. No file was skipped, xfailed or loosened to get
+there; the three strict `xfail`s are the documented divergences listed in `docs/parity-report.md` and
+they fail by design.
