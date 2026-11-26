@@ -498,7 +498,7 @@ planning aid, not a commitment.
 | WS1.5 | M0 | `swadesh check-set` validator | 1 | todo |
 | WS0.1 | M0 | Shared dataset reader | 1 | **done** |
 | WS0.2 | M0 | `-t` for the built-in catalogue | 2 | **part done** (cached sets; the cold path needs WS0.3) |
-| WS0.3 | M0 | The downloader (feature-gated) | 3 | **done for the measured families**: the SGML, WMT XML, plain-text and IWSLT parsers rebuild their sets byte-identically, and the `downloader` feature fetches, md5-verifies and extracts every tar+gzip set - single- or multi-archive - in registry order, so a cold cache works end to end. Remaining: `.zip`/plain-`.gz`, the TSV family, and the SGML variants (`B`, `tworefs`, `dev`) |
+| WS0.3 | M0 | The downloader (feature-gated) | 3 | **done for the measured families**: the SGML family and its `B`/`tworefs`/`dev` variants, the WMT XML, plain-text, IWSLT and TSV parsers rebuild their sets byte-identically, and the `downloader` feature fetches, md5-verifies and extracts every tar+gzip set - single- or multi-archive - in registry order, so a cold cache works end to end. Remaining: `.zip`/plain-`.gz`, and the shapes whose registry `paths` are not all `.sgm` (`wmt17/ms`, `wmt19/google/*`, `wmt21/B`) |
 | WS0.4 | M0 | `--download NAME -l PAIR` | 0.5 | **done** |
 | WS0.5 | M0 | `--echo FIELD...` | 1 | **done** |
 | WS0.6 | M0 | `-ol/--origlang`, `--subset` | 1 | **done** |

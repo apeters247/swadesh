@@ -6,6 +6,7 @@ pub mod args;
 pub mod dataset;
 pub mod plain;
 pub mod iwslt;
+pub mod tsv;
 #[cfg(feature = "downloader")]
 pub mod fetch;
 pub mod sgml;

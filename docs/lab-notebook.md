@@ -4858,3 +4858,50 @@ test was added.
 
 **Next.** The TSV family (`mtnt*`) and the SGML variants (`B`, `tworefs`, `dev`), then the WS0.8
 small divergences and slice 4.
+
+## 2026-11-26 (continued) - M0 slice 9: the TSV family, the SGML variants, and a read-side rstrip bug
+
+**Attempted.** Two parser families and one latent bug. Spec first: `docs/spec/test-set-parsers.md`
+gained the TSV section and the FakeSGML-variants section (commit 1e57cbd), both measured, before any
+code was written.
+
+**The SGML variants, and the guess that was never needed.** The plain `wmtNN` parser *guessed* the
+file names from the pair. Measurement showed every SGML set already carries a per-pair `paths` list
+naming one `.sgm` per `src`/`ref*` field, in order - the same files the guess produced for the plain
+sets, and the only source of truth for the variants: `wmt16/B` (a second reference file), `tworefs`
+(`ref:0`, `ref:1`) and the `dev` sets (a `dev/` directory). The parser now reads those paths, behind a
+guard - every path must end in `.sgm` and there must be as many paths as `src`/`ref*` fields - which
+keeps `wmt17/ms` (`.txt`/`.gz` references), `wmt19/google/*` (a plain `.ref`) and `wmt21/B` (WMT XML)
+refusing rather than mis-parsed. Verified against the oracle: `wmt16/B` en-fi, `wmt16/tworefs` en-fi
+(all of `src`/`ref:0`/`ref:1`), `wmt16/dev` en-ro and tr-en, and plain `wmt16` en-de - stdout and every
+generated file identical.
+
+**The TSV family.** `mtnt1.1/*` and `mtnt2019`: the registry path is `<col>:<file>` with a **0-based**
+column index over one tab-separated file, and the last column keeps its `\r`, so a CRLF input gives an
+LF `.src` and a CRLF `.ref`. A Python reference matched all twelve pairs' files byte for byte.
+
+**A bug the TSV family exposed.** With the files byte-identical, `--echo all` still differed on
+`mtnt1.1/test`, and the difference was trailing spaces: the cached `.src` keeps them, the oracle's
+`--echo` does not. Measured over 1020 segments - `verbatim` 21 mismatches, `rstrip` 0, `strip` 123 -
+so sacreBLEU **rstrips every line when it loads a cached field**, and this read-side rule covers
+scoring too, not only `--echo`. swadesh's `input.rs` already rstripped `-i` lines; `dataset::read_field`
+did not. Fixed it to use the same `py_rstrip`. The TSV sets then matched on `--echo all`, on every
+generated file, and on scoring (corpus and sentence-level) for BLEU, chrF and TER.
+
+**Numbers.**
+
+* cargo test --release --workspace: 13 suites green.
+* full `tests/test_cli.py`: **667 passed, 3 skipped, 3 xfailed** (6:41).
+* parser area: 9 tests.
+
+**A measurement for the next slice (item 4: the console script running the binary).** With the
+scoring flags, the Rust binary is already at **full parity**: running sacreBLEU's own CLI-parity case
+list (`tests/test_parity.py`'s `CLI_ARGS`/`CLI_SCORING`, program names normalised) against the oracle
+and the binary gives **scoring 43/43** and **informational 9/13** - the only four failures are
+`--help`, `-h`, `--version`, `-V`, i.e. the binary's identity text, nothing functional. So making the
+console script run the binary is no longer "a day of flags": it is the `--help` transcription (with
+`swadesh` as the program name, which the parity harness normalises) plus `--version`. Measured with
+`/tmp/measure_rustcli_parity.py`.
+
+**Next.** The remaining "shapes" (`.zip`/plain-`.gz` download, `wmt17/ms`, `wmt19/google/*`), then the
+WS0.8 small divergences and slice 4 (the console script running the binary).

@@ -138,7 +138,7 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
             // Each family answers only for the layouts it measured; the order does not matter
             // because each refuses anything it does not recognise.
             let rebuild = |found: &dataset::Found, pair: &str| -> Result<bool, Fail> {
-                for step in [crate::sgml::rebuild, crate::wmtxml::rebuild, crate::plain::rebuild, crate::iwslt::rebuild] {
+                for step in [crate::sgml::rebuild, crate::wmtxml::rebuild, crate::plain::rebuild, crate::iwslt::rebuild, crate::tsv::rebuild] {
                     if step(found, pair)? {
                         return Ok(true);
                     }

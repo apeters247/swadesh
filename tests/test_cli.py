@@ -1588,6 +1588,44 @@ def test_sgml_set_is_rebuilt_from_its_raw_tree(tmp_path):
         assert ours.stdout == theirs[1], flags
 
 
+def test_sgml_variants_are_rebuilt_from_their_raw_tree(tmp_path):
+    """`wmt16/B`, `wmt16/tworefs` and `wmt16/dev` rebuild from their registry `paths` and match.
+
+    These are exactly the sets the old pair-guessing rule could not reach: `B` names a *second*
+    reference file, `tworefs` names two of them over the fields `ref:0`/`ref:1`, and `dev` lives
+    under a `dev/` directory. The registry's per-pair `paths` list - one `.sgm` per `src`/`ref*`
+    field, in order - is the source of truth for all of them, and the guard that a set whose `paths`
+    are not all `.sgm` (or do not line up with its `src`/`ref*` fields) keeps refusing is what stops
+    `wmt17/ms`, `wmt19/google/*` and `wmt21/B` being parsed wrongly.
+    """
+    home = Path(os.environ.get("SACREBLEU", Path.home() / ".sacrebleu"))
+    checked = 0
+    for set_name, pair, marker in (
+        ("wmt16/B", "en-fi", "newstestB2016-enfi-ref.fi.sgm"),
+        ("wmt16/tworefs", "en-fi", "newstestB2016-enfi-ref.fi.sgm"),
+        ("wmt16/dev", "en-ro", "newsdev2016-enro-ref.ro.sgm"),
+    ):
+        raw = home / set_name / "raw"
+        if not raw.is_dir() or not any(f.name == marker for f in raw.rglob("*")):
+            continue
+        checked += 1
+        cache = tmp_path / set_name.replace("/", "_")
+        (cache / set_name).mkdir(parents=True)
+        shutil.copytree(raw, cache / set_name / "raw", dirs_exist_ok=True)
+        env = dict(ENV)
+        env["SACREBLEU"] = str(cache)
+        args = ["-t", set_name, "-l", pair, "--echo", "all"]
+        theirs = run(SACREBLEU, args)
+        ours = _run_env(SWADESH, [*args, "--python-version", PYVER], env)
+        assert ours.returncode == 0, (set_name, ours.stderr)
+        assert ours.stdout == theirs[1], set_name
+        prefix = set_name.replace("/", "_")
+        for f in (home / set_name).glob(f"{prefix}.{pair}.*"):
+            mine = (cache / set_name / f.name).read_bytes()
+            assert mine == f.read_bytes(), (set_name, f.name)
+    assert checked, "no SGML variant is cached under $SACREBLEU"
+
+
 def test_an_unparsable_layout_still_refuses(tmp_path):
     """A set whose layout no measured rule covers refuses rather than producing wrong data.
 
@@ -1648,6 +1686,40 @@ def test_iwslt_set_is_rebuilt_from_its_raw_tree(tmp_path):
             want = (home / "iwslt17" / f"iwslt17.{pair}.{name}").read_bytes()
             assert mine == want, (pair, name)
     assert checked, "no complete iwslt17 direction is cached under $SACREBLEU"
+
+
+# ------------------------------------------------- the TSV family (mtnt1.1, mtnt2019)
+
+def test_tsv_set_is_rebuilt_from_its_raw_tree(tmp_path):
+    """`mtnt1.1/*` rebuilds from its TSV alone, and every generated file is byte-identical to
+    sacreBLEU's own.
+
+    The measured rules this pins: the registry path is `<col>:<file>` with a **0-based** column index
+    (`1:`/`2:` over mtnt1.1's `id<TAB>src<TAB>tgt` file, `2:`/`3:` over mtnt2019's four-column one);
+    the last column keeps its `\r`, so a CRLF input yields an LF `.src` and a CRLF `.ref`; and the
+    read side is measured here too - a cached field is **rstripped** line by line when loaded (the
+    files keep mtnt's trailing spaces, `--echo src` does not), which the `--echo all` comparison
+    below exercises on lines that genuinely have them.
+    """
+    home = Path(os.environ.get("SACREBLEU", Path.home() / ".sacrebleu"))
+    raw = home / "mtnt1.1" / "test" / "raw"
+    if not (raw / "MTNT" / "test" / "test.en-fr.tsv").exists():
+        pytest.skip("the mtnt1.1 raw tree is not cached under $SACREBLEU")
+    cache = tmp_path / "cache"
+    (cache / "mtnt1.1" / "test").mkdir(parents=True)
+    shutil.copytree(raw, cache / "mtnt1.1" / "test" / "raw", dirs_exist_ok=True)
+    env = dict(ENV)
+    env["SACREBLEU"] = str(cache)
+    for pair in ("en-fr", "fr-en", "en-ja"):
+        args = ["-t", "mtnt1.1/test", "-l", pair, "--echo", "all"]
+        theirs = run(SACREBLEU, args)
+        ours = _run_env(SWADESH, [*args, "--python-version", PYVER], env)
+        assert ours.returncode == 0, ours.stderr
+        assert ours.stdout == theirs[1], pair
+        for name in ("src", "ref"):
+            mine = (cache / "mtnt1.1" / "test" / f"mtnt1.1_test.{pair}.{name}").read_bytes()
+            want = (home / "mtnt1.1" / "test" / f"mtnt1.1_test.{pair}.{name}").read_bytes()
+            assert mine == want, (pair, name)
 
 
 # ------------------------------------------------- the WMT XML family (wmt20 and later)

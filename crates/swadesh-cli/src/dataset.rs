@@ -28,6 +28,8 @@
 
 use std::path::{Path, PathBuf};
 
+use swadesh_core::unicode::py_rstrip;
+
 use crate::datasets::DATASETS;
 use crate::{fail, Fail};
 
@@ -439,8 +441,11 @@ pub fn not_cached(found: &Found, pair: &str, field: &str, path: &Path) -> Fail {
 pub fn read_field(path: &Path) -> Result<Vec<String>, Fail> {
     let bytes = std::fs::read(path).or_else(|e| fail(1, format!("{}: {e}", path.display())))?;
     let text = String::from_utf8_lossy(&bytes);
-    let mut lines: Vec<String> =
-        text.split('\n').map(|l| l.strip_suffix('\r').unwrap_or(l).to_string()).collect();
+    // Every line is rstripped, as sacreBLEU loads a cached field: measured on mtnt1.1/test,
+    // where `--echo src` matches line.rstrip() for all 1020 segments and neither the verbatim
+    // line nor line.strip() does. The files keep their trailing spaces - the parsers write them
+    // verbatim - so this is a read-side rule, and it applies to scoring as much as to --echo.
+    let mut lines: Vec<String> = text.split('\n').map(|l| py_rstrip(l).to_string()).collect();
     if lines.last().map(|l| l.is_empty()).unwrap_or(false) {
         lines.pop();
     }
