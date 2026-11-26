@@ -9,6 +9,8 @@ pub mod iwslt;
 pub mod tsv;
 #[cfg(feature = "downloader")]
 pub mod fetch;
+#[cfg(feature = "downloader")]
+pub mod zip;
 pub mod sgml;
 pub mod wmtxml;
 pub mod datasets;

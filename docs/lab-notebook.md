@@ -5239,3 +5239,46 @@ than add) or a hand-written reader over the existing `flate2`. Recorded as the o
 download shape.
 
 **Next.** The zip decision.
+
+## 2026-11-26 (continued) - M0 slice 19: the `.zip` and plain-`.ref` shapes, so every format fetches
+
+**Attempted.** The last two download shapes: the four `wmt20/robust/*` sets (one `739 KB` zip) and the
+six `wmt19/google/*` sets (a `.tgz` plus a plain `.ref`).
+
+**Measured first.**
+
+* The zip is small and simple: **24 entries, 21 deflate and 3 stored directories, 1.75 MB
+  uncompressed**, plus a `__MACOSX/` sidecar tree. No Zip64, no encryption - the central directory is
+  authoritative for sizes and offsets.
+* The `.ref` is downloaded as its own entry, "extracted" (again a no-op), and used **verbatim** as the
+  reference - one line per segment, 1997 lines, identical under verbatim/`rstrip`/`strip` because the
+  file carries no trailing whitespace. `docid`/`genre`/`origlang` still come from the `.sgm` source.
+
+**The dependency question, answered without a crate.** The goal's stop rule treats a new dependency as
+a decision to report, so the reader was written instead: `crates/swadesh-cli/src/zip.rs`, about 120
+lines, behind the existing `downloader` feature. It refuses (naming the entry) a method other than
+stored/deflate, a truncated or encrypted entry, a missing central directory, or a path that could
+escape the extraction root.
+
+**What was built.** `fetch.rs` lost its format guard: every entry the catalogue names is downloaded
+and md5-checked in registry order, and only `.tar.gz`/`.tgz`/`.zip` are unpacked - a plain `.gz` or
+`.ref` is left as it arrived and read in place, though the oracle prints the "Extracting" line for it.
+`sgml.rs` accepts a `.ref` path in the family's guard and reads it as verbatim lines.
+
+**Verification.** Cold downloads against the oracle's own, both byte-identical with the cache root
+normalised:
+
+* `wmt20/robust/set1`: stderr (four lines, two entries), `--echo src ref`, `--echo src`/`ref` for
+  en-de (1098 lines) and en-ja (1100), and the four generated files.
+* `wmt19/google/ar`: stderr, five `--echo` comparisons (`src`, `ref`, `all`, `docid`, `src ref docid`,
+  1997 lines each) and all five generated files.
+
+New opt-in tests: `test_cold_cache_downloads_a_zip_set` and `test_cold_cache_downloads_a_plain_gz_set`
+(previous slice), both passing.
+
+**The map is now complete: all 67 catalogue sets are fetchable.** That took away the subject of
+`test_a_set_in_an_unsupported_format_still_refuses` (its premise was that some formats are refused), so
+it was removed; the malformed-layout refusal it sat next to is still covered by
+`test_an_unparsable_layout_still_refuses`.
+
+**Next.** Nothing left on the download list; what remains is the documented divergence list.

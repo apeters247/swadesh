@@ -1473,28 +1473,6 @@ def test_the_default_reference_is_deterministic(tmp_path, set_pair, expected):
     assert ours == want, set_pair
 
 
-def test_a_set_in_an_unsupported_format_still_refuses(tmp_path):
-    """A set whose archives are not tar+gzip refuses with an accurate message, and never the network.
-
-    The catalogue's URL list is flat and the fetcher treats every URL of a set alike, so a set that
-    lists a `.zip` (the four `wmt20/robust/*` sets) or a plain `.gz` (`multi30k/2018`) cannot be
-    fetched in part; an empty cache gets the "not in the cache" refusal instead. Multi-archive
-    *tar+gzip* sets are fetchable now (see `test_cold_cache_downloads_a_multi_archive_set`): the
-    oracle downloads every archive of a set, and so does swadesh.
-    """
-    cache = tmp_path / "empty-cache"
-    cache.mkdir()
-    env = dict(ENV)
-    env["SACREBLEU"] = str(cache)
-    proc = subprocess.run(
-        [str(SWADESH), "-t", "wmt20/robust/set1", "-l", "en-de", "--echo", "src",
-         "--python-version", PYVER],
-        capture_output=True, env=env,
-    )
-    assert proc.returncode == 1
-    assert proc.stdout == b""
-    assert b"run `swadesh --download wmt20/robust/set1` first" in proc.stderr
-
 
 @pytest.mark.skipif(os.environ.get("SWADESH_DOWNLOAD_TESTS") != "1",
                     reason="downloads 3.7 MB twice and needs the network; set SWADESH_DOWNLOAD_TESTS=1")
@@ -1520,6 +1498,31 @@ def test_cold_cache_downloads_and_matches(tmp_path):
     for name in ("src", "ref", "docid", "origlang", "genre"):
         assert (ours / "wmt16" / f"wmt16.en-de.{name}").read_bytes() == \
             (theirs / "wmt16" / f"wmt16.en-de.{name}").read_bytes(), name
+
+
+@pytest.mark.skipif(os.environ.get("SWADESH_DOWNLOAD_TESTS") != "1",
+                    reason="downloads ~0.7 MB twice and needs the network; set SWADESH_DOWNLOAD_TESTS=1")
+def test_cold_cache_downloads_a_zip_set(tmp_path):
+    """A `.zip` set fetches, unpacks with the hand-written reader, and parses byte-identically.
+
+    `wmt20/robust/set1` is one zip of 24 entries (21 deflate, 3 stored directories, plus a
+    `__MACOSX/` sidecar tree). The reader is `crates/swadesh-cli/src/zip.rs`, written rather than
+    pulled in as a crate.
+    """
+    ours = tmp_path / "ours"
+    theirs = tmp_path / "theirs"
+    ours.mkdir()
+    theirs.mkdir()
+    args = ["-t", "wmt20/robust/set1", "-l", "en-de", "--echo", "src", "ref"]
+    ref = _run_env(SACREBLEU, args, {**ENV, "SACREBLEU": str(theirs)})
+    own = _run_env(SWADESH, [*args, "--python-version", PYVER], {**ENV, "SACREBLEU": str(ours)})
+    assert ref.returncode == own.returncode == 0, (ref.stderr[-300:], own.stderr[-300:])
+    assert own.stdout == ref.stdout
+    norm = lambda blob: blob.replace(str(ours).encode(), b"CACHE").replace(str(theirs).encode(), b"CACHE")
+    assert norm(own.stderr) == norm(ref.stderr)
+    for name in ("src", "ref"):
+        assert (ours / "wmt20" / "robust" / "set1" / f"wmt20_robust_set1.en-de.{name}").read_bytes() == \
+            (theirs / "wmt20" / "robust" / "set1" / f"wmt20_robust_set1.en-de.{name}").read_bytes(), name
 
 
 @pytest.mark.skipif(os.environ.get("SWADESH_DOWNLOAD_TESTS") != "1",

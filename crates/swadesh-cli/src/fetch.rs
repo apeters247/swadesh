@@ -18,10 +18,12 @@
 //! URL. So the multi-archive case is a loop over `data`, not a lookup: 27 single-archive and 31
 //! multi-archive sets share this one path.
 //!
-//! **What this does not cover, and refuses explicitly.** Formats other than `.tar.gz`/`.tgz` - four
-//! `.zip` sets and the plain-`.gz` `multi30k/2018` - are refused whole rather than partially fetched.
-//! And the md5-mismatch message is ours, not measured: producing a corrupted download needs a fake
-//! server, so sacreBLEU's wording for that case is still unknown (`docs/parity-report.md` records it).
+//! **The formats.** Every entry the catalogue names is downloaded and md5-checked, in registry order.
+//! `.tar.gz`/`.tgz` are unpacked with `tar` and a `.zip` with the small reader in `zip.rs`; a plain
+//! file - a `.gz` reference (`multi30k/2018`) or a `/google/*.ref` - is left as it arrived and read in
+//! place, though the oracle still prints the "Extracting" line for it (measured).
+//! The md5-mismatch message is ours, not measured: producing a corrupted download needs a fake server,
+//! so sacreBLEU's wording for that case is still unknown (`docs/parity-report.md` records it).
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -40,14 +42,6 @@ pub fn ensure_archive(found: &Found) -> Result<bool, Fail> {
     let Some(entry) = DATASETS.iter().find(|d| d.name == found.name) else { return Ok(false) };
     if entry.data.is_empty() {
         return Ok(false);
-    }
-    // Every URL must be a tar+gzip archive: a set that also lists another format is refused whole,
-    // rather than fetched in part and left unusable.
-    for url in entry.data {
-        let base = url.rsplit('/').next().unwrap_or("archive");
-        if !(base.ends_with(".tar.gz") || base.ends_with(".tgz") || base.ends_with(".gz")) {
-            return Ok(false);
-        }
     }
     let raw = found.dir.join("raw");
     std::fs::create_dir_all(&raw).or_else(|e| fail(1, format!("{}: {e}", raw.display())))?;
@@ -85,7 +79,13 @@ pub fn ensure_archive(found: &Found) -> Result<bool, Fail> {
             eprintln!("sacreBLEU: Extracting {} to {}", archive.display(), raw.display());
             if base.ends_with(".tar.gz") || base.ends_with(".tgz") {
                 extract_tar_gz(&archive, &raw)?;
+            } else if base.ends_with(".zip") {
+                let bytes = std::fs::read(&archive)
+                    .or_else(|e| fail(1, format!("{}: {e}", archive.display())))?;
+                crate::zip::extract(&bytes, &raw)?;
             }
+            // A plain file (a `.gz` reference, a `/google/*.ref`) is left as it arrived; the parser
+            // reads it in place. Measured: the oracle still prints the "Extracting" line for it.
             extracted = true;
         }
     }

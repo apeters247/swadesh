@@ -109,7 +109,14 @@ pub fn rebuild(found: &Found, pair: &str) -> Result<bool, Fail> {
     let Some(entry) = DATASETS.iter().find(|d| d.name == found.name) else { return Ok(false) };
     let Some(index) = entry.langpairs.iter().position(|p| *p == pair) else { return Ok(false) };
     let paths = entry.paths.get(index).copied().unwrap_or(&[]);
-    if paths.is_empty() || paths.iter().any(|p| !p.to_lowercase().ends_with(".sgm")) {
+    // `.sgm` files, and the plain-text `.ref` a `wmt19/google/*` set mixes in (measured: the reference
+    // is one line per segment, taken verbatim).
+    if paths.is_empty()
+        || paths.iter().any(|p| {
+            let lower = p.to_lowercase();
+            !(lower.ends_with(".sgm") || lower.ends_with(".ref"))
+        })
+    {
         return Ok(false);
     }
     let declared = found.fields_of(pair).cloned().unwrap_or_default();
@@ -135,7 +142,22 @@ pub fn rebuild(found: &Found, pair: &str) -> Result<bool, Fail> {
         let Some(path) = locate(want) else { return Ok(false) };
         let text = std::fs::read_to_string(&path)
             .or_else(|e| fail(1, format!("{}: {e}", path.display())))?;
-        parsed.push((field.clone(), parse(&text)));
+        let one = if want.to_lowercase().ends_with(".ref") {
+            // A plain reference: one line per segment, verbatim (no `<doc>` annotations of its own).
+            let mut lines: Vec<&str> = text.split('\n').collect();
+            if text.ends_with('\n') {
+                lines.pop();
+            }
+            Parsed {
+                segs: lines.into_iter().map(str::to_string).collect(),
+                docids: Vec::new(),
+                genres: Vec::new(),
+                origlangs: Vec::new(),
+            }
+        } else {
+            parse(&text)
+        };
+        parsed.push((field.clone(), one));
     }
     let Some(source) = parsed.iter().find(|(field, _)| field == "src") else { return Ok(false) };
     let count = source.1.segs.len();
