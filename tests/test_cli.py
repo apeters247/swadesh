@@ -376,7 +376,6 @@ def test_error_exit_codes_match(tmp_path, args, stdin):
     ["x.txt", "-i", "y.txt", "-tok", "flores200"],
     ["x.txt", "-i", "y.txt", "-tok", "spBLEU-1K"],
     ["x.txt", "-i", "y.txt", "-l", "en-ja"],
-    ["x.txt", "-i", "y.txt", "-e", "latin-1"],
     ["x.txt", "-i", "y.txt", "-e", "utf-16"],
 ])
 def test_unsupported_options_fail_with_hint(tmp_path, args):
@@ -384,6 +383,55 @@ def test_unsupported_options_fail_with_hint(tmp_path, args):
     assert rc == 2, err
     assert out == b""
     assert err.startswith(b"swadesh: error:"), err
+
+
+# --------------------------------------------------------------- -e / --encoding
+
+# The payloads are bytes: cp1252's 0x80..=0x9F block cannot be written as a Python str.
+_ENCODED = [
+    ("latin-1", b"caf\xe9 noir\nT\xe9l\xe9\n"),
+    ("latin1", b"caf\xe9 noir\n"),
+    ("iso-8859-1", b"d\xe9j\xe0 vu\n"),
+    ("cp1252", b"a\x93b\x94c \x80\nplain\n"),
+    ("windows-1252", b"a\x93b\n"),
+    ("utf-8-sig", b"\xef\xbb\xbfcaf\xc3\xa9 noir\n"),
+    ("ascii", b"plain ascii only\n"),
+]
+
+
+@pytest.mark.parametrize("encoding,raw", _ENCODED)
+def test_encoding_flag_decodes_like_python(tmp_path, encoding, raw):
+    """`-e` names a codec, and files and stdin are decoded the way Python decodes them.
+
+    Measured: sacreBLEU's `-e` takes any Python codec name. swadesh builds in the dependency-free set
+    that MT data actually ships in - utf-8, utf-8-sig, ascii, latin-1 and cp1252, with their aliases -
+    and refuses anything else with a hint (`docs/parity-report.md`).
+    """
+    path = tmp_path / "data.txt"
+    path.write_bytes(raw)
+    assert_same(["-e", encoding, str(path), "-i", str(path), "-f", "text"])
+    assert_same(["-e", encoding, str(path), "-f", "text"], stdin=raw)
+
+
+@pytest.mark.parametrize("encoding,raw,last", [
+    ("ascii", b"high \xe9 byte\n", "'ascii' codec can't decode byte 0xe9 in position 5"),
+    ("cp1252", b"bad \x81 byte\n", "'charmap' codec can't decode byte 0x81 in position 4"),
+    ("utf-8", b"caf \xe9 noir\n", "'utf-8' codec can't decode byte 0xe9 in position 4"),
+])
+def test_encoding_flag_error_line_matches_python(tmp_path, encoding, raw, last):
+    """A decode failure exits 1, prints nothing on stdout, and ends in Python's own line.
+
+    The traceback *frames* above it are not reproduced (the entry points differ), which is the
+    documented divergence in `docs/parity-report.md`.
+    """
+    path = tmp_path / "bad.txt"
+    path.write_bytes(raw)
+    ref_rc, ref_out, ref_err = run(SACREBLEU, ["-e", encoding, str(path), "-i", str(path)])
+    sw_rc, sw_out, sw_err = run(SWADESH, ["-e", encoding, str(path), "-i", str(path)])
+    assert sw_rc == ref_rc == 1, (ref_rc, sw_rc)
+    assert sw_out == ref_out
+    assert sw_err.strip().splitlines()[-1] == ref_err.strip().splitlines()[-1]
+    assert last in sw_err.decode()
 
 
 def test_version_reports_both(tmp_path):

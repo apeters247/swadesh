@@ -5016,5 +5016,11 @@ left `test_unsupported_options_fail_with_hint`, which no longer covers it. That 
 
 **Numbers.** See the code commit for the full-suite runs.
 
+**Measured while waiting, for the next slice: `.gz` input.** sacreBLEU decompresses a file whose
+name ends in `.gz` (case-sensitive: `.GZ` is *not* decompressed, it is read as raw bytes and fails),
+for references and hypotheses alike, and a `.gz` file that is not gzip gives `gzip.BadGzipFile: Not a
+gzipped file (b'pl')` with exit code 1. swadesh refuses `.gz` today. Implementing it needs `flate2`
+without the `downloader` feature, so it is a small Cargo change plus input handling.
+
 **Next.** `.gz` input, the unconsumed-token list, `-j > 1` status lines, the real-model
 re-verification, and the `.zip`/plain-`.gz` download shapes.
