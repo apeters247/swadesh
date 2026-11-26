@@ -4126,3 +4126,95 @@ not a behaviour worth matching.
 **Done in this slice so far.** `--list`, byte-identical, and the catalogue itself (67 test sets,
 generated). `--citation`'s catalogue data is in hand; everything else in the group waits on the
 decision above.
+
+## 2026-11-26 (continued) - slice 1c-iii: multi-system `-f text`/`-f latex`, and the check order
+
+**Attempted.** The last CLI formatting gap: several systems (`-i a b`, or tab-separated stdin) with
+`-f text` or `-f latex`. Until now the binary refused both with "the multi-system report is
+implemented for --format json so far", so a whole output form was missing.
+
+**How the table is drawn, measured.** Both forms are `tabulate` - `fancy_grid` for text,
+`latex_booktabs` for latex - and the geometry is measurable, not guessable. Reading the oracle's
+bytes for 2, 3 and 12 systems at `-w` 1..6 gave one rule that covers everything:
+
+  * column content width = `max(len(header) + 2, longest cell)`;
+  * each cell is then drawn as one space, the aligned content, one space;
+  * the `System` column is right-aligned (header and body), each metric column is centred;
+  * latex is the same grid with `&` between cells, `\\` at the end, and `\begin{tabular}{r...}`:
+    `r` for the system column, `c` per metric.
+
+The `+ 2` is the part that is not obvious: `BLEU` alone is 4 wide, but the column is 6, and only a
+value longer than `len(header) + 2` widens it (`-w 4` onwards). The score strings are the same
+`f"{score:.{w}f}"` the single-system report uses, and the headings are the score objects' own names
+(`BLEU` / `chrF2` / `chrF2++` / `TER`), so `-cw 2` already produces `chrF2++`. The footer is the
+usual `Metric signatures` block, `-sh` shortening the signatures as elsewhere.
+
+**Also fixed, because the same tests cover it: the order of the refusals.** The binary had the checks
+in an order it invented, and the oracle's is different. Measured, with matching and mismatching
+streams:
+
+  * the paired tests name the first system the baseline and drop a later system with the same name
+    (`Ignoring '<name>' as it was also given as the baseline.`) **before** anything else;
+  * then duplicate names (`'<name>' already used to name a system.` + the basename line), which is
+    checked for plain multi-system runs but not by the paired tests, which allow a repeated baseline;
+  * then `-sl` with more than one system (`Only one system can be evaluated in sentence-level mode.`),
+    which beats `-ci` and beats the paired tests;
+  * then, inside the paired path only, `-sl` (`Statistical tests are unavailable in sentence-level
+    mode.`) and the count (`Paired tests require multiple input systems given to --input (-i).`);
+  * then `-ci` with more than one system (`Use paired tests (--paired) for multiple systems.`) - even
+    when `--paired-bs` was also given;
+  * and only then the stream checks (`Test set None contains no sentence`,
+    `System and reference streams have different lengths.`).
+
+That last point is why the order matters: `-i h1 h2 -ci` reports the paired-test hint even when the
+two hypotheses are different lengths. All of those messages now go to stderr with sacreBLEU's own
+`sacreBLEU: ` prefix, so `stderr` is byte-identical too, not just stdout. The no-reference message is
+the oracle's three lines, the third being the catalogue as a Python list - the **reverse** of the
+`--list` order, confirmed by comparing the two, and built from `datasets.rs`.
+
+**Two `-ci` quirks found while writing the tests.** Both were reachable before this session and are
+now pinned:
+
+  * `--confidence-n 1` or less **drops `-ci` silently**: no interval, and no `bs`/`seed` pair in the
+    signature. The binary used to exit 1 with a `StatisticsError` message.
+  * a resampled mean of exactly `0.0` (a zero score) leaves sacreBLEU's interval undefined: it prints
+    the score alone, but the `bs`/`seed` pair stays in the signature. That is a different shape from
+    the first quirk, which is why the two are separate tests.
+
+Also `-pbsn`/`-parn` at or below zero fall back to the flag's default (1000 / 10000), not an error.
+
+**Failure that did not close.** None this slice; the first draft of the refusal test failed on the
+zero-mean `-ci` case, which is how the second quirk above was found.
+
+**Measured.** `cargo test --release --workspace`: 135 tests, 0 failed (13 suites, including three new
+unit tests for the table geometry). `tests/test_cli.py`: **531 passed, 0 failed in 5m49s**, up from
+482 after slice 2a (the file was 448 at the goal start, and the proof's case count), and the fast
+half (`-k "not ter and not timing"`) is 347 passed in 35s. The new cases: 14 table cases, 15
+refusal/order cases, 20 `-ci` edge cases.
+
+**Goal item 2's import check.** `rg -n "^import sacrebleu|^from sacrebleu"` over `metrics.py`,
+`significance.py` and `base.py` still returns nothing (verified again here).
+
+**Deferred, and deliberately not half-done.** (a) The paired report's `-f text`/`-f latex`. Measured
+while here, so the next slice starts from numbers: the heading is `BLEU (μ ± 95% CI)` for
+`--paired-bs` and plain `BLEU` for `--paired-ar`; the baseline row is the score alone; each other
+system takes **two** grid rows (the score line, then a `(p = 0.2941)` line with an empty first cell
+and no separator between them - the separator only divides systems); the p-value is 4 decimals with a
+`*` when below 0.05; and the footer is a titled block whose underline is as long as the title
+(`Paired bootstrap resampling test with 50 resampling trials`, or `Paired approximate randomization
+test with 50 trials`), the difference between the two being one line ("Actual system score / bootstrap
+estimated true mean / 95% CI are provided for each metric." versus "Actual system score is provided
+for each metric."), a paragraph about the null hypothesis, the significance-threshold paragraph, and
+a NOTE paragraph. sacreBLEU prints the baseline name in that first line as the empty string
+(`compared to .`), an oracle bug to reproduce rather than fix. (b) `-t` and the rest of the test-set group, still behind the downloader decision above.
+(c) Argument-level errors: for an invalid `-m` choice, `--max-ngram-order 0` or a negative `-w` the
+oracle prints argparse's full `usage:` block and exits 2 where we print one `swadesh: error:` line -
+the exit code matches for the first two but not the usage text, and `-w -1`, `-l en` and a missing
+file make the oracle *crash* with a traceback where we print a clean message. Reproducing a Python
+traceback is not worth matching; the usage block is a separate slice. `-e latin-1` is a real gap
+(the oracle accepts any Python codec and we refuse anything but utf-8), which needs an encoding crate
+and so is another dependency decision.
+
+**Next.** The paired text/latex table, then the test-set group once the downloader is chosen, then
+slice 3 (the Python significance orchestration onto `swadesh-core`) and slice 4 (the console script
+onto the binary).

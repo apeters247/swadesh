@@ -9,6 +9,7 @@ mod lower;
 mod pyfmt;
 pub mod report;
 pub mod run;
+pub mod tabulate;
 
 use std::io::Write;
 

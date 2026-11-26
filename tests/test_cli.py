@@ -834,3 +834,103 @@ def test_list_test_sets():
 def test_list_short_circuits_other_arguments():
     """The files given do not exist, and sacreBLEU still just lists the test sets."""
     assert assert_same(["x.txt", "-i", "y.txt", "--list"]) == 0
+
+# ------------------------------------------------- multi-system tables and refusals
+
+MULTI_TABLE_CASES = [
+    ["-m", "bleu"],
+    ["-m", "bleu", "chrf", "ter"],
+    ["-m", "bleu", "-w", "3"],
+    ["-m", "chrf", "-cw", "2"],
+    ["-m", "bleu", "-sh"],
+    ["-m", "bleu", "-b"],
+    ["-m", "chrf", "bleu", "-w", "2"],
+]
+
+
+@pytest.mark.parametrize("fmt", ["text", "latex"])
+@pytest.mark.parametrize("flags", MULTI_TABLE_CASES, ids=[" ".join(f) for f in MULTI_TABLE_CASES])
+def test_multi_system_table(wmt_files, flags, fmt):
+    """`-f text`/`-f latex` with several systems, drawn as tabulate's fancy_grid/latex_booktabs."""
+    refs = wmt_files / "en-de.ref"
+    a = wmt_files / "en-de.short.hyp"
+    b = wmt_files / "en-de.drop.hyp"
+    assert assert_same([str(refs), "-i", str(a), str(b), *flags, "-f", fmt]) == 0
+
+
+def assert_same_streams(args):
+    """Like `assert_same`, but the refusal messages on stderr are compared too."""
+    ref_rc, ref_out, ref_err = run(SACREBLEU, args)
+    sw_rc, sw_out, sw_err = run(SWADESH, args)
+    assert sw_out == ref_out, args
+    assert sw_err == ref_err, (args, ref_err, sw_err)
+    assert sw_rc == ref_rc, (args, ref_rc, sw_rc)
+    return ref_rc
+
+
+REFUSAL_CASES = [
+    ["{refs}", "-i", "{h1}", "-m", "bleu", "chrf", "-sl"],            # one metric per sentence
+    ["{refs}", "-i", "{h1}", "{h2}", "-m", "bleu", "-sl"],            # sentence level, 2 systems
+    ["{refs}", "-i", "{h1}", "{h1}", "-m", "bleu"],                   # two systems, same name
+    ["{refs}", "-i", "{h1}", "{h1}", "-m", "bleu", "-sl"],            # duplicates before -sl
+    ["{refs}", "-i", "{h1}", "{h2}", "-m", "bleu", "-ci"],            # -ci with several systems
+    ["{refs}", "-i", "{h1}", "-m", "bleu", "-ci"],                    # ... but fine with one
+    ["{refs}", "-i", "{empty}", "-m", "bleu"],                        # a system with no lines
+    ["{refs}", "-i", "{one}", "-m", "bleu"],                          # streams of different length
+    ["{refs}", "-i", "{h1}", "{h2}", "{h1}", "-m", "bleu", "-pbs"],   # a repeated baseline
+    ["{refs}", "-i", "{h1}", "-m", "bleu", "-pbs"],                   # too few for a paired test
+    ["{refs}", "-i", "{h1}", "{h2}", "-m", "bleu", "-sl", "-pbs"],    # -sl beats the paired test
+    ["{refs}", "-i", "{h1}", "{h1}", "-m", "bleu", "-sl", "-pbs"],    # ... afterwards, uniquely
+    ["{refs}", "-i", "{h1}", "{h2}", "-m", "bleu", "-ci", "-pbs"],    # -ci still refused
+    ["{refs}", "-i", "{h1}", "{h2}", "-m", "bleu", "-pbs", "-pbsn", "0"],
+    ["{refs}", "-i", "{h1}", "{h2}", "-m", "bleu", "-par", "-parn", "-1"],
+]
+
+
+@pytest.mark.parametrize("args", REFUSAL_CASES, ids=lambda a: " ".join(a))
+def test_refusal_messages_and_order(tmp_path, args):
+    """The refusal messages, and the order sacreBLEU checks them in, match on stderr as well.
+
+    The order is measured, not guessed: names are settled first (the paired tests drop a repeated
+    baseline), then duplicates and the sentence-level refusals, then the paired test's own checks,
+    then `-ci`, and only then are the streams validated.
+    """
+    files = {"refs": "a\nb\n", "h1": "a\nb\n", "h2": "c\nd\n", "one": "a\n", "empty": ""}
+    for key, text in files.items():
+        (tmp_path / f"{key}.txt").write_text(text, encoding="utf-8")
+    resolved = [a.format(**{k: str(tmp_path / f"{k}.txt") for k in files}) for a in args]
+    assert_same_streams(resolved)
+
+CI_QUIRK_CASES = [
+    ["-m", "bleu", "-ci"],                        # the default 1000 resamples
+    ["-m", "bleu", "-ci", "-cin", "2"],
+    ["-m", "bleu", "-ci", "-cin", "0"],           # 1 or less: -ci is dropped entirely
+    ["-m", "bleu", "-ci", "-cin", "1"],
+    ["-m", "bleu", "-ci", "-cin", "-1"],
+    ["-m", "chrf", "-ci", "-cin", "3"],
+    ["-m", "ter", "-ci", "-cin", "3"],
+]
+
+
+@pytest.mark.parametrize("fmt", ["text", "json"])
+@pytest.mark.parametrize("flags", CI_QUIRK_CASES, ids=[" ".join(f) for f in CI_QUIRK_CASES])
+def test_confidence_edge_cases(wmt_files, flags, fmt):
+    """`--confidence-n` of 1 or less drops `-ci` silently: no interval, no `bs`/`seed` pair."""
+    refs = wmt_files / "en-de.ref"
+    hyp = wmt_files / "en-de.short.hyp"
+    assert assert_same_streams([str(refs), "-i", str(hyp), *flags, "-f", fmt]) == 0
+
+
+@pytest.mark.parametrize("metric", ["bleu", "chrf", "ter"])
+@pytest.mark.parametrize("fmt", ["text", "json"])
+def test_confidence_is_omitted_when_the_mean_is_zero(tmp_path, metric, fmt):
+    """A resampled mean of 0.0 leaves sacreBLEU's interval undefined: it prints the score alone.
+
+    The `bs`/`seed` pair stays in the signature, so this is not the same as `--confidence-n 1`.
+    Identical copies of a two-line reference give every metric a 0.0 on one of these metrics.
+    """
+    refs = tmp_path / "r.txt"
+    refs.write_text("a\nb\n", encoding="utf-8")
+    hyp = tmp_path / "h.txt"
+    hyp.write_text("zz\nqq\n" if metric != "ter" else "a\nb\n", encoding="utf-8")
+    assert_same_streams([str(refs), "-i", str(hyp), "-m", metric, "-ci", "-cin", "3", "-f", fmt])

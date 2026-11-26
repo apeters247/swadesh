@@ -19,6 +19,7 @@ use crate::lower::py_lower;
 use crate::pyfmt::fixed;
 use crate::pyfmt::json_float;
 use crate::report::{json_str, print_single, Score, Signature};
+use crate::tabulate::{self, Align};
 use crate::{fail, Fail};
 
 
@@ -35,7 +36,8 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
         return Ok(());
     }
     if cli.sentence_level && cli.metrics.len() > 1 {
-        return fail(1, "Only one metric can be used in sentence-level mode.");
+        eprintln!("sacreBLEU: Only one metric can be used in sentence-level mode.");
+        return Err(Fail { code: 1, msg: String::new() });
     }
     if cli.num_refs != 1 && cli.refs.len() > 1 {
         return fail(
@@ -45,11 +47,15 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
         );
     }
     if cli.refs.is_empty() {
-        return fail(
-            1,
-            "If manual references given, make sure to provide them before the -i/--input argument \
-             to avoid confusion. (swadesh needs reference files; test sets need pip install swadesh)",
+        eprintln!(
+            "sacreBLEU: If manual references given, make sure to provide them before the \
+             -i/--input argument to avoid confusion."
         );
+        eprintln!("sacreBLEU: Otherwise, I need a predefined test set (-t) from the following list:");
+        let names: Vec<String> =
+            crate::datasets::DATASETS.iter().rev().map(|d| format!("'{}'", d.name)).collect();
+        eprintln!("sacreBLEU: [{}]", names.join(", "));
+        return Err(Fail { code: 1, msg: String::new() });
     }
     if cli.width < 0 {
         return fail(1, "Format specifier missing precision");
@@ -70,47 +76,15 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
 
     let refs = read_refs(cli)?;
     let (systems, sys_names) = read_systems(cli)?;
-    if systems.iter().any(|s| s.is_empty()) {
-        return fail(1, "Test set None contains no sentence");
-    }
-    if systems.iter().any(|s| refs.iter().any(|r| r.len() != s.len())) {
-        return fail(1, "System and reference streams have different lengths.");
-    }
-    let nrefs = refs.len();
-    let width = cli.width as usize;
-    let json = cli.format == "json";
 
-    // The `-m` names become upper-case metric names; duplicates collapse, output is sorted.
-    let mut names: Vec<String> = cli.metrics.iter().map(|m| m.to_uppercase()).collect();
-    names.sort();
-    names.dedup();
-
-    // sacreBLEU refuses `-ci` with more than one system: the interval is a single-system report and
-    // the paired tests are the multi-system one.
-    if cli.confidence && systems.len() > 1 {
-        eprintln!("sacreBLEU: Use paired tests (--paired) for multiple systems.");
-        return Err(Fail { code: 1, msg: String::new() });
-    }
-
-    // Paired significance testing: the first system is the baseline, the others are compared to it.
-    if cli.paired_ar || cli.paired_bs {
-        if cli.sentence_level {
-            return fail(1, "sentence-level output is not available for paired significance testing");
-        }
-        if !json {
-            return fail(1, "the paired report is implemented for --format json so far");
-        }
-        let bs = cli.paired_bs;
-        let n_samples = if bs { cli.paired_bs_n } else { cli.paired_ar_n };
-        if n_samples <= 0 {
-            return fail(1, "the paired test needs at least one sample");
-        }
-        let n_samples = n_samples as usize;
-        let (seed, _) = bootstrap_seed()?;
-        let n_ar_conf = 0usize; // `-ci` with several systems is refused above, as in sacreBLEU
-
-        // A system named like the baseline is dropped, with a note, before anything is counted.
-        let mut keep: Vec<usize> = vec![0];
+    // sacreBLEU's order of checks is measured, not chosen (docs/lab-notebook.md). The systems are
+    // named first: the paired tests drop a later system that shares the baseline's name, with a
+    // note. Duplicate names and the sentence-level refusals then fire, and only after them are the
+    // streams validated (so `-i h1 h2 -ci` reports the paired-test hint even when the lengths
+    // differ).
+    let paired = cli.paired_ar || cli.paired_bs;
+    let keep: Vec<usize> = if paired {
+        let mut keep = vec![0];
         for i in 1..systems.len() {
             if sys_names[i] == sys_names[0] {
                 eprintln!(
@@ -121,7 +95,36 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
                 keep.push(i);
             }
         }
-        // Any other repeated name is an error.
+        keep
+    } else {
+        (0..systems.len()).collect()
+    };
+    // Two systems with the same name: sacreBLEU prints both lines itself and exits 1 before any
+    // output. The paired tests run their own pass (they tolerate a repeated baseline).
+    if !paired && systems.len() > 1 {
+        let mut seen = std::collections::HashSet::new();
+        for name in &sys_names {
+            if !seen.insert(name.as_str()) {
+                eprintln!("sacreBLEU: '{name}' already used to name a system.");
+                eprintln!("sacreBLEU: Make sure to have a different basename for each system.");
+                return Err(Fail { code: 1, msg: String::new() });
+            }
+        }
+    }
+    if keep.len() > 1 && cli.sentence_level {
+        eprintln!("sacreBLEU: Only one system can be evaluated in sentence-level mode.");
+        return Err(Fail { code: 1, msg: String::new() });
+    }
+    if paired {
+        if cli.sentence_level {
+            eprintln!("sacreBLEU: Statistical tests are unavailable in sentence-level mode.");
+            return Err(Fail { code: 1, msg: String::new() });
+        }
+        if keep.len() < 2 {
+            eprintln!("sacreBLEU: Paired tests require multiple input systems given to --input (-i).");
+            return Err(Fail { code: 1, msg: String::new() });
+        }
+        // Any repeated name other than the baseline is an error.
         let mut seen = std::collections::HashSet::new();
         for i in keep.iter().skip(1) {
             if !seen.insert(sys_names[*i].as_str()) {
@@ -130,9 +133,47 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
                 return Err(Fail { code: 1, msg: String::new() });
             }
         }
-        if keep.len() < 2 {
-            return fail(1, "You must provide at least 2 systems for paired testing.");
+    }
+    // `-ci` is a single-system report: sacreBLEU points at the paired tests for several systems,
+    // even when the paired tests were also asked for.
+    if cli.confidence && systems.len() > 1 {
+        eprintln!("sacreBLEU: Use paired tests (--paired) for multiple systems.");
+        return Err(Fail { code: 1, msg: String::new() });
+    }
+    if systems.iter().any(|s| s.is_empty()) {
+        eprintln!("sacreBLEU: Test set None contains no sentence");
+        return Err(Fail { code: 1, msg: String::new() });
+    }
+    if systems.iter().any(|s| refs.iter().any(|r| r.len() != s.len())) {
+        eprintln!("sacreBLEU: System and reference streams have different lengths.");
+        return Err(Fail { code: 1, msg: String::new() });
+    }
+    let nrefs = refs.len();
+    let width = cli.width as usize;
+    let json = cli.format == "json";
+
+    // The `-m` names become upper-case metric names; duplicates collapse, output is sorted.
+    let mut names: Vec<String> = cli.metrics.iter().map(|m| m.to_uppercase()).collect();
+    names.sort();
+    names.dedup();
+
+    // Paired significance testing: the first system is the baseline, the others are compared to it.
+    if paired {
+        if !json {
+            return fail(1, "the paired report is implemented for --format json so far");
         }
+        let bs = cli.paired_bs;
+        // `-pbsn` and `-parn` fall back to their defaults when not positive, as in sacreBLEU.
+        let n_samples = if bs {
+            if cli.paired_bs_n <= 0 { 1000 } else { cli.paired_bs_n }
+        } else if cli.paired_ar_n <= 0 {
+            10000
+        } else {
+            cli.paired_ar_n
+        };
+        let n_samples = n_samples as usize;
+        let (seed, _) = bootstrap_seed()?;
+        let n_ar_conf = 0usize; // `-ci` with several systems is refused above, as in sacreBLEU
         eprintln!("sacreBLEU: Found {} systems.", keep.len());
         let bl_display = format!("Baseline: {}", sys_names[0]);
 
@@ -219,45 +260,66 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
         return Ok(());
     }
 
-    // Multi-system mode: sacreBLEU reports every system side by side instead of one score. Only the
-    // JSON form is implemented so far; the text/latex forms need a faithful `tabulate` port.
+    // Multi-system mode: sacreBLEU reports every system side by side instead of one score. The
+    // text and latex forms are `tabulate`'s `fancy_grid` / `latex_booktabs`; the port lives in
+    // `crate::tabulate` and its geometry is measured from sacreBLEU (docs/lab-notebook.md).
     if systems.len() > 1 {
-        // sacreBLEU refuses two systems with the same name, printing both lines itself and
-        // exiting 1 before any output.
-        let mut seen = std::collections::HashSet::new();
-        for name in &sys_names {
-            if !seen.insert(name.as_str()) {
-                eprintln!("sacreBLEU: '{name}' already used to name a system.");
-                eprintln!("sacreBLEU: Make sure to have a different basename for each system.");
-                return Err(Fail { code: 1, msg: String::new() });
-            }
-        }
+        // Duplicate names and `-sl` were refused above, in sacreBLEU's own order.
         eprintln!("sacreBLEU: Found {} systems.", systems.len());
-        if cli.sentence_level {
-            return fail(1, "sentence-level output for several systems is not implemented yet");
-        }
-        if !json {
-            return fail(1, "the multi-system report is implemented for --format json so far");
-        }
-        let mut rows: Vec<String> = Vec::with_capacity(systems.len());
-        for (system, name) in systems.iter().zip(&sys_names) {
-            let mut entries: Vec<String> =
-                vec![format!("        \"system\": {}", json_str(name))];
+
+        // Score every system for every metric. The column headings are the score objects' own
+        // names (BLEU / chrF2 / chrF2++ / TER) and the signatures are identical across systems,
+        // so they are taken from the first.
+        let mut header: Vec<String> = vec!["System".to_string()];
+        let mut sigs: Vec<(String, String)> = Vec::new();
+        let mut body: Vec<Vec<String>> = Vec::with_capacity(systems.len());
+        for (i, (system, name)) in systems.iter().zip(&sys_names).enumerate() {
+            let mut cells: Vec<String> = vec![name.clone()];
             for metric_name in &names {
-                let (score, _sig) = match metric_name.as_str() {
+                let (score, sig) = match metric_name.as_str() {
                     "BLEU" => bleu_corpus(cli, bleu_tokenizer(cli)?, system, &refs, nrefs)?,
                     "TER" => ter_corpus(cli, system, &refs, nrefs)?,
                     _ => chrf_corpus(cli, system, &refs, nrefs)?,
                 };
-                entries.push(format!(
-                    "        {}: {}",
-                    json_str(&score.name),
-                    json_str(&fixed(score.score, width))
-                ));
+                if i == 0 {
+                    header.push(score.name.clone());
+                    sigs.push((score.name.clone(), sig.format(cli.short)));
+                }
+                cells.push(fixed(score.score, width));
             }
-            rows.push(format!("    {{\n{}\n    }}", entries.join(",\n")));
+            body.push(cells);
         }
-        writeln!(out, "[\n{}\n]", rows.join(",\n")).map_err(io_err)?;
+
+        if json {
+            let mut rows: Vec<String> = Vec::with_capacity(body.len());
+            for cells in &body {
+                let mut entries: Vec<String> =
+                    vec![format!("        \"system\": {}", json_str(&cells[0]))];
+                for (j, metric_name) in header.iter().skip(1).enumerate() {
+                    entries.push(format!(
+                        "        {}: {}",
+                        json_str(metric_name),
+                        json_str(&cells[j + 1])
+                    ));
+                }
+                rows.push(format!("    {{\n{}\n    }}", entries.join(",\n")));
+            }
+            writeln!(out, "[\n{}\n]", rows.join(",\n")).map_err(io_err)?;
+            return Ok(());
+        }
+
+        let mut aligns: Vec<Align> = vec![Align::Right];
+        aligns.extend(std::iter::repeat_n(Align::Center, header.len() - 1));
+        if cli.format == "latex" {
+            write!(out, "{}", tabulate::latex_table(&header, &body, &aligns)).map_err(io_err)?;
+        } else {
+            write!(out, "{}", tabulate::fancy_grid(&header, &body, &aligns)).map_err(io_err)?;
+        }
+        writeln!(out).map_err(io_err)?;
+        write!(out, "-----------------\nMetric signatures\n-----------------\n").map_err(io_err)?;
+        for (name, sig) in &sigs {
+            writeln!(out, " - {:<11}{}", name, sig).map_err(io_err)?;
+        }
         return Ok(());
     }
 
@@ -327,27 +389,26 @@ fn bootstrap_seed() -> Result<(u128, String), Fail> {
     Ok((seed, raw.to_lowercase()))
 }
 
-/// `--confidence-n`, refused when it could not produce an interval.
-fn confidence_samples(cli: &Cli) -> Result<usize, Fail> {
-    if cli.confidence_n <= 0 {
-        return Err(Fail { code: 1, msg: "StatisticsError: mean requires at least one data point".into() });
-    }
-    Ok(cli.confidence_n as usize)
-}
-
-/// The bootstrap interval when `-ci` was given, and the seed string the signature reports.
+/// The bootstrap interval when `-ci` was given, with the `(samples, seed)` the signature reports.
+///
+/// Two measured quirks of sacreBLEU 2.6.0:
+///   * `--confidence-n` of 1 or less drops `-ci` silently: no interval, and no `bs`/`seed` pair.
+///   * a resampled mean of exactly 0.0 makes its interval undefined, so it reports the score alone
+///     -- but the `bs`/`seed` pair stays in the signature.
 fn confidence(
     cli: &Cli,
     rows: &[f64],
     width: usize,
     kind: &ScoreKind,
-) -> Result<(Option<(f64, f64)>, Option<String>), Fail> {
-    if !cli.confidence {
+) -> Result<(Option<(f64, f64)>, Option<(usize, String)>), Fail> {
+    if !cli.confidence || cli.confidence_n <= 1 {
         return Ok((None, None));
     }
-    let n = confidence_samples(cli)?;
+    let n = cli.confidence_n as usize;
     let (seed, seed_str) = bootstrap_seed()?;
-    Ok((Some(bootstrap_ci(rows, width, kind, n, seed)), Some(seed_str)))
+    let (mean, half_width) = bootstrap_ci(rows, width, kind, n, seed);
+    let interval = if mean == 0.0 { None } else { Some((mean, half_width)) };
+    Ok((interval, Some((n, seed_str))))
 }
 
 fn io_err(e: std::io::Error) -> Fail {
@@ -656,10 +717,10 @@ fn bleu_corpus(
     let res = compute_bleu(&stats, &scfg);
     let verbose = bleu_verbose(total[0], total[1], res.bp, &res.precisions);
     let rows_f: Vec<f64> = rows.iter().map(|&v| v as f64).collect();
-    let (conf, seed_str) = confidence(cli, &rows_f, width, &ScoreKind::Bleu(scfg))?;
+    let (conf, bootstrap) = confidence(cli, &rows_f, width, &ScoreKind::Bleu(scfg))?;
     let mut sig = bleu_signature(cli, tok, nrefs, false);
-    if let Some(seed) = &seed_str {
-        sig = sig.with_confidence(confidence_samples(cli)?, seed);
+    if let Some((samples, seed)) = &bootstrap {
+        sig = sig.with_confidence(*samples, seed);
     }
     Ok((Score { name: "BLEU".into(), score: res.score, verbose: Some(verbose), confidence: conf }, sig))
 }
@@ -745,10 +806,10 @@ fn chrf_corpus(cli: &Cli, system: &[String], refs: &[Vec<String>], nrefs: usize)
     let score = chrf_f_score(&total, order, cfg.beta, cfg.eps_smoothing);
     let rows_f: Vec<f64> = rows.iter().map(|&v| v as f64).collect();
     let kind = ScoreKind::Chrf { order, beta: cfg.beta, eps_smoothing: cfg.eps_smoothing };
-    let (conf, seed_str) = confidence(cli, &rows_f, width, &kind)?;
+    let (conf, bootstrap) = confidence(cli, &rows_f, width, &kind)?;
     let mut sig = chrf_signature(cli, nrefs);
-    if let Some(seed) = &seed_str {
-        sig = sig.with_confidence(confidence_samples(cli)?, seed);
+    if let Some((samples, seed)) = &bootstrap {
+        sig = sig.with_confidence(*samples, seed);
     }
     Ok((Score { name: chrf_name(cli), score, verbose: None, confidence: conf }, sig))
 }
@@ -828,10 +889,10 @@ fn ter_corpus(cli: &Cli, system: &[String], refs: &[Vec<String>], nrefs: usize) 
         total[1] += row[1];
     }
     let score = ter_score_value(total[0], total[1]);
-    let (conf, seed_str) = confidence(cli, &rows, 2, &ScoreKind::Ter)?;
+    let (conf, bootstrap) = confidence(cli, &rows, 2, &ScoreKind::Ter)?;
     let mut sig = ter_signature(cli, nrefs);
-    if let Some(seed) = &seed_str {
-        sig = sig.with_confidence(confidence_samples(cli)?, seed);
+    if let Some((samples, seed)) = &bootstrap {
+        sig = sig.with_confidence(*samples, seed);
     }
     Ok((Score { name: "TER".into(), score, verbose: None, confidence: conf }, sig))
 }
