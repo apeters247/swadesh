@@ -27,8 +27,6 @@
 //! (`&amp;gt;`, `&amp;quot;`) occurs anywhere in the cached wmt22/wmt24 XML, so a single pass is
 //! exact for the measured data and a nested form is left as a gap rather than guessed at.
 
-use std::path::{Path, PathBuf};
-
 use crate::dataset::{self, Found};
 use crate::{fail, Fail};
 

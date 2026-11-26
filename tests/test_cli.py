@@ -1276,21 +1276,27 @@ def test_the_default_reference_is_deterministic(tmp_path, set_pair, expected):
     assert ours == want, set_pair
 
 
-def test_an_unfetchable_set_still_refuses(tmp_path):
-    """The catalogue stores a *flat* URL list, so which archive belongs to a pair is not recoverable
-    from it: the 36 multi-archive sets (and the four `.zip` sets) refuse with an accurate message
-    rather than guessing which archive to fetch."""
+def test_a_set_in_an_unsupported_format_still_refuses(tmp_path):
+    """A set whose archives are not tar+gzip refuses with an accurate message, and never the network.
+
+    The catalogue's URL list is flat and the fetcher treats every URL of a set alike, so a set that
+    lists a `.zip` (the four `wmt20/robust/*` sets) or a plain `.gz` (`multi30k/2018`) cannot be
+    fetched in part; an empty cache gets the "not in the cache" refusal instead. Multi-archive
+    *tar+gzip* sets are fetchable now (see `test_cold_cache_downloads_a_multi_archive_set`): the
+    oracle downloads every archive of a set, and so does swadesh.
+    """
     cache = tmp_path / "empty-cache"
     cache.mkdir()
     env = dict(ENV)
     env["SACREBLEU"] = str(cache)
     proc = subprocess.run(
-        [str(SWADESH), "-t", "iwslt17", "-l", "en-de", "--echo", "src", "--python-version", PYVER],
+        [str(SWADESH), "-t", "wmt20/robust/set1", "-l", "en-de", "--echo", "src",
+         "--python-version", PYVER],
         capture_output=True, env=env,
     )
     assert proc.returncode == 1
     assert proc.stdout == b""
-    assert b"run `swadesh --download iwslt17` first" in proc.stderr
+    assert b"run `swadesh --download wmt20/robust/set1` first" in proc.stderr
 
 
 @pytest.mark.skipif(os.environ.get("SWADESH_DOWNLOAD_TESTS") != "1",
@@ -1317,6 +1323,32 @@ def test_cold_cache_downloads_and_matches(tmp_path):
     for name in ("src", "ref", "docid", "origlang", "genre"):
         assert (ours / "wmt16" / f"wmt16.en-de.{name}").read_bytes() == \
             (theirs / "wmt16" / f"wmt16.en-de.{name}").read_bytes(), name
+
+
+@pytest.mark.skipif(os.environ.get("SWADESH_DOWNLOAD_TESTS") != "1",
+                    reason="downloads ~12 MB twice and needs the network; set SWADESH_DOWNLOAD_TESTS=1")
+def test_cold_cache_downloads_a_multi_archive_set(tmp_path):
+    """A multi-archive set fetches *every* archive, in registry order, and the IWSLT parser then
+    rebuilds the pair - stdout, stderr and every generated file matching the oracle.
+
+    Measured: `-t iwslt17 -l en-de` makes sacreBLEU download and extract all twelve archives even
+    though only one pair is parsed, printing the two lines once per URL. swadesh follows the same
+    loop, which is why the per-URL stderr matches.
+    """
+    ours = tmp_path / "ours"
+    theirs = tmp_path / "theirs"
+    ours.mkdir()
+    theirs.mkdir()
+    args = ["-t", "iwslt17", "-l", "en-de", "--echo", "all"]
+    ref = _run_env(SACREBLEU, args, {**ENV, "SACREBLEU": str(theirs)})
+    own = _run_env(SWADESH, [*args, "--python-version", PYVER], {**ENV, "SACREBLEU": str(ours)})
+    assert ref.returncode == own.returncode == 0, (ref.stderr[-300:], own.stderr[-300:])
+    assert own.stdout == ref.stdout
+    norm = lambda blob: blob.replace(str(ours).encode(), b"CACHE").replace(str(theirs).encode(), b"CACHE")
+    assert norm(own.stderr) == norm(ref.stderr)
+    for name in ("src", "ref", "docid", "genre", "origlang"):
+        assert (ours / "iwslt17" / f"iwslt17.en-de.{name}").read_bytes() == \
+            (theirs / "iwslt17" / f"iwslt17.en-de.{name}").read_bytes(), name
 
 
 @pytest.mark.skipif(os.environ.get("SWADESH_DOWNLOAD_TESTS") != "1",
@@ -1576,6 +1608,47 @@ def test_an_unparsable_layout_still_refuses(tmp_path):
     missing = _run_env(SWADESH, ["-t", "myset", "-l", "en-de", "--echo", "ref", "--python-version", PYVER], env)
     assert missing.returncode == 1 and missing.stdout == b""
     assert b"No such field ref in test set myset" in missing.stderr
+
+# ------------------------------------------------- the IWSLT family (iwslt17)
+
+def test_iwslt_set_is_rebuilt_from_its_raw_tree(tmp_path):
+    """`iwslt17` rebuilds from its TED XML alone, and every generated file is byte-identical to
+    sacreBLEU's own.
+
+    The measured rules this pins down: the segment text is whitespace-*collapsed*
+    (`" ".join(text.split())`) and **not** entity-decoded (`&amp;` stays literal, so a plain strip
+    would also be wrong - 819 of en-fr's 1455 source lines carry doubled internal spaces); `docid`
+    and `genre` are the enclosing `<doc>`'s; `origlang` is empty for the whole family; and the
+    reference lives in the *other* direction's directory, which the registry's per-pair paths name.
+    """
+    home = Path(os.environ.get("SACREBLEU", Path.home() / ".sacrebleu"))
+    raw = home / "iwslt17" / "raw"
+    if not raw.is_dir():
+        pytest.skip("the iwslt17 raw tree is not cached under $SACREBLEU")
+    cache = tmp_path / "cache"
+    (cache / "iwslt17").mkdir(parents=True)
+    shutil.copytree(raw, cache / "iwslt17" / "raw", dirs_exist_ok=True)
+    env = dict(ENV)
+    env["SACREBLEU"] = str(cache)
+    checked = 0
+    for pair in ("en-fr", "en-de", "ja-en", "ar-en"):
+        src_lang, trg_lang = pair.split("-")
+        need = [raw / pair / f"IWSLT17.TED.tst2017.{pair}.{src_lang}.xml",
+                raw / f"{trg_lang}-{src_lang}" / f"IWSLT17.TED.tst2017.{trg_lang}-{src_lang}.{trg_lang}.xml"]
+        if not all(p.exists() for p in need):
+            continue  # a direction whose raw tree is not cached here
+        checked += 1
+        args = ["-t", "iwslt17", "-l", pair, "--echo", "all"]
+        theirs = run(SACREBLEU, args)
+        ours = _run_env(SWADESH, [*args, "--python-version", PYVER], env)
+        assert ours.returncode == 0, ours.stderr
+        assert ours.stdout == theirs[1], pair
+        for name in ("src", "ref", "docid", "genre", "origlang"):
+            mine = (cache / "iwslt17" / f"iwslt17.{pair}.{name}").read_bytes()
+            want = (home / "iwslt17" / f"iwslt17.{pair}.{name}").read_bytes()
+            assert mine == want, (pair, name)
+    assert checked, "no complete iwslt17 direction is cached under $SACREBLEU"
+
 
 # ------------------------------------------------- the WMT XML family (wmt20 and later)
 

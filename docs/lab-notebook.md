@@ -4809,3 +4809,52 @@ half is re-running.
 (nine sets, the largest remaining), the SGML variants (`B`, `tworefs`, `dev` - `tworefs` is `ref:0`/
 `ref:1`), and the per-pair URL mapping so multi-archive sets can fetch. Then the WS0.8 small
 divergences and slice 4.
+
+## 2026-11-26 (continued) - M0 slice 8: the IWSLT family, and fetching every archive
+
+**Attempted.** The fourth parser family (`iwslt17` and its `dev2010`/`tst2010`..`tst2016` subsets,
+nine sets) plus the multi-archive download it needs. Spec first - `docs/spec/test-set-parsers.md`
+(6cd7264) records all four families' measured rules and the newly measured IWSLT one - then
+`crates/swadesh-cli/src/iwslt.rs`, and `fetch.rs` turned from a single-archive fetch into a loop.
+
+**What the measurement gave, before any code.**
+
+* **Downloads are per URL, not per pair.** `-t iwslt17 -l en-fr --echo all` fetched and extracted
+  all twelve archives although only one pair was parsed, printing the two lines once per URL in
+  registry order. So the catalogue's flat URL list is not the limitation the previous entry assumed:
+  the multi-archive case is a `for url in entry.data` loop, and 27 single-archive and 31 multi-archive
+  sets share it. The old `data.len() > 1` refusal is gone.
+* **The TED XML rule.** `<doc docid genre>` attributes copied onto each `<seg>`; segment text is
+  `" ".join(text.split())` - *collapsed*, not merely stripped (819 of en-fr's 1455 source lines carry
+  doubled internal spaces, so a strip is wrong); and **no entity is decoded** - the one `&`-bearing
+  segment in the family comes back with `&amp;` literal, which says sacreBLEU is regex-based here, not
+  an XML parser, and swadesh must be too. `origlang` is empty for the whole family; the reference
+  lives in the *other* direction's directory.
+
+**Measurement before code.** A Python reference implementation reproduced the oracle's `--echo all`
+for all twelve pairs of `iwslt17` byte for byte (1455/1138/1459/1460/1452/1429 segments per direction,
+0 mismatches) before `iwslt.rs` existed. After building, the second archive family was checked the
+same way: `iwslt17/tst2015` (the `2017-01-trnted` archives, six of them) matched the oracle on stdout
+and on all five generated files for all six directions (`fail=0`).
+
+**A test that had to change, and a cache that bit back.** `test_an_unfetchable_set_still_refuses`
+asserted iwslt17 refuses; now it is fetchable, and the premise would have sent a *default* test to the
+network. Replaced with `test_a_set_in_an_unsupported_format_still_refuses` (a `.zip` set, refused
+whole), and the multi-archive cold fetch is its own opt-in test. Separately, an earlier probe had
+deleted the shared cache's `raw/en-de` and sacreBLEU never restores a deleted directory, so the new
+rebuild test failed at first - the parser was right, the cache was not; restored the directory from
+the archive and made the test skip a direction whose raw tree is absent.
+
+**Numbers.**
+
+* (before, at b4c7b08) full `tests/test_cli.py`: **664 passed, 2 skipped, 3 xfailed** (6:48).
+* (after) full `tests/test_cli.py`: **665 passed, 3 skipped, 3 xfailed** (6:40).
+* `cargo test --release --workspace`: 13 suites green.
+* parser area: 7 tests.
+
+**A correction to earlier entries.** Two entries above left the fast half "re-running"; the numbers
+are 446 passed / 2 skipped / 3 xfailed for the downloader slice and 447 / 2 / 3 after the plain-text
+test was added.
+
+**Next.** The TSV family (`mtnt*`) and the SGML variants (`B`, `tworefs`, `dev`), then the WS0.8
+small divergences and slice 4.
