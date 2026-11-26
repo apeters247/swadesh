@@ -88,7 +88,7 @@ there is nothing to match here; a user set gets one fixed order instead of a per
 | `-ol/--origlang X` | keeps segments whose `origlang` field is `X`, or `non-X`; needs the `.origlang` file |
 | `--subset X` | keeps segments whose `domain`/`genre` field is `X`; needs one of those files |
 | `-d/--detail` | the per-`origlang` x domain breakdown, measured shape: `origlang=de domain=ALL : sentences=1499   BLEU = 100.0` |
-| `--citation` | prints a `.citation` file when the set has one; otherwise sacreBLEU's refusal wording |
+| `--citation` | prints `<dir>/citation` when the set has one (a plain file, not a per-pair field); otherwise sacreBLEU's refusal wording |
 | `-m/-s/-sv/-tok/-lc/-w/...` | unchanged; the signature names the set, as for a built-in |
 
 A requested pair with no files raises the measured language-pair error:
