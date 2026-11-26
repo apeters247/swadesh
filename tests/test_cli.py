@@ -1024,3 +1024,109 @@ def test_citation(tmp_path, args):
     mapping = {k: str(tmp_path / f"{k}.txt") for k in ("refs", "hyp")}
     resolved = [a.format(**mapping) for a in args]
     assert_same_streams(resolved)
+# ------------------------------------------------- argument errors: argparse's usage block
+
+def _norm_argerr(raw: bytes) -> str:
+    """The program name is the one intentional difference, and argparse wraps to the terminal
+    width, so compare with the name masked and the whitespace collapsed."""
+    text = raw.decode("utf-8", "replace").replace("sacrebleu", "PROG").replace("swadesh", "PROG")
+    return " ".join(text.split())
+
+
+ARGUMENT_ERRORS = [
+    ["-m", "nope"],
+    ["-s", "nope"],
+    ["-f", "nope"],
+    ["-tok", "nope"],
+    ["-w", "x"],
+    ["-cin", "x"],
+    ["-cc", "x"],
+    ["-cw", "x"],
+    ["-nr", "x"],
+    ["-sv", "x"],
+    ["-parn", "x"],
+    ["-pbsn", "x"],
+    ["-j", "x"],
+    ["--chrf-beta", "x"],
+    ["--nope"],
+    ["-Z"],
+    ["-b", "--width"],
+    ["--citation", "--nope"],
+    ["-par", "-pbs"],
+    ["-pbs", "-par"],
+    ["--paired-bs", "--paired-ar"],
+]
+
+
+@pytest.mark.parametrize("args", ARGUMENT_ERRORS, ids=lambda a: " ".join(a))
+def test_argument_errors_print_the_usage_block(args):
+    """Argument errors carry argparse's usage block and exit 2, as sacreBLEU's do.
+
+    The usage text is transcribed from sacreBLEU 2.6.0 at the default 80 columns; the comparison
+    masks the program name and collapses whitespace, which is also how a resized terminal is
+    tolerated.
+    """
+    ref_rc, ref_out, ref_err = run(SACREBLEU, args)
+    sw_rc, sw_out, sw_err = run(SWADESH, args)
+    assert ref_rc == sw_rc == 2, (args, ref_rc, sw_rc)
+    assert sw_out == ref_out == b"", args
+    assert _norm_argerr(sw_err) == _norm_argerr(ref_err), args
+
+
+@pytest.fixture(scope="module")
+def paired_stdin(tmp_path_factory):
+    refs = tmp_path_factory.mktemp("jobs") / "r.txt"
+    refs.write_text("The cat sat on the mat.\nA dog barked.\n", encoding="utf-8")
+    stdin = (
+        "The cat sat on a mat.\tA cat sat on the mat.\n"
+        "A dog barks.\tA dog barked loudly.\n"
+    ).encode("utf-8")
+    return str(refs), stdin
+
+
+def test_paired_jobs_short_flag(paired_stdin):
+    """`-j` is `--paired-jobs` (``-pj`` is not a flag), and `-j 1` is byte-identical."""
+    refs, stdin = paired_stdin
+    base = [refs, "-m", "bleu", "--paired-bs", "--paired-bs-n", "20"]
+    assert_same_streams([*base, "-j", "1", "-f", "json"], stdin=stdin)
+    # `-pj` is not a flag: an argument error, so the program name differs by design.
+    unreal = [*base, "-pj"]
+    ref_rc, ref_out, ref_err = run(SACREBLEU, unreal, stdin)
+    sw_rc, sw_out, sw_err = run(SWADESH, unreal, stdin)
+    assert ref_rc == sw_rc == 2 and sw_out == ref_out == b""
+    assert _norm_argerr(sw_err) == _norm_argerr(ref_err)
+
+
+def test_paired_jobs_parallel_keeps_the_result(paired_stdin):
+    """With `-j 2` the numbers are identical; only the worker status lines are not reproduced."""
+    refs, stdin = paired_stdin
+    args = [refs, "-m", "bleu", "--paired-bs", "--paired-bs-n", "20", "-j", "2", "-f", "json"]
+    ref_rc, ref_out, _ = run(SACREBLEU, args, stdin)
+    sw_rc, sw_out, _ = run(SWADESH, args, stdin)
+    assert ref_rc == sw_rc == 0
+    assert sw_out == ref_out
+
+
+@pytest.mark.xfail(strict=True, reason=(
+    "documented divergence: with -j > 1 sacreBLEU prints `Launching N parallel workers.` and its "
+    "fork pool reorders the per-system status lines; swadesh scores serially and prints them in "
+    "system order. The scores themselves match (test_paired_jobs_parallel_keeps_the_result)"))
+def test_paired_jobs_parallel_status_lines(paired_stdin):
+    refs, stdin = paired_stdin
+    args = [refs, "-m", "bleu", "--paired-bs", "--paired-bs-n", "20", "-j", "2", "-f", "json"]
+    ref_err = run(SACREBLEU, args, stdin)[2]
+    sw_err = run(SWADESH, args, stdin)[2]
+    assert sw_err == ref_err
+
+
+@pytest.mark.xfail(strict=True, reason=(
+    "documented divergence: argparse lists every unconsumed token (`-pj 1`), swadesh stops at the "
+    "first (`-pj`); reproducing argparse's two-phase parse is out of scope for this slice"))
+def test_unrecognized_arguments_lists_every_token(tmp_path):
+    refs = tmp_path / "r.txt"
+    refs.write_text("a\nb\n", encoding="utf-8")
+    args = [str(refs), "-m", "bleu", "-pbs", "-pbsn", "5", "-pj", "1"]
+    ref_rc, _, ref_err = run(SACREBLEU, args)
+    sw_rc, _, sw_err = run(SWADESH, args)
+    assert ref_rc == sw_rc == 2
+    assert _norm_argerr(sw_err) == _norm_argerr(ref_err)

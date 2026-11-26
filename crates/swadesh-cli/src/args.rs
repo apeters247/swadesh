@@ -83,6 +83,39 @@ options:
 ";
 
 
+/// The usage block argparse prints above an argument error, transcribed from sacreBLEU 2.6.0 with
+/// the program name substituted (its only intentional difference). argparse wraps it to the
+/// terminal width; those are the lines for the default 80 columns.
+pub const USAGE_BLOCK: &str = "\
+usage: swadesh [-h] [--citation] [--list] [--test-set TEST_SET]
+                 [--language-pair LANGPAIR] [--origlang ORIGLANG]
+                 [--subset SUBSET] [--download DOWNLOAD]
+                 [--echo ECHO [ECHO ...]] [--input [INPUT ...]]
+                 [--num-refs NUM_REFS] [--encoding ENCODING]
+                 [--metrics {bleu,chrf,ter} [{bleu,chrf,ter} ...]]
+                 [--sentence-level] [--smooth-method {none,floor,add-k,exp}]
+                 [--smooth-value BLEU_SMOOTH_VALUE]
+                 [--tokenize {none,zh,13a,intl,char,ja-mecab,ko-mecab,spm,flores101,flores200,spBLEU-1K}]
+                 [--lowercase] [--force] [--chrf-char-order CHRF_CHAR_ORDER]
+                 [--chrf-word-order CHRF_WORD_ORDER] [--chrf-beta CHRF_BETA]
+                 [--chrf-whitespace] [--chrf-lowercase] [--chrf-eps-smoothing]
+                 [--ter-case-sensitive] [--ter-asian-support] [--ter-no-punct]
+                 [--ter-normalized] [--confidence]
+                 [--confidence-n CONFIDENCE_N] [--paired-ar | --paired-bs]
+                 [--paired-ar-n PAIRED_AR_N] [--paired-bs-n PAIRED_BS_N]
+                 [--paired-jobs PAIRED_JOBS] [--quiet] [--short]
+                 [--score-only] [--width WIDTH] [--detail] [--no-color]
+                 [--format {json,text,latex}] [--version]
+                 [refs ...]
+";
+
+/// Whether an error message is one of argparse's own, which are printed under the usage block.
+pub fn is_argparse_error(msg: &str) -> bool {
+    msg.starts_with("argument ")
+        || msg.starts_with("unrecognized arguments:")
+        || msg.starts_with("ambiguous option:")
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Nargs {
     Zero,
@@ -129,7 +162,7 @@ const OPTS: &[Opt] = &[
     o("--paired-bs", "-pbs", Nargs::Zero, "paired_bs"),
     o("--paired-ar-n", "-parn", Nargs::One, "paired_ar_n"),
     o("--paired-bs-n", "-pbsn", Nargs::One, "paired_bs_n"),
-    o("--paired-jobs", "-pj", Nargs::One, "paired_jobs"),
+    o("--paired-jobs", "-j", Nargs::One, "paired_jobs"),
     o("--list", "", Nargs::Zero, "list"),
     o("--citation", "", Nargs::Zero, "citation"),
     o("--cite", "", Nargs::Zero, "citation"),
@@ -148,20 +181,12 @@ const OPTS: &[Opt] = &[
     o("--no-color", "-nc", Nargs::Zero, "no_color"),
     o("--format", "-f", Nargs::One, "format"),
     // Recognised so that they fail with a helpful message instead of "unknown option".
-    u("--list", "", Nargs::Zero, "--list (built-in test sets) is not supported by swadesh; the test sets need the Python package: pip install swadesh"),
     u("--test-set", "-t", Nargs::One, "-t/--test-set (built-in test sets) is not supported by swadesh; pip install swadesh"),
     u("--download", "", Nargs::One, "--download (test sets) is not supported by swadesh; pip install swadesh"),
     u("--echo", "", Nargs::Plus, "--echo (test sets) is not supported by swadesh; pip install swadesh"),
     u("--origlang", "-ol", Nargs::One, "--origlang (test-set subsets) is not supported by swadesh; pip install swadesh"),
     u("--subset", "", Nargs::One, "--subset (test-set subsets) is not supported by swadesh; pip install swadesh"),
     u("--detail", "-d", Nargs::Zero, "--detail (translationese breakdown) is not supported by swadesh; pip install swadesh"),
-    u("--confidence", "-ci", Nargs::Zero, "--confidence (bootstrap CI) is not supported by swadesh yet; pip install swadesh"),
-    u("--confidence-n", "-cin", Nargs::One, "--confidence-n (bootstrap CI) is not supported by swadesh yet; pip install swadesh"),
-    u("--paired-ar", "-par", Nargs::Zero, "--paired-ar (paired significance) is not supported by swadesh yet; pip install swadesh"),
-    u("--paired-bs", "-pbs", Nargs::Zero, "--paired-bs (paired significance) is not supported by swadesh yet; pip install swadesh"),
-    u("--paired-ar-n", "-parn", Nargs::One, "--paired-ar-n (paired significance) is not supported by swadesh yet; pip install swadesh"),
-    u("--paired-bs-n", "-pbsn", Nargs::One, "--paired-bs-n (paired significance) is not supported by swadesh yet; pip install swadesh"),
-    u("--paired-jobs", "-j", Nargs::One, "--paired-jobs (paired significance) is not supported by swadesh yet; pip install swadesh"),
     o("--ter-case-sensitive", "", Nargs::Zero, "ter_case_sensitive"),
     o("--ter-asian-support", "", Nargs::Zero, "ter_asian_support"),
     o("--ter-no-punct", "", Nargs::Zero, "ter_no_punct"),
@@ -302,6 +327,16 @@ fn parse_float(opt: &str, v: &str) -> Result<f64, Fail> {
         .or_else(|_| fail(2, format!("argument {opt}: invalid float value: '{v}'")))
 }
 
+/// The name argparse prints for an option in an error: `--long/-short`, long form first even when
+/// the short one was typed. Measured for every option that can fail to parse.
+fn opt_display(opt: &Opt) -> String {
+    if opt.short.is_empty() {
+        opt.long.to_string()
+    } else {
+        format!("{}/{}", opt.long, opt.short)
+    }
+}
+
 fn choice(opt: &str, v: &str, choices: &[&str]) -> Result<String, Fail> {
     if choices.contains(&v) {
         Ok(v.to_string())
@@ -380,7 +415,7 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
                 None => Vec::new(),
                 Some(s) if s.is_empty() => Vec::new(),
                 Some(s) if tok.starts_with("--") => {
-                    return fail(2, format!("argument {}: ignored explicit argument '{s}'", opt.long))
+                    return fail(2, format!("argument {}: ignored explicit argument '{s}'", opt_display(opt)))
                 }
                 // Bundled flags: "-qb" means "-q -b".
                 Some(s) => {
@@ -392,7 +427,7 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
                 Some(s) => vec![s],
                 None => match queue.front() {
                     Some(next) if !looks_like_option(next) => vec![queue.pop_front().unwrap()],
-                    _ => return fail(2, format!("argument {}: expected one argument", opt.long)),
+                    _ => return fail(2, format!("argument {}: expected one argument", opt_display(opt))),
                 },
             },
             Nargs::Star | Nargs::Plus => {
@@ -404,7 +439,7 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
                     vals.push(queue.pop_front().unwrap());
                 }
                 if opt.nargs == Nargs::Plus && vals.is_empty() {
-                    return fail(2, format!("argument {}: expected at least one argument", opt.long));
+                    return fail(2, format!("argument {}: expected at least one argument", opt_display(opt)));
                 }
                 vals
             }
@@ -419,27 +454,41 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
             "metrics" => {
                 let mut ms = Vec::new();
                 for v in &values {
-                    ms.push(choice("-m/--metrics", v, METRIC_CHOICES)?);
+                    ms.push(choice(&opt_display(opt), v, METRIC_CHOICES)?);
                 }
                 cli.metrics = ms;
             }
             "sentence_level" => cli.sentence_level = true,
             "input" => cli.input = Some(values),
-            "num_refs" => cli.num_refs = parse_int("-nr/--num-refs", &one())?,
+            "num_refs" => cli.num_refs = parse_int(&opt_display(opt), &one())?,
             "encoding" => cli.encoding = one(),
             "langpair" => cli.langpair = Some(one()),
-            "smooth" => cli.smooth = choice("-s/--smooth-method", &one(), SMOOTH_CHOICES)?,
-            "smooth_value" => cli.smooth_value = Some(parse_float("-sv/--smooth-value", &one())?),
-            "tokenize" => cli.tokenize = Some(choice("-tok/--tokenize", &one(), TOKENIZE_CHOICES)?),
+            "smooth" => cli.smooth = choice(&opt_display(opt), &one(), SMOOTH_CHOICES)?,
+            "smooth_value" => cli.smooth_value = Some(parse_float(&opt_display(opt), &one())?),
+            "tokenize" => cli.tokenize = Some(choice(&opt_display(opt), &one(), TOKENIZE_CHOICES)?),
             "lowercase" => cli.lowercase = true,
             "force" => cli.force = true,
             "confidence" => cli.confidence = true,
-            "confidence_n" => cli.confidence_n = parse_int("--confidence-n", &one())?,
+            "confidence_n" => cli.confidence_n = parse_int(&opt_display(opt), &one())?,
+            // The two paired tests are mutually exclusive, and argparse names the one that
+            // came *second* as the argument that is not allowed (measured in both orders).
+            "paired_ar" if cli.paired_bs => {
+                return fail(
+                    2,
+                    "argument --paired-ar/-par: not allowed with argument --paired-bs/-pbs",
+                )
+            }
             "paired_ar" => cli.paired_ar = true,
+            "paired_bs" if cli.paired_ar => {
+                return fail(
+                    2,
+                    "argument --paired-bs/-pbs: not allowed with argument --paired-ar/-par",
+                )
+            }
             "paired_bs" => cli.paired_bs = true,
-            "paired_ar_n" => cli.paired_ar_n = parse_int("--paired-ar-n", &one())?,
-            "paired_bs_n" => cli.paired_bs_n = parse_int("--paired-bs-n", &one())?,
-            "paired_jobs" => cli.paired_jobs = parse_int("--paired-jobs", &one())?,
+            "paired_ar_n" => cli.paired_ar_n = parse_int(&opt_display(opt), &one())?,
+            "paired_bs_n" => cli.paired_bs_n = parse_int(&opt_display(opt), &one())?,
+            "paired_jobs" => cli.paired_jobs = parse_int(&opt_display(opt), &one())?,
             "list" => cli.list = true,
             "citation" => cli.citation = true,
             "max_order" => cli.max_ngram_order = parse_int("--max-ngram-order", &one())?,
@@ -451,18 +500,18 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
                     None => return fail(2, format!("argument --python-version: expected X.Y, got '{v}'")),
                 };
             }
-            "cc" => cli.chrf_char_order = parse_int("-cc/--chrf-char-order", &one())?,
-            "cw" => cli.chrf_word_order = parse_int("-cw/--chrf-word-order", &one())?,
-            "beta" => cli.chrf_beta = parse_int("--chrf-beta", &one())?,
+            "cc" => cli.chrf_char_order = parse_int(&opt_display(opt), &one())?,
+            "cw" => cli.chrf_word_order = parse_int(&opt_display(opt), &one())?,
+            "beta" => cli.chrf_beta = parse_int(&opt_display(opt), &one())?,
             "whitespace" => cli.chrf_whitespace = true,
             "chrf_lowercase" => cli.chrf_lowercase = true,
             "eps" => cli.chrf_eps_smoothing = true,
             "quiet" => cli.quiet = true,
             "short" => cli.short = true,
             "score_only" => cli.score_only = true,
-            "width" => cli.width = parse_int("-w/--width", &one())?,
+            "width" => cli.width = parse_int(&opt_display(opt), &one())?,
             "no_color" => {}
-            "format" => cli.format = choice("-f/--format", &one(), FORMAT_CHOICES)?,
+            "format" => cli.format = choice(&opt_display(opt), &one(), FORMAT_CHOICES)?,
             "ter_case_sensitive" => cli.ter_case_sensitive = true,
             "ter_asian_support" => cli.ter_asian_support = true,
             "ter_no_punct" => cli.ter_no_punct = true,

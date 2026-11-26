@@ -4315,3 +4315,46 @@ pipeline, in the measured place, with sacreBLEU's own `sacreBLEU: ` prefix.
 `-t`), the argument-level usage/exit-code parity, `-e` with non-utf8 codecs, and the `test_ter` /
 `test_deep` numbers (running separately; both were timed out by the harness's 10-minute cap when run
 with the rest of the selection, so they are measured on their own).
+
+## 2026-11-26 (continued) - argument errors, and a wrong short flag
+
+**Attempted.** The last unblocked piece of item 1: argument-level stdout/stderr/exit-code parity. The
+oracle prints argparse's usage block above an argument error; we printed one `swadesh: error:` line.
+
+**A real bug fell out of the measurement.** sacreBLEU's short form of `--paired-jobs` is **`-j`**, and
+our binary had registered `-pj` - because a dead `u("--paired-jobs", "-j", ...)` entry in the option
+table (left from before the paired flags landed) swallowed `-j` and answered with a *stale* "not
+supported yet" hint. So `swadesh -j 2` refused a flag the oracle accepts, and `swadesh -pj 2` accepted
+one it does not. Both directions are now fixed, and the seven other dead entries that shadowed live
+options (`--list`, `--confidence`, `--confidence-n`, `--paired-ar`, `--paired-bs`, `--paired-ar-n`,
+`--paired-bs-n`) are gone.
+
+**Also found by measuring.** `--paired-ar` and `--paired-bs` are mutually exclusive, and argparse
+names the option that came **second** as the argument not allowed with the first (verified in both
+orders and with long forms). That is a parse-time error, now refused with the usage block and exit 2.
+
+**Change.** The usage block is transcribed from the oracle at the default 80 columns with the program
+name substituted; the option name in an error line is now `--long/-short` (it had been
+`-short/--long`, and was missing shorts for `-cin`/`-parn`/`-pbsn`), generated from the option table
+rather than written out at each call site.
+
+**Measured.** A 23-case byte-diff of argument errors (bad choices, bad ints, bad floats, unknown long
+and short options, a missing value, an unrecognized positional, the mutually exclusive pair, and
+`-j`/`-pj`) is 0 diffs after masking the program name and collapsing whitespace, which is how
+argparse's terminal-width wrapping is tolerated. `-j 1` and the two paired tests are byte-identical
+*strictly* (stderr too), and `-j 2` gives identical scores.
+
+**Two divergences, documented and pinned.** (a) With more than one unconsumed token argparse lists
+them all (`unrecognized arguments: -pj 1`) where we stop at the first - matching it means emulating
+argparse's two-phase parse, out of scope here. (b) With `--paired-jobs N` for N > 1 sacreBLEU prints
+`Launching N parallel workers.` and its fork pool reorders the per-system status lines; we score
+serially and print them in system order, so the *scores* match but the status lines do not. Both are
+`xfail(strict=True)` tests.
+
+**Measured numbers.** `cargo test --release --workspace`: green (13 suites). `tests/test_cli.py` fast
+half: 392 passed, 2 xfailed, 0 failed.
+
+**Still open.** `--help`/`-h` still prints swadesh's own summary rather than sacreBLEU's 149-line help
+(the *usage* section now matches; the option descriptions do not) - a transcription slice of its own.
+`--max-ngram-order` and `--python-version` remain swadesh additions. The `-t` group, `--detail` and
+slice 4 still wait on the downloader decision, and `test_ter`/`test_deep` are still being measured.
