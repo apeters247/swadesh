@@ -27,6 +27,20 @@ Both are the oracle's own text, with one substitution: the program name.
 swadesh's own additions (`--python-version`, `--max-ngram-order`) are therefore *not* listed in
 `--help`; they are documented here and in `docs/guide.md`.
 
+### Option forms and refusals (measured 2026-11-26)
+
+* **`--opt=value` supplies exactly one value**, even for an option that takes `nargs='+'`:
+  `--metrics=bleu chrf` scores BLEU and takes `chrf` as a *positional reference* (which then fails to
+  open), while `--metrics bleu chrf` is a two-metric list. Same for `--input=h.txt`. An attached
+  value on a single-value option (`--echo=src`, `--format=json`) is the obvious case.
+* **`--echo all` is exclusive.** `--echo all src`, `--echo src all` and even `--echo all all` are
+  refused with `sacreBLEU: Cannot use --echo all with other fields` (exit 1). The `-t`/`-l` checks
+  come first.
+* **`-sl` refuses a statistical test**: `-ci`, `-par` or `-pbs` in sentence-level mode is
+  `sacreBLEU: Statistical tests are unavailable in sentence-level mode.` (exit 1). The measured order
+  is: the one-metric check (`-sl -m bleu chrf -ci` reports the metric), then the one-system check
+  (`-sl -par` with two systems reports the system), then this one.
+
 ## Metrics
 
 `-m` selects one or more of `bleu`, `chrf`, `ter`; default `bleu`. Multiple metrics print in the

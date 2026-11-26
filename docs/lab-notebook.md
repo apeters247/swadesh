@@ -5099,3 +5099,32 @@ own trailing `--python-version` lands after `--`) and `-w -1` (already in the tr
 
 **Next.** Those four gaps, then the real-model re-verification and the `.zip`/plain-`.gz` *download*
 shapes.
+
+## 2026-11-26 (continued) - M0 slice 15: the four gaps the second probe found
+
+**Attempted.** The four divergences the previous slice's second probe recorded. Three were fixed;
+the fourth (`-t A,B`, concatenated sets) is a feature, not a check, and is left as the next slice.
+
+**`--opt=value` with `nargs='+'` was a parsing bug.** `--metrics=bleu r.txt -i h.txt` made swadesh
+take `r.txt` as a second metric and die with `invalid choice: 'r.txt'`. Measured: argparse supplies
+*one* value for `--opt=value` and then stops - `--metrics=bleu chrf` scores BLEU and takes `chrf` as a
+positional *reference* (the oracle then fails opening it with `FileNotFoundError`). The argument loop
+now stops after the inline value, and `--input=h.txt` works for the same reason.
+
+**Two missing refusals.** `--echo all` is exclusive (`--echo all src`, `--echo src all`, even
+`--echo all all` -> `sacreBLEU: Cannot use --echo all with other fields`, exit 1), and `-sl` with any
+statistical flag (`-ci`, `-par`, `-pbs`) is refused (`sacreBLEU: Statistical tests are unavailable in
+sentence-level mode.`, exit 1). The statistical check already existed but only inside the *paired*
+branch, so a single-system `-sl -ci` scored silently; it now sits after the one-metric and one-system
+checks, which is the measured order (`-sl -m bleu chrf -ci` reports the metric; `-sl -par` with two
+systems reports the system).
+
+**Verification.** The two probe suites: 49 of 51 and 36 of 41 forms byte-identical; every remaining
+difference is either a probe artefact (`--` followed by the harness's own `--python-version`), the
+registered traceback class (`-w -1`, `-ol`/`--subset` without `-t`, `-cc -1`, `-cw -1`), or the
+deferred `-t A,B`. New tests: `test_inline_option_value_supplies_one_value`,
+`test_echo_all_is_exclusive` (three orders) and `test_sentence_level_refuses_statistical_tests`
+(four flag combinations) - 6 passed.
+
+**Next.** `-t A,B` (concatenating sets), then the real-model re-verification and the
+`.zip`/plain-`.gz` *download* shapes.
