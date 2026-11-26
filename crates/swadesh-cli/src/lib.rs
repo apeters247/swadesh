@@ -39,13 +39,8 @@ pub fn fail<T>(code: i32, msg: impl Into<String>) -> Result<T, Fail> {
 pub fn run_argv(argv: &[String], out: &mut dyn Write) -> Result<(), Fail> {
     match args::parse(argv) {
         Ok(Action::Help) => write!(out, "{}", args::USAGE).map_err(|e| Fail { code: 1, msg: e.to_string() }),
-        Ok(Action::Version) => writeln!(
-            out,
-            "swadesh {} (sacreBLEU {})",
-            env!("CARGO_PKG_VERSION"),
-            report::SACREBLEU_VERSION
-        )
-        .map_err(|e| Fail { code: 1, msg: e.to_string() }),
+        Ok(Action::Version) => writeln!(out, "swadesh {}", report::SACREBLEU_VERSION)
+            .map_err(|e| Fail { code: 1, msg: e.to_string() }),
         Ok(Action::Run(cli)) => run::execute(&cli, out),
         Err(f) => Err(f),
     }

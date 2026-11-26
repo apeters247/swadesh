@@ -17,76 +17,7 @@ pub const TOKENIZE_CHOICES: &[&str] = &[
     "spBLEU-1K",
 ];
 
-pub const USAGE: &str = "\
-usage: swadesh [-h] [-V] [-m {bleu,chrf,ter} ...] [-i INPUT] [options] [REF ...]
-
-Compute BLEU, chrF and/or TER. Hypotheses are read from stdin unless -i is given.
-Output is byte-identical to `sacrebleu REF -i HYP` (sacreBLEU 2.6.0).
-
-positional arguments:
-  REF                   reference file(s), one line per segment
-
-options:
-  -i, --input FILE      hypothesis file (default: stdin)
-  -m, --metrics {bleu,chrf,ter} ...
-                        metrics to compute (default: bleu)
-  -sl, --sentence-level
-                        score each segment (text output, one metric)
-  -s, --smooth-method {none,floor,add-k,exp}
-                        BLEU smoothing (default: exp)
-  -sv, --smooth-value X
-                        value for floor / add-k smoothing
-  -tok, --tokenize {none,zh,13a,intl,char}
-                        BLEU tokenizer (default: 13a)
-  -lc, --lowercase      BLEU: lowercase input
-  --force               BLEU: suppress the tokenized-input warning
-  -ci, --confidence     report a bootstrap confidence interval
-  -cin, --confidence-n N
-                        bootstrap resamples for the confidence interval (default: 1000)
-  -par, --paired-ar     paired approximate-randomisation test between systems
-  -pbs, --paired-bs     paired bootstrap resampling test between systems
-  -parn, --paired-ar-n N
-                        trials for --paired-ar (default: 10000)
-  -pbsn, --paired-bs-n N
-                        resamples for --paired-bs (default: 1000)
-  -pj, --paired-jobs N  worker processes for the paired test (default: 1)
-  --list                print the available test sets and quit
-  --citation            print the citation for a test set (-t)
-  -t, --test-set NAME   score against a named test set instead of reference files
-  --echo FIELD ...      print these fields of the test set (or 'all') and quit
-  -ol, --origlang X     keep segments whose source language is X (or 'non-X')
-  --subset X            keep segments whose domain annotation is X
-  -d, --detail          break the score down by source language and domain
-  --download NAME       fetch that test set's archive and quit
-  --max-ngram-order N   BLEU maximum n-gram order (default: 4)
-  --python-version X.Y  emulate sacreBLEU running on this CPython (float sum()
-                        semantics changed in 3.12 and 3.14; default: 3.12)
-  -cc, --chrf-char-order N
-                        chrF character n-gram order (default: 6)
-  -cw, --chrf-word-order N
-                        chrF word n-gram order (2 gives chrF++; default: 0)
-  --chrf-beta N         chrF beta (default: 2)
-  --chrf-whitespace     chrF: keep whitespace in character n-grams
-  --chrf-lowercase      chrF: lowercase input
-  --chrf-eps-smoothing  chrF: epsilon smoothing instead of effective order
-  -l, --language-pair XX-YY
-                        target language, only used to pick the default tokenizer
-  -e, --encoding ENC    input encoding (only utf-8)
-  -nr, --num-refs N     split each reference line on tabs into N references
-  -f, --format {json,text,latex}
-                        output format (default: json; env SACREBLEU_FORMAT)
-  -b, --score-only      print only the score
-  -w, --width N         decimal places (default: 1)
-  -sh, --short          shorter signature (text output)
-  --ter-case-sensitive  TER: case sensitive (default: lowercase)
-  --ter-asian-support   TER: special treatment of Asian characters
-  --ter-no-punct        TER: remove punctuation
-  --ter-normalized      TER: basic normalization and tokenization
-  -q, --quiet           suppress informational messages
-  -nc, --no-color       accepted for compatibility (no colors are used)
-  -V, --version         print swadesh and sacreBLEU versions
-  -h, --help            show this help
-";
+pub const USAGE: &str = "usage: swadesh [-h] [--citation] [--list] [--test-set TEST_SET]\n                 [--language-pair LANGPAIR] [--origlang ORIGLANG]\n                 [--subset SUBSET] [--download DOWNLOAD]\n                 [--echo ECHO [ECHO ...]] [--input [INPUT ...]]\n                 [--num-refs NUM_REFS] [--encoding ENCODING]\n                 [--metrics {bleu,chrf,ter} [{bleu,chrf,ter} ...]]\n                 [--sentence-level] [--smooth-method {none,floor,add-k,exp}]\n                 [--smooth-value BLEU_SMOOTH_VALUE]\n                 [--tokenize {none,zh,13a,intl,char,ja-mecab,ko-mecab,spm,flores101,flores200,spBLEU-1K}]\n                 [--lowercase] [--force] [--chrf-char-order CHRF_CHAR_ORDER]\n                 [--chrf-word-order CHRF_WORD_ORDER] [--chrf-beta CHRF_BETA]\n                 [--chrf-whitespace] [--chrf-lowercase] [--chrf-eps-smoothing]\n                 [--ter-case-sensitive] [--ter-asian-support] [--ter-no-punct]\n                 [--ter-normalized] [--confidence]\n                 [--confidence-n CONFIDENCE_N] [--paired-ar | --paired-bs]\n                 [--paired-ar-n PAIRED_AR_N] [--paired-bs-n PAIRED_BS_N]\n                 [--paired-jobs PAIRED_JOBS] [--quiet] [--short]\n                 [--score-only] [--width WIDTH] [--detail] [--no-color]\n                 [--format {json,text,latex}] [--version]\n                 [refs ...]\n\nsacreBLEU: Hassle-free computation of shareable BLEU scores.\nQuick usage: score your detokenized output against WMT'14 EN-DE:\n    cat output.detok.de | sacrebleu -t wmt14 -l en-de\n\npositional arguments:\n  refs                  Optional list of references. If given, it should\n                        preceed the -i/--input argument.\n\noptions:\n  -h, --help            show this help message and exit\n  --citation, --cite    Dump the bibtex citation and quit.\n  --list                Print a list of all available test sets.\n  --test-set TEST_SET, -t TEST_SET\n                        The test set to use (see also --list) or a comma-\n                        separated list of test sets to be concatenated.\n  --language-pair LANGPAIR, -l LANGPAIR\n                        Source-target language pair (2-char ISO639-1 codes).\n  --origlang ORIGLANG, -ol ORIGLANG\n                        Use a subset of sentences with a given original\n                        language (2-char ISO639-1 codes), \"non-\" prefix means\n                        negation.\n  --subset SUBSET       Use a subset of sentences whose document annotation\n                        matches a given regex (see SUBSETS in the source\n                        code).\n  --download DOWNLOAD   Download a test set and quit.\n  --echo ECHO [ECHO ...]\n                        Output the source (src), reference (ref), or other\n                        available field (docid, ref:A, ref:1 for example) to\n                        STDOUT and quit. You can get available fields with\n                        options `--list` and `-t`For example: `sacrebleu -t\n                        wmt21 --list`. If multiple fields are given, they are\n                        outputted with tsv format in the order they are\n                        given.You can also use `--echo all` to output all\n                        available fields.\n  --input [INPUT ...], -i [INPUT ...]\n                        Read input from file(s) instead of STDIN.\n  --num-refs NUM_REFS, -nr NUM_REFS\n                        Split the reference stream on tabs, and expect this\n                        many references. (Default: 1)\n  --encoding ENCODING, -e ENCODING\n                        Open text files with specified encoding (Default:\n                        utf-8)\n  --metrics {bleu,chrf,ter} [{bleu,chrf,ter} ...], -m {bleu,chrf,ter} [{bleu,chrf,ter} ...]\n                        Space-delimited list of metrics to compute (Default:\n                        bleu)\n  --sentence-level, -sl\n                        Compute metric for each sentence.\n  --version, -V         show program's version number and exit\n\nBLEU related arguments:\n  --smooth-method {none,floor,add-k,exp}, -s {none,floor,add-k,exp}\n                        Smoothing method: exponential decay, floor (increment\n                        zero counts), add-k (increment num/denom by k for\n                        n>1), or none. (Default: exp)\n  --smooth-value BLEU_SMOOTH_VALUE, -sv BLEU_SMOOTH_VALUE\n                        The smoothing value. Only valid for floor and add-k.\n                        (Defaults: floor: 0.1, add-k: 1)\n  --tokenize {none,zh,13a,intl,char,ja-mecab,ko-mecab,spm,flores101,flores200,spBLEU-1K}, -tok {none,zh,13a,intl,char,ja-mecab,ko-mecab,spm,flores101,flores200,spBLEU-1K}\n                        Tokenization method to use for BLEU. If not provided,\n                        defaults to `zh` for Chinese, `ja-mecab` for Japanese,\n                        `ko-mecab` for Korean and `13a` (mteval) otherwise.\n  --lowercase, -lc      If True, enables case-insensitivity. (Default: False)\n  --force               Insist that your tokenized input is actually\n                        detokenized.\n\nchrF related arguments:\n  --chrf-char-order CHRF_CHAR_ORDER, -cc CHRF_CHAR_ORDER\n                        Character n-gram order. (Default: 6)\n  --chrf-word-order CHRF_WORD_ORDER, -cw CHRF_WORD_ORDER\n                        Word n-gram order (Default: 0). If equals to 2, the\n                        metric is referred to as chrF++.\n  --chrf-beta CHRF_BETA\n                        Determine the importance of recall w.r.t precision.\n                        (Default: 2)\n  --chrf-whitespace     Include whitespaces when extracting character n-grams.\n                        (Default: False)\n  --chrf-lowercase      Enable case-insensitivity. (Default: False)\n  --chrf-eps-smoothing  Enables epsilon smoothing similar to chrF++.py, NLTK\n                        and Moses; instead of effective order smoothing.\n                        (Default: False)\n\nTER related arguments (The defaults replicate TERCOM's behavior):\n  --ter-case-sensitive  Enables case sensitivity. (Default: False)\n  --ter-asian-support   Enables special treatment of Asian characters.\n                        (Default: False)\n  --ter-no-punct        Removes punctuation. (Default: False)\n  --ter-normalized      Applies basic normalization and tokenization.\n                        (Default: False)\n\nConfidence interval (CI) estimation for single-system evaluation:\n  --confidence, -ci     Report confidence interval using bootstrap resampling.\n  --confidence-n CONFIDENCE_N, -cin CONFIDENCE_N\n                        Set the number of bootstrap resamples for CI\n                        estimation (Default: 1000).\n\nPaired significance testing for multi-system evaluation:\n  --paired-ar, -par     Perform paired test using approximate randomization\n                        (AR). This option is mutually exclusive with --paired-\n                        bs (Default: False).\n  --paired-bs, -pbs     Perform paired test using bootstrap resampling. This\n                        option is mutually exclusive with --paired-ar\n                        (Default: False).\n  --paired-ar-n PAIRED_AR_N, -parn PAIRED_AR_N\n                        Number of trials for approximate randomization test\n                        (Default: 10000).\n  --paired-bs-n PAIRED_BS_N, -pbsn PAIRED_BS_N\n                        Number of bootstrap resamples for paired bootstrap\n                        resampling test (Default: 1000).\n  --paired-jobs PAIRED_JOBS, -j PAIRED_JOBS\n                        If 0, launches as many workers as the number of\n                        systems. If > 0, sets the number of workers manually.\n                        This feature is currently not supported on Windows.\n\nReporting related arguments:\n  --quiet, -q           Suppress verbose messages.\n  --short, -sh          Produce a shorter (less human readable) signature.\n  --score-only, -b      Print only the computed score.\n  --width WIDTH, -w WIDTH\n                        Floating point width (Default: 1).\n  --detail, -d          Print detailed information (split test sets based on\n                        origlang).\n  --no-color, -nc       Disable the occasional use of terminal colors.\n  --format {json,text,latex}, -f {json,text,latex}\n                        Set the output format. `latex` is only valid for\n                        multi-system mode whereas `json` and `text` apply to\n                        single-system mode only. This flag is overridden if\n                        the SACREBLEU_FORMAT environment variable is set to\n                        one of the valid choices (Default: json).\n";
 
 
 /// The usage block argparse prints above an argument error, transcribed from sacreBLEU 2.6.0 with
