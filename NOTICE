@@ -14,6 +14,7 @@ specification and from black-box measurement of sacreBLEU's observable output, r
 * `docs/spec/ter.md` — TER, including the beam edit distance
 * `docs/spec/intl-absorption.md` — the international tokenizer's measured model (the file keeps its old name; it supersedes the earlier number-absorption rule)
 * `docs/spec/cli-contract.md` — the command-line interface
+* `docs/spec/user-test-sets.md` — swadesh's own extension for user-provided test sets (design, not a sacreBLEU behaviour)
 
 The differential tests compare against recorded sacreBLEU output. That is measurement, not
 derivation: no sacreBLEU source was read for these, and no sacreBLEU code is copied into `crates/`.

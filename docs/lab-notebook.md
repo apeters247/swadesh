@@ -4420,3 +4420,33 @@ troy-1 this session: `test_differential_long` **46 passed** (14m16s) and `test_m
 binary side, the other nineteen on the Python side. No file was skipped, xfailed or loosened to get
 there; the three strict `xfail`s are the documented divergences listed in `docs/parity-report.md` and
 they fail by design.
+
+## 2026-11-26 (continued) - spec: user-provided test sets (a swadesh addition)
+
+**Context.** The `-t` work is blocked on the downloader decision, so this session turned the offer
+made in conversation into a written specification rather than code: the ability to score against a
+test set the *user* provides, with no download.
+
+**The design insight, and it is a measured one.** sacreBLEU's own processed cache is already the
+layout worth reading - `~/.sacrebleu/wmt16/wmt16.en-de.{src,ref,docid,origlang,genre}`, and for wmt22
+`.{src,ref-A,ref-B,docid,origlang,domain,<system>}`. So the feature needs no new format, no manifest
+and no dependency: a directory of those files *is* a test set. `$SWADESH_TEST_SETS` names extra
+roots, `-t` resolves built-ins first (so nothing sacreBLEU defines changes), then those roots, then
+`$SACREBLEU`, and a `-t` value containing a path separator is used directly.
+
+**What it buys.** Everything a reference-file invocation loses: named and multiple references,
+per-segment `origlang`/`docid`/`genre`, `--subset` slices, `--echo`, `--detail`, and a signature that
+names the set. It is also the substrate the downloaded sets must land in, so Phase B (URLs, behind a
+`downloader` cargo feature, with the five archive parsers) adds to this rather than replacing it.
+
+**Why it is verifiable without a downloader.** The acceptance test points `SWADESH_TEST_SETS` at
+`$SACREBLEU` and byte-diffs against the oracle for sets already cached on this host: `--echo` for
+src/ref/ref:A/ref:B/docid/origlang/genre and a system field, `-ol` in both senses, scoring against
+`.ref`, the `-d` breakdown lines, and `-t <set> --list`. That is a real parity test for the reader,
+using data that is already on disk - no downloads, no new fixtures.
+
+**Sourcing.** The spec says where each rule comes from: everything sacreBLEU defines (refusal
+wording, `--echo` shape, the language-pair error) is measured and already in `cli-contract.md`;
+everything it does not define (resolution roots, field discovery, the user-set `--list` order) is
+swadesh's own design, and the file says so rather than implying an oracle for it. `NOTICE` now names
+the spec, and no data or licence position changes - a user set is the user's own files.
