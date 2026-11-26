@@ -723,7 +723,7 @@ fn run_cli(py: Python<'_>, argv: Vec<String>) -> PyResult<(i32, String, String)>
         let text = String::from_utf8_lossy(&buf.0).into_owned();
         match result {
             Ok(()) => (0, text, String::new()),
-            Err(f) => (f.code, text, f.msg),
+            Err(f) => (f.code, text, swadesh_cli::error_stderr(&f)),
         }
     });
     Ok((code, out, err))

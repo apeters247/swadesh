@@ -4947,3 +4947,43 @@ script->binary switch is a decision, not a transcription, and it is reported rat
 The help/version/usage area: 32 passed / 1 xfailed.
 
 **Next.** The console-script decision for item 4, then the WS0.8 leftovers.
+
+## 2026-11-26 (continued) - M0 slice 11: the console script runs the compiled code (item 4)
+
+**Attempted.** `python/swadesh/cli.py` used to patch sacreBLEU and call *its* argument parser, so the
+`swadesh` console script could not run without sacreBLEU installed. It now calls
+`swadesh._swadesh.run_cli` - the same entry point the standalone binary uses.
+
+**Three pieces were needed.**
+
+1. **One stderr formatter.** `main.rs` added the `swadesh: error: ` prefix and, for argument errors,
+   argparse's usage block; `run_cli` returned the bare message. The two are now the same function,
+   `swadesh_cli::error_stderr`, so the console script and the binary print byte-identical stderr.
+2. **Python's two exception lines, verbatim.** The parity harness compares the *final* line of a
+   failed run against CPython's, so `input.rs` now prints
+   `FileNotFoundError: [Errno 2] No such file or directory: 'x'` and
+   `UnicodeDecodeError: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte`
+   (with Python's three reason strings: `invalid start byte`, `invalid continuation byte`,
+   `unexpected end of data`, chosen from Rust's `Utf8Error`), and `error_stderr` prints those two
+   without the `swadesh: error: ` prefix. Nothing in the tests pinned the old wording.
+3. **The script itself.** `cli.py` runs the compiled code, adding `--python-version` (the running
+   interpreter's) unless the user passed one or the call is `-h/--help/-V/--version`; the old
+   sacreBLEU adapter stays as a fallback for a checkout with no built extension.
+
+**Verification.** `tests/test_parity.py`'s CLI section against the oracle: **76 passed, 1 xfailed,
+0 failed** - the xfail is `-tok ja-mecab`, the one remaining divergence (sacreBLEU accepts the flag
+and fails at import time with exit code 1; swadesh refuses up front with exit code 2, which
+`test_unsupported_options_fail_with_hint` requires). It is pinned by an explicitly named
+`test_cli_unbuilt_tokenizer` rather than left as a red parity case.
+
+**A note on `SWADESH_DATA`.** With `SWADESH_DATA=bench/data` the parity section's 58 scoring cases
+*skip*: the harness wants `<SWADESH_DATA>/wmt16/wmt16.en-de.ref` and `bench/data` has wmt22 only.
+Pointing it at `$SACREBLEU` (whose layout is the one the fixture reads) exercises all 77.
+
+**Numbers (this tree, Python 3.11.14).** CLI parity section: **76 passed / 1 xfailed**. `cargo test
+--release --workspace`: 13 suites, 0 failed. `tests/test_cli.py`: **667 passed, 3 skipped, 3
+xfailed** (6m42s). `tests/test_parity.py`: 436 passed, 58 skipped. The fast Python selection (13
+files): 319 passed. `test_fuzz_unicode` + `test_coverage_gaps` + `test_mutation_kills`: 86 passed.
+
+**Next.** The WS0.8 leftovers (`-e` codecs, `.gz` input, the unconsumed-token list, `-j > 1` status
+lines, the real-model re-verification), and the `.zip`/plain-`.gz` download shapes.

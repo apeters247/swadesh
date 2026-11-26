@@ -33,17 +33,46 @@ fn virtual_file(path: &str) -> Option<Vec<u8>> {
     VIRTUAL_FILES.with(|f| f.borrow().get(path).cloned())
 }
 
-fn decode_utf8(bytes: Vec<u8>, what: &str) -> Result<String, Fail> {
+/// Python's own `UnicodeDecodeError` line, which `tests/test_parity.py` compares line for line.
+///
+/// The reason is Python's: `unexpected end of data` when the sequence is truncated, `invalid
+/// continuation byte` when a valid lead byte is followed by the wrong byte, and `invalid start byte`
+/// otherwise (a lead byte that cannot begin a sequence, e.g. 0xff). Verified against CPython for
+/// `b"\xff"`, `b"\x80"`, `b"\xc3"` and `b"\xc3\x28"`.
+fn decode_utf8(bytes: Vec<u8>, _what: &str) -> Result<String, Fail> {
     String::from_utf8(bytes).or_else(|e| {
+        let err = e.utf8_error();
+        let position = err.valid_up_to();
+        let byte = e.as_bytes().get(position).copied().unwrap_or(0);
+        let reason = match err.error_len() {
+            None => "unexpected end of data",
+            Some(_) if (0xC2..=0xF4).contains(&byte) => "invalid continuation byte",
+            Some(_) => "invalid start byte",
+        };
         fail(
             1,
             format!(
-                "UnicodeDecodeError: 'utf-8' codec can't decode byte 0x{:02x} in {what} (position {})",
-                e.as_bytes()[e.utf8_error().valid_up_to()],
-                e.utf8_error().valid_up_to()
+                "UnicodeDecodeError: 'utf-8' codec can't decode byte 0x{byte:02x} in position {position}: {reason}"
             ),
         )
     })
+}
+
+/// Python's line for a failed open, class and errno included.
+fn io_error(path: &str, e: &std::io::Error) -> String {
+    match e.kind() {
+        std::io::ErrorKind::NotFound => {
+            format!("FileNotFoundError: [Errno 2] No such file or directory: '{path}'")
+        }
+        std::io::ErrorKind::PermissionDenied => {
+            format!("PermissionError: [Errno 13] Permission denied: '{path}'")
+        }
+        _ if std::path::Path::new(path).is_dir() => {
+            format!("IsADirectoryError: [Errno 21] Is a directory: '{path}'")
+        }
+        // Unmeasured kinds keep a readable message rather than guessing Python's wording.
+        _ => format!("{path}: {e}"),
+    }
 }
 
 pub fn check_encoding(encoding: &str) -> Result<(), Fail> {
@@ -61,7 +90,7 @@ pub fn file_lines(path: &str, encoding: &str) -> Result<Vec<String>, Fail> {
     }
     let bytes = match virtual_file(path) {
         Some(b) => b,
-        None => std::fs::read(path).or_else(|e| fail(1, format!("{path}: {}", e)))?,
+        None => std::fs::read(path).or_else(|e| fail(1, io_error(path, &e)))?,
     };
     let text = decode_utf8(bytes, path)?;
     Ok(text.split_inclusive('\n').map(|l| py_rstrip(l).to_string()).collect())

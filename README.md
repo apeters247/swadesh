@@ -3,11 +3,11 @@
 **sacreBLEU, bit for bit, in Rust.** BLEU, chrF, chrF++ and TER with the same scores, the same signatures
 and the same CLI, and much faster: 22–46× on one core and 41–331× on a 24-thread desktop.
 
-**Status (2026-11-24).** Bit-exact on the WMT-style corpora, on the 494-case parity suite and on the
+**Status (2026-11-26).** Bit-exact on the WMT-style corpora, on the 494-case parity suite and on the
 seven-file differential selection (**0 failing cases**): TER, BLEU, chrF and chrF++ match sacreBLEU on
 every input exercised, including the long unrelated-reference cases that were the last divergence.
 `TESTING.md` records the evidence; `docs/lab-notebook.md` records the work. The CLI suite is green
-too — `tests/test_cli.py` 448 passed, 0 failed — when its fixtures are pointed at the checkout's data
+too - `tests/test_cli.py` 667 passed, 3 skipped, 3 xfailed - when its fixtures are pointed at the checkout's data
 with `SWADESH_DATA=bench/data` (they default to `/var/www/llmeval/bench/data`).
 
 <p align="center"><img src="docs/img/benchmark.svg" alt="swadesh vs sacreBLEU on 100k segments: BLEU 129x, chrF 331x, chrF++ 326x faster, identical scores" width="720"></p>
@@ -17,8 +17,9 @@ pip install swadesh
 ```
 
 The library needs only NumPy. BLEU, chrF, chrF++, TER and the paired significance tests all run
-with sacreBLEU absent; `sacrebleu` is an extra, needed by `patch()`, the `swadesh` command line,
-`verify.py` and the six tokenizers that use mecab or sentencepiece
+with sacreBLEU absent, and so does the `swadesh` command line - it runs the compiled code in process
+(`_swadesh.run_cli`), so there is no Python-side CLI and nothing to keep in step. `sacrebleu` is an
+extra, needed by `patch()`, `verify.py` and the six tokenizers that use mecab or sentencepiece
 (`pip install "swadesh[sacrebleu]"`).
 
 ```python

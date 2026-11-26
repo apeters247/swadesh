@@ -19,15 +19,9 @@ fn main() -> ExitCode {
             Err(_) => ExitCode::from(1),
         },
         Err(f) => {
-            // Output already written stays on stdout; the error goes to stderr. An empty message
-            // means the diagnostic was already printed, in sacreBLEU's own wording.
-            if !f.msg.is_empty() {
-                // argparse prints its usage block above an argument error, so this does too.
-                if f.code == 2 && swadesh_cli::args::is_argparse_error(&f.msg) {
-                    eprint!("{}", swadesh_cli::args::USAGE_BLOCK);
-                }
-                eprintln!("swadesh: error: {}", f.msg);
-            }
+            // Output already written stays on stdout; the error goes to stderr, formatted by the
+            // same function the in-process entry point uses.
+            eprint!("{}", swadesh_cli::error_stderr(&f));
             ExitCode::from(f.code as u8)
         }
     }

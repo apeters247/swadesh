@@ -910,7 +910,7 @@ CLI_SCORING = [
     ["-ci", "-cin", "50"], ["-ci"], ["-q"], ["-sh"], ["-b"], ["-w", "4"], ["-d"], ["-nc"],
     ["-f", "text"], ["-f", "latex"], ["-f", "json"], ["-sh", "-f", "latex"], ["--short"],
     ["-b", "-w", "5"], ["-d", "-m", "bleu", "chrf"], ["-e", "utf-8"], ["-nr", "1"],
-    ["-s", "bogus"], ["-tok", "bogus"], ["-tok", "ja-mecab"], ["-m", "nope"], ["-w", "x"], ["-cc", "0"],
+    ["-s", "bogus"], ["-tok", "bogus"], ["-m", "nope"], ["-w", "x"], ["-cc", "0"],
     ["-cw", "-1"], ["--chrf-beta", "0"], ["-ci", "-cin", "0"],
     ["-par", "-parn", "50", "-j", "1"], ["-pbs", "-pbsn", "50"],
     ["-par", "-pbs"], ["-par", "-ci"], ["-m", "bleu", "-sv", "0.1", "-s", "exp"],
@@ -938,6 +938,14 @@ def test_cli_informational_flags(argv):
 def test_cli_scoring_flags(argv, cli_files):
     base = [str(cli_files["refs"]), "-i", str(cli_files["hyps"])]
     _cli_compare(base + argv, cli_files)
+
+
+@pytest.mark.xfail(strict=True, reason=(
+    "documented divergence: sacreBLEU accepts `-tok ja-mecab` and fails later, at import time, with "
+    "exit code 1 and a traceback ending in `    pip install sacrebleu[ja]`; swadesh refuses an "
+    "unbuilt tokenizer up front with a hint and exit code 2 (docs/parity-report.md)"))
+def test_cli_unbuilt_tokenizer(cli_files):
+    _cli_compare([str(cli_files["refs"]), "-i", str(cli_files["hyps"]), "-tok", "ja-mecab"], cli_files)
 
 
 @pytest.mark.parametrize("argv", [

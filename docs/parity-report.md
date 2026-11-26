@@ -67,6 +67,7 @@ Not covered: `--download` (needs network; it fetches a set and quits). `spm`, `f
 | Suite | Result |
 |---|---|
 | `cargo test --release --workspace` | 13 suites, 0 failed (9 of them the CLI's own unit tests) |
+| the `swadesh` console script | runs the compiled code (`_swadesh.run_cli`), no sacreBLEU and no second binary needed | the same: `swadesh.cli` calls `_swadesh.run_cli`, with sacreBLEU's own parser kept only as a fallback when the extension is missing | 2026-11-26: `tests/test_parity.py`'s CLI section is 76 passed / 1 xfailed (the unbuilt tokenizer) with `SWADESH_DATA` pointing at the cache |
 | `tests/test_cli.py` (runs the **Rust binary** against the sacrebleu CLI) | 582 passed, 2 xfailed, 0 failed in 6m26s (the file was 448 cases at the goal start) |
 | `tests/test_parity.py` | 436 passed, 58 skipped |
 | `tests/test_frozen_oracle.py`, `test_provenance.py`, `test_score_objects.py`, `test_estimate_ci.py`, `test_dependency_licences.py`, `test_version.py`, `test_base_port.py`, `test_metrics_fallback.py`, `test_ter_preprocess.py`, `test_regressions.py`, `test_numrefs_none_refs.py` | 0 failed (with `test_parity.py`, 673 passed / 58 skipped together) |
@@ -172,7 +173,7 @@ implements them:
 |---|---|---|---|
 | `-t/--test-set`, `--download`, `--echo`, `-ol/--origlang`, `--subset` | works (downloads into `$SACREBLEU` and parses five formats) | refused with a hint | needs an HTTP client + archive decoding; the dependency decision is recorded in `docs/lab-notebook.md` |
 | `-d/--detail` | works (needs a test set) | refused with a hint | rides on `-t` |
-| `-tok ja-mecab/ko-mecab/spm/flores101/flores200/spBLEU-1K` | works with the extra packages | refused with a hint | the five native tokenizers are byte-identical |
+| `-tok ja-mecab/ko-mecab/spm/flores101/flores200/spBLEU-1K` | works with the extra packages | refused with a hint, exit code 2 | the five native tokenizers are byte-identical; the exit code also differs from the oracle's (it accepts the flag and fails at import time, exit code 1), pinned by `test_cli_unbuilt_tokenizer` as a strict xfail |
 | `-e` other than utf-8 | opens the file with any Python codec | refused with a hint | needs an encoding crate |
 | a `.gz` input file | reads it | refused with a hint | needs a decompressor |
 | `-cw -1`, `-cw -2`, ... | accepted; `nw:-1` in the signature and a reduced order | refused with a hint | `test_negative_chrf_word_order` (strict xfail) |
@@ -180,7 +181,7 @@ implements them:
 | `--paired-jobs N` for N > 1 | prints `Launching N parallel workers.` and its fork pool reorders the status lines | scores serially, prints the status lines in system order | scores identical; `test_paired_jobs_parallel_status_lines` (strict xfail) |
 | `-m chrf --paired-bs` (and TER) | **crashes**: `TypeError: Object of type float32 is not JSON serializable` | prints the interval | `test_paired_bootstrap_with_a_float32_metric` |
 | `--citation -t <set>` | **crashes**: `TypeError: argument of type 'WMTXMLDataset' is not iterable` | refused with the `-t` hint | `docs/spec/cli-contract.md` |
-| `-w -1`, `-l en`, a missing input file | raise a Python traceback | print a clean message, same exit code | the exit code and stdout match; reproducing a traceback is not worth matching |
+| `-w -1`, `-l en`, a missing input file, invalid UTF-8 | raise a Python traceback | the exit code matches and the **final line is Python's own** (`FileNotFoundError: [Errno 2] No such file or directory: 'x'`; `UnicodeDecodeError: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte`), with no `swadesh: error:` prefix | 2026-11-26: the two exception lines are compared line for line and now match; the traceback frames are still not reproduced (`test_parity.py`) |
 | `--help`/`-h` | the full 149-line argparse help | the same text, transcribed, with `swadesh` as the program name (the one intentional difference) | 2026-11-26: transcribed so the Rust binary's help matches the oracle token for token |
 | `--version` | `sacrebleu 2.6.0` | `swadesh 2.6.0` | argparse-shaped; the program name is the only difference |
 | `--max-ngram-order`, `--python-version` | not flags (unrecognized) | swadesh additions, listed in `docs/spec/cli-contract.md` rather than in `--help` (which is now the oracle's own text) | `--python-version` selects the CPython float-summation semantics to emulate |
