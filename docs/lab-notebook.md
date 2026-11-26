@@ -5126,5 +5126,15 @@ deferred `-t A,B`. New tests: `test_inline_option_value_supplies_one_value`,
 `test_echo_all_is_exclusive` (three orders) and `test_sentence_level_refuses_statistical_tests`
 (four flag combinations) - 6 passed.
 
-**Next.** `-t A,B` (concatenating sets), then the real-model re-verification and the
-`.zip`/plain-`.gz` *download* shapes.
+**Measured for the next slice: `-t A,B`, concatenated sets.** A comma-separated list concatenates
+the sets in the order given (`multi30k/2017,wmt16` en-de: 1000 + 2999 = 3999 rows; no de-duplication -
+`wmt16,wmt16` gives 5998). `--echo all` keeps **each set's own field list**, so the rows have
+different column counts (1000 rows of 2 from multi30k, 2999 of 5 from wmt16); a *named* field must
+exist in every set, and the error names the first that lacks it
+(`sacreBLEU: available fields for multi30k/2017/en-de: src, ref`). A pair missing from one set fails
+with that set's "No such language pair" block; an unknown name fails with the usual unknown-set
+lines. `-t A,B --list` prints **nothing** (exit 0). The signature is the ordinary single-set one, and
+`-d` concatenates like `--echo`. So the implementation is a per-set loop with the filters applied per
+set and offsets between them - not a merged `Found`.
+
+**Next.** `-t A,B`, then the real-model re-verification and the `.zip`/plain-`.gz` *download* shapes.

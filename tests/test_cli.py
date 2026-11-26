@@ -385,6 +385,50 @@ def test_unsupported_options_fail_with_hint(tmp_path, args):
     assert err.startswith(b"swadesh: error:"), err
 
 
+# ------------------------------------------------------ option parsing: --opt=value
+
+def test_inline_option_value_supplies_one_value(tmp_path):
+    """`--opt=value` supplies exactly one value, even for an option that takes `nargs='+'`.
+
+    Measured: `--metrics=bleu chrf` scores BLEU and takes `chrf` as a positional *reference* (the
+    oracle then fails opening it), while `--metrics bleu chrf` is a two-metric list. swadesh used to
+    keep consuming after the inline value and report `invalid choice: 'chrf'`.
+    """
+    refs = tmp_path / "r.txt"
+    hyp = tmp_path / "h.txt"
+    refs.write_text("the cat sat on the mat\nhello world here\n", encoding="utf-8")
+    hyp.write_text("the cat sat on a mat\nhello there world\n", encoding="utf-8")
+
+    assert_same_streams(["--metrics=bleu", str(refs), "-i", str(hyp)])
+    assert_same_streams(["--input=" + str(hyp), str(refs)])
+    _assert_same_error_line(["--metrics=bleu", "chrf", str(refs), "-i", str(hyp)])
+
+
+def test_echo_all_is_exclusive(tmp_path):
+    """`--echo all` cannot be combined with other fields, in any order.
+
+    Measured: `--echo all all` is refused too, and the `-t`/`-l` checks come first.
+    """
+    if not _have_set("wmt16"):
+        pytest.skip("no cached test set under $SACREBLEU")
+    for fields in (["all", "src"], ["all", "all"], ["src", "all"]):
+        args = ["-t", "wmt16", "-l", "en-de", "--echo", *fields]
+        assert_same_streams(args)
+
+
+@pytest.mark.parametrize("flags", [["-ci"], ["-par"], ["-pbs"], ["-ci", "-par"]])
+def test_sentence_level_refuses_statistical_tests(tmp_path, flags):
+    """`-sl` with `-ci`, `-par` or `-pbs` is refused; the one-metric and one-system checks come first.
+
+    Measured: a single system silently scored before this check existed.
+    """
+    refs = tmp_path / "r.txt"
+    hyp = tmp_path / "h.txt"
+    refs.write_text("the cat sat on the mat\nhello world here\n", encoding="utf-8")
+    hyp.write_text("the cat sat on a mat\nhello there world\n", encoding="utf-8")
+    assert_same_streams([str(refs), "-i", str(hyp), "-sl", *flags])
+
+
 # ------------------------------------------------------------------- .gz input
 
 def _assert_same_error_line(args):

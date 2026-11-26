@@ -386,12 +386,20 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
                 },
             },
             Nargs::Star | Nargs::Plus => {
-                let mut vals: Vec<String> = inline.into_iter().collect();
-                while let Some(next) = queue.front() {
-                    if looks_like_option(next) {
-                        break;
+                // `--opt=value` supplies *one* value even for `nargs='+'`: argparse stops there, so
+                // `--metrics=bleu chrf` scores bleu and takes `chrf` as a positional reference
+                // (measured). Only the space-separated form keeps consuming.
+                let mut vals: Vec<String> = Vec::new();
+                match inline {
+                    Some(s) => vals.push(s),
+                    None => {
+                        while let Some(next) = queue.front() {
+                            if looks_like_option(next) {
+                                break;
+                            }
+                            vals.push(queue.pop_front().unwrap());
+                        }
                     }
-                    vals.push(queue.pop_front().unwrap());
                 }
                 if opt.nargs == Nargs::Plus && vals.is_empty() {
                     return fail(2, format!("argument {}: expected at least one argument", opt_display(opt)));

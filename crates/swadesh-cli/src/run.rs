@@ -187,6 +187,12 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
         if !cli.echo.is_empty() {
             let fields = found.fields_of(pair).expect("the pair was checked above");
             let default_ref = found.default_reference(pair);
+            // Measured: `all` is exclusive, and even `--echo all all` is refused; the -t/-l
+            // checks above come first.
+            if cli.echo.iter().any(|e| e == "all") && cli.echo.len() > 1 {
+                eprintln!("sacreBLEU: Cannot use --echo all with other fields");
+                return Err(Fail { code: 1, msg: String::new() });
+            }
             let wanted: Vec<String> = if cli.echo.iter().any(|e| e == "all") {
                 fields.clone()
             } else {
@@ -332,6 +338,12 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
     }
     if keep.len() > 1 && cli.sentence_level {
         eprintln!("sacreBLEU: Only one system can be evaluated in sentence-level mode.");
+        return Err(Fail { code: 1, msg: String::new() });
+    }
+    // Measured order: the one-metric check, then the one-system check, then this. `-sl -ci` with a
+    // single system used to score silently, because the existing branch only ran for a paired test.
+    if cli.sentence_level && (cli.confidence || cli.paired_ar || cli.paired_bs) {
+        eprintln!("sacreBLEU: Statistical tests are unavailable in sentence-level mode.");
         return Err(Fail { code: 1, msg: String::new() });
     }
     if paired {
