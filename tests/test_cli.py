@@ -1636,3 +1636,34 @@ def test_wmtxml_scores_and_breaks_down_identically(tmp_path):
         ours = _run_env(SWADESH, [*args, "--python-version", PYVER], env)
         assert ours.returncode == theirs[0], flags
         assert ours.stdout == theirs[1], flags
+
+# ------------------------------------------------------ the plain-text family (multi30k)
+
+def test_plain_text_set_is_rebuilt_from_its_raw_tree(tmp_path):
+    """multi30k is the plain-text family: the processed `src`/`ref` are the two files the registry
+    names for the pair, with **each line rstripped**.
+
+    Measured as `[line.rstrip() for line in raw] == processed` for both columns of both pairs - so
+    the whole rule, not a one-off: the French reference has two lines ending in a space in `raw/` and
+    none in the processed file. The registry's per-pair paths are carried in `datasets.rs` for this.
+    """
+    home = Path(os.environ.get("SACREBLEU", Path.home() / ".sacrebleu"))
+    set_name = "multi30k/2017"
+    raw = home / set_name / "raw"
+    if not raw.is_dir():
+        pytest.skip("the multi30k/2017 raw tree is not cached under $SACREBLEU")
+    root = tmp_path / "cache"
+    (root / set_name).mkdir(parents=True)
+    (root / set_name / "raw").symlink_to(raw)
+    env = dict(ENV)
+    env["SACREBLEU"] = str(root)
+    for pair in ("en-de", "en-fr"):
+        for field in ("src", "ref"):
+            args = ["-t", set_name, "-l", pair, "--echo", field, "--python-version", PYVER]
+            ours = _run_env(SWADESH, args, env)
+            theirs = run(SACREBLEU, ["-t", set_name, "-l", pair, "--echo", field])
+            assert ours.returncode == 0, ours.stderr
+            assert ours.stdout == theirs[1], (pair, field)
+            generated = root / set_name / f"multi30k_2017.{pair}.{field}"
+            want = home / set_name / f"multi30k_2017.{pair}.{field}"
+            assert generated.read_bytes() == want.read_bytes(), (pair, field)

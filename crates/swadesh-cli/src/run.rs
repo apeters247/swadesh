@@ -135,11 +135,15 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
             // not, the downloader fetches it (when the build has one and the set is single-archive),
             // and then the parsers run again. An unknown layout or format leaves the refusal below
             // intact rather than producing plausible-looking wrong data.
+            // Each family answers only for the layouts it measured; the order does not matter
+            // because each refuses anything it does not recognise.
             let rebuild = |found: &dataset::Found, pair: &str| -> Result<bool, Fail> {
-                if crate::sgml::rebuild(found, pair)? {
-                    return Ok(true);
+                for step in [crate::sgml::rebuild, crate::wmtxml::rebuild, crate::plain::rebuild] {
+                    if step(found, pair)? {
+                        return Ok(true);
+                    }
                 }
-                crate::wmtxml::rebuild(found, pair)
+                Ok(false)
             };
             if !rebuild(found, pair)? {
                 #[cfg(feature = "downloader")]

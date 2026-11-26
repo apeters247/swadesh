@@ -72,6 +72,10 @@ def main() -> int:
         "    pub langpairs: &'static [&'static str],",
         "    /// `fields[i]` are the fields of `langpairs[i]`, in sacreBLEU's own order.",
         "    pub fields: &'static [&'static [&'static str]],",
+        "    /// `paths[i]` are the archive-relative files of `langpairs[i]`, from the registry's\n",
+        "    /// own `langpairs` mapping (a pair whose entry is a dict contributes its `path`): the\n",
+        "    /// plain-text parser copies them and the other families locate their input with them.",
+        "    pub paths: &'static [&'static [&'static str]],",
         "}",
         "",
         "/// Every test set, in the order sacreBLEU's `--list` prints them.",
@@ -100,6 +104,19 @@ def main() -> int:
         lines.append(
             "        fields: &[%s],"
             % ", ".join("&[%s]" % ", ".join(rust_str(f) for f in fs) for _, fs in listed)
+        )
+        raw_pairs = getattr(ds, "langpairs", None) or {}
+        per_pair = []
+        for key in pairs:
+            entry = raw_pairs.get(key)
+            if isinstance(entry, dict):
+                entry = [entry["path"]] if "path" in entry else []
+            elif isinstance(entry, str):
+                entry = [entry]
+            per_pair.append(list(entry or []))
+        lines.append(
+            "        paths: &[%s],"
+            % ", ".join("&[%s]" % ", ".join(rust_str(str(p)) for p in paths) for paths in per_pair)
         )
         lines.append("    },")
     lines.append("];")

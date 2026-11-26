@@ -171,18 +171,6 @@ fn parse(text: &str) -> Vec<Stream> {
     streams
 }
 
-fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
-    let Ok(entries) = std::fs::read_dir(dir) else { return };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_dir() {
-            walk(&path, out);
-        } else {
-            out.push(path);
-        }
-    }
-}
-
 /// Rebuild `found`'s processed files for `pair` from the cached WMT XML, when the family applies.
 pub fn rebuild(found: &Found, pair: &str) -> Result<bool, Fail> {
     let Some(digits) = found.name.split('/').next().and_then(|n| n.strip_prefix("wmt")) else {
@@ -196,8 +184,7 @@ pub fn rebuild(found: &Found, pair: &str) -> Result<bool, Fail> {
         return Ok(false);
     }
     let wanted = format!("wmttest20{digits}.{pair}.all.xml");
-    let mut files = Vec::new();
-    walk(&raw_dir, &mut files);
+    let files = dataset::walk_files(&raw_dir);
     let Some(xml_path) = files
         .iter()
         .find(|path| path.file_name().map(|n| n == wanted.as_str()).unwrap_or(false))

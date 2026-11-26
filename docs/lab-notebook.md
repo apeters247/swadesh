@@ -4781,3 +4781,31 @@ property honest.
 **Next.** The per-pair URL mapping (so multi-archive sets fetch), then the remaining parser families
 (TSV, plain text, IWSLT XML) and the SGML variants (`B`, `tworefs`, `dev`), then the WS0.8 small
 divergences.
+
+## 2026-11-26 (continued) - M0 slice 7: the plain-text family, and the registry's per-pair paths
+
+**Attempted.** The third parser family (`multi30k`, three sets). It needed one thing the catalogue did
+not carry yet: the registry's **per-pair file paths** (`langpairs[pair]` is a list of archive-relative
+files, or a dict with a `path`), which the generator now emits as `paths` alongside `fields`.
+`--list` stayed byte-identical after the regeneration (compared with `cmp`).
+
+**The rule, and it is two rules.** For `multi30k/2017` en-de the processed `src`/`ref` are byte-identical
+copies of the two files the registry names - but for en-fr the reference differs on one line, and the
+difference is a **trailing space**: the raw file has two lines ending in a space and the processed file
+has none. Checked as `[line.rstrip() for line in raw] == processed`, which holds for both columns of
+both pairs, so the rule is "the same lines, each rstripped, one trailing newline". Two failed attempts
+got the newline arithmetic wrong before that (`split('\n')` ends with an empty piece: popping it when
+the file ends with a newline is the whole trick).
+
+**Verification.** With `raw/` symlinked into a scratch cache: `--echo src`/`ref` and the generated files
+are identical to the oracle's for both pairs of `multi30k/2017`, scoring matches, and the SGML family
+still takes its own path (no regression from adding a third parse step). The new test is cache-gated on
+the raw tree, which the download slice left on this host.
+
+**Numbers.** `cargo test --release --workspace`: 13 suites green. The parser area: 15 tests. The fast
+half is re-running.
+
+**Next.** The same shape of work continues: the TSV family (`mtnt*`, four sets), the IWSLT-XML family
+(nine sets, the largest remaining), the SGML variants (`B`, `tworefs`, `dev` - `tworefs` is `ref:0`/
+`ref:1`), and the per-pair URL mapping so multi-archive sets can fetch. Then the WS0.8 small
+divergences and slice 4.

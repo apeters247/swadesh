@@ -76,18 +76,6 @@ pub fn parse(text: &str) -> Parsed {
 }
 
 /// Every file under `dir`, recursively (the archives extract into nested directories).
-fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
-    let Ok(entries) = std::fs::read_dir(dir) else { return };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_dir() {
-            walk(&path, out);
-        } else {
-            out.push(path);
-        }
-    }
-}
-
 /// The processed files to write, in the order they are reported.
 const FIELDS: &[&str] = &["src", "ref", "docid", "genre", "origlang"];
 
@@ -114,8 +102,7 @@ pub fn rebuild(found: &Found, pair: &str) -> Result<bool, Fail> {
     let want_src = format!("-{concat}-src.{src_lang}.sgm");
     let want_ref = format!("-{concat}-ref.{trg_lang}.sgm");
 
-    let mut files = Vec::new();
-    walk(&raw_dir, &mut files);
+    let files = dataset::walk_files(&raw_dir);
     let find = |suffix: &str| -> Option<&PathBuf> {
         files.iter().find(|path| {
             let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();

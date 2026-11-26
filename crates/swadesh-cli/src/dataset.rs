@@ -389,6 +389,26 @@ pub fn no_sentence(name: &str, origlang: Option<&str>, subset: Option<&str>) -> 
     Fail { code: 1, msg: String::new() }
 }
 
+/// Every file under `dir`, recursively: the archives extract into nested directories, so the
+/// parsers locate their inputs by base name rather than by a fixed path.
+pub fn walk_files(dir: &Path) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    walk_into(dir, &mut out);
+    out
+}
+
+fn walk_into(dir: &Path, out: &mut Vec<PathBuf>) {
+    let Ok(entries) = std::fs::read_dir(dir) else { return };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            walk_into(&path, out);
+        } else {
+            out.push(path);
+        }
+    }
+}
+
 /// The catalogue's citation for a built-in set. sacreBLEU 2.6.0 crashes on `--citation -t X`
 /// (`TypeError: argument of type 'WMTXMLDataset' is not iterable`), so printing this is a
 /// documented divergence rather than a reproduction of its traceback.
