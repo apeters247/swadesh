@@ -18,6 +18,17 @@ use crate::dataset::{self, Found};
 use crate::datasets::DATASETS;
 use crate::{fail, Fail};
 
+/// A file's text, gunzipped first when its name says so (the registry names `.gz` files directly).
+fn read_text(path: &std::path::Path) -> Result<String, Fail> {
+    let bytes = std::fs::read(path).or_else(|e| fail(1, format!("{}: {e}", path.display())))?;
+    let bytes = if path.to_string_lossy().ends_with(".gz") {
+        crate::input::gunzip(&bytes)?
+    } else {
+        bytes
+    };
+    String::from_utf8(bytes).or_else(|e| fail(1, format!("{}: {e}", path.display())))
+}
+
 /// Rebuild `found`'s processed `src`/`ref` for `pair` when the registry names two plain files.
 pub fn rebuild(found: &Found, pair: &str) -> Result<bool, Fail> {
     let Some(entry) = DATASETS.iter().find(|d| d.name == found.name) else { return Ok(false) };
@@ -26,13 +37,11 @@ pub fn rebuild(found: &Found, pair: &str) -> Result<bool, Fail> {
     if paths.len() != 2 {
         return Ok(false);
     }
+    // A `.gz` file is fine (`multi30k/2018` keeps its references compressed and sacreBLEU reads them
+    // gzip-aware); the archive formats and the other families' file names are not.
     if paths.iter().any(|path| {
         let lower = path.to_lowercase();
-        lower.ends_with(".sgm")
-            || lower.ends_with(".xml")
-            || lower.ends_with(".tsv")
-            || lower.ends_with(".gz")
-            || lower.ends_with(".zip")
+        lower.ends_with(".sgm") || lower.ends_with(".xml") || lower.ends_with(".tsv") || lower.ends_with(".zip")
     }) {
         return Ok(false);
     }
@@ -56,8 +65,7 @@ pub fn rebuild(found: &Found, pair: &str) -> Result<bool, Fail> {
         if !declared.iter().any(|d| d == field) {
             continue;
         }
-        let text = std::fs::read_to_string(from)
-            .or_else(|e| fail(1, format!("{}: {e}", from.display())))?;
+        let text = read_text(from)?;
         // Each line rstripped, joined by newlines, and one trailing newline - which is what
         // `[line.rstrip() for line in raw]` compares equal to, blank-line quirks included. Every
         // measured file ends with a newline, so the absent case is unmeasured and simply gets one.

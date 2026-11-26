@@ -215,7 +215,7 @@ fn py_bytes_repr(bytes: &[u8]) -> String {
 /// must begin with the gzip magic or Python raises `BadGzipFile: Not a gzipped file (b'XX')` with the
 /// first two bytes repr'd; a truncated stream is `EOFError: Compressed file ended before the
 /// end-of-stream marker was reached`.
-fn gunzip(bytes: &[u8]) -> Result<Vec<u8>, Fail> {
+pub fn gunzip(bytes: &[u8]) -> Result<Vec<u8>, Fail> {
     if bytes.is_empty() {
         return Ok(Vec::new());
     }

@@ -1523,6 +1523,33 @@ def test_cold_cache_downloads_and_matches(tmp_path):
 
 
 @pytest.mark.skipif(os.environ.get("SWADESH_DOWNLOAD_TESTS") != "1",
+                    reason="downloads ~0.3 MB twice and needs the network; set SWADESH_DOWNLOAD_TESTS=1")
+def test_cold_cache_downloads_a_plain_gz_set(tmp_path):
+    """A set mixing a tar+gzip with plain `.gz` entries fetches all of them, and the parser gunzips.
+
+    `multi30k/2018` lists one tar and three plain `.gz` references. Measured: the oracle prints
+    `Downloading` *and* `Extracting` for each, leaves the `.gz` files compressed (the extraction is a
+    no-op) and reads them gzip-aware, so the processed reference comes out of a compressed file.
+    """
+    ours = tmp_path / "ours"
+    theirs = tmp_path / "theirs"
+    ours.mkdir()
+    theirs.mkdir()
+    args = ["-t", "multi30k/2018", "-l", "en-fr", "--echo", "src", "ref"]
+    ref = _run_env(SACREBLEU, args, {**ENV, "SACREBLEU": str(theirs)})
+    own = _run_env(SWADESH, [*args, "--python-version", PYVER], {**ENV, "SACREBLEU": str(ours)})
+    assert ref.returncode == own.returncode == 0, (ref.stderr[-300:], own.stderr[-300:])
+    assert own.stdout == ref.stdout
+    norm = lambda blob: blob.replace(str(ours).encode(), b"CACHE").replace(str(theirs).encode(), b"CACHE")
+    assert norm(own.stderr) == norm(ref.stderr)
+    for name in ("src", "ref"):
+        assert (ours / "multi30k" / "2018" / f"multi30k_2018.en-fr.{name}").read_bytes() == \
+            (theirs / "multi30k" / "2018" / f"multi30k_2018.en-fr.{name}").read_bytes(), name
+    # the plain-gz reference is kept compressed in the cache, as the oracle leaves it
+    assert (ours / "multi30k" / "2018" / "raw" / "multi30k_2018.test_2018_flickr.fr.gz").exists()
+
+
+@pytest.mark.skipif(os.environ.get("SWADESH_DOWNLOAD_TESTS") != "1",
                     reason="downloads ~12 MB twice and needs the network; set SWADESH_DOWNLOAD_TESTS=1")
 def test_cold_cache_downloads_a_multi_archive_set(tmp_path):
     """A multi-archive set fetches *every* archive, in registry order, and the IWSLT parser then

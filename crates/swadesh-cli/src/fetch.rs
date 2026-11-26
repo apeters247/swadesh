@@ -45,7 +45,7 @@ pub fn ensure_archive(found: &Found) -> Result<bool, Fail> {
     // rather than fetched in part and left unusable.
     for url in entry.data {
         let base = url.rsplit('/').next().unwrap_or("archive");
-        if !(base.ends_with(".tar.gz") || base.ends_with(".tgz")) {
+        if !(base.ends_with(".tar.gz") || base.ends_with(".tgz") || base.ends_with(".gz")) {
             return Ok(false);
         }
     }
@@ -80,8 +80,12 @@ pub fn ensure_archive(found: &Found) -> Result<bool, Fail> {
             }
         }
         if downloaded || !extracted {
+            // Measured: a plain `.gz` still prints the "Extracting" line, but it is left compressed on
+            // disk and the parsers read it gzip-aware.
             eprintln!("sacreBLEU: Extracting {} to {}", archive.display(), raw.display());
-            extract_tar_gz(&archive, &raw)?;
+            if base.ends_with(".tar.gz") || base.ends_with(".tgz") {
+                extract_tar_gz(&archive, &raw)?;
+            }
             extracted = true;
         }
     }
