@@ -184,6 +184,10 @@ implements them:
 | `--version` | `sacrebleu 2.6.0` | `swadesh 0.1.0 (sacreBLEU 2.6.0)` | reports swadesh's own version as well |
 | `--max-ngram-order`, `--python-version` | not flags (unrecognized) | swadesh additions | `--python-version` selects the CPython float-summation semantics to emulate |
 
+| the field list in `-t X --list` and in the "available fields" error | **not reproducible**: `-t wmt22 --list` printed `ref:A, ref:B` six times and `ref:B, ref:A` six times over twelve runs, the order following a hash-randomised mapping. Only the numbered-reference subgroup flips; the metadata and system order was stable 12/12 | deterministic: the set's declared order with the `ref:*` subgroup sorted, so the default reference is first | `test_test_set_field_lists` compares the lists as *sets*; `test_echo_from_a_cached_set` byte-compares every `--echo`. Recorded for the findings note (WS7.1) |
+| `-t X -l BAD --list` | crashes (traceback, non-zero) | lists the set's pairs, ignoring `-l`, exit 0 | `test_list_with_a_set_and_an_unknown_pair` |
+| a cold cache (`-t` with nothing cached) | downloads the archive and scores | refuses with the missing file and "this build has no downloader yet" | interim: closed by PLAN.md WS0.3; `test_a_cold_cache_is_refused_for_now` pins the message so it cannot pass silently |
+
 Two hundred and thirty CLI parity cases (byte-diffed, stdout and stderr) cover the flags that are
 implemented: the scoring matrix, sentence level, all four significance flags, the paired report in
 all three formats, multi-system in all three formats, the refusals, `--citation`, `--list` and the

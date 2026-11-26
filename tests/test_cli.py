@@ -368,10 +368,10 @@ def test_error_exit_codes_match(tmp_path, args, stdin):
 
 
 @pytest.mark.parametrize("args", [
-    ["-t", "wmt22", "-l", "en-de"],
-    ["-t", "wmt22", "-l", "en-de", "--confidence"],
+    ["-t", "wmt22", "-l", "en-de", "--detail"],
+    ["-t", "wmt22", "-l", "en-de", "--origlang", "en"],
     ["x.txt", "--detail", "-i", "y.txt", "z.txt"],
-    ["--citation", "-t", "wmt16"],
+    ["-t", "wmt16", "--subset", "x"],
     ["x.txt", "-i", "y.txt", "-tok", "ja-mecab"],
     ["x.txt", "-i", "y.txt", "-tok", "ko-mecab"],
     ["x.txt", "-i", "y.txt", "-tok", "spm"],
@@ -1139,3 +1139,175 @@ def test_negative_chrf_word_order(tmp_path):
     hyp = tmp_path / "h.txt"
     hyp.write_text("the cat sat on a mat\nhello there world\n", encoding="utf-8")
     assert_same_streams([str(refs), "-i", str(hyp), "-m", "chrf", "-cw", "-1", "-f", "text"])
+
+# ------------------------------------------------------- the test-set data layer (-t / --echo)
+
+def _have_set(name: str) -> bool:
+    root = Path(os.environ.get("SACREBLEU", Path.home() / ".sacrebleu"))
+    return (root / name.split("/")[0]).exists()
+
+
+def _norm_field_order(text: str) -> str:
+    """Field *lists* compared as sets: sacreBLEU's field order is not reproducible.
+
+    Measured over twelve runs, `-t wmt22 --list` printed `ref:A, ref:B` six times and
+    `ref:B, ref:A` six times while everything else kept its order. So a field list is compared as a
+    set of names (the register row is in docs/parity-report.md); every other byte is compared.
+    """
+    out = []
+    for line in text.splitlines():
+        head, sep, rest = line.partition(": ")
+        if sep and "," in rest:
+            out.append(head + sep + ", ".join(sorted(f.strip() for f in rest.split(","))))
+        else:
+            out.append(line)
+    return "\n".join(out)
+
+
+def assert_same_fields(args, stdin=b""):
+    """Like assert_same_streams, but the two field-list outputs are order-insensitive."""
+    ref_rc, ref_out, ref_err = run(SACREBLEU, args, stdin)
+    sw_rc, sw_out, sw_err = run(SWADESH, args, stdin)
+    assert sw_rc == ref_rc, (args, ref_rc, sw_rc, ref_err, sw_err)
+    assert _norm_field_order(sw_out.decode()) == _norm_field_order(ref_out.decode()), args
+    assert _norm_field_order(sw_err.decode()) == _norm_field_order(ref_err.decode()), args
+
+
+TEST_SET_CASES = [
+    ["-t", "nope", "-l", "en-de", "--echo", "src"],          # unknown set
+    ["-t", "", "-l", "en-de", "--echo", "src"],              # empty name
+    ["-t", "wmt16", "-l", "en-xx", "--echo", "src"],          # unknown language pair
+    ["-t", "wmt16", "--echo", "src"],                         # language pair missing
+    ["-t", "wmt16", "r.txt", "--echo", "src"],                # -t with positional references
+    ["-t", "nope", "--list"],                                 # --list of an unknown set: silent, rc 0
+]
+
+
+@pytest.mark.parametrize("args", TEST_SET_CASES, ids=lambda a: " ".join(a) or "empty")
+def test_test_set_refusals(tmp_path, args):
+    """The `-t` refusals, byte for byte, on stdout, stderr and exit code.
+
+    None of these needs a cached set: the refusals come from the catalogue or from argument
+    handling, which is why they also run where no data is present.
+    """
+    (tmp_path / "r.txt").write_text("a\nb\n", encoding="utf-8")
+    resolved = [str(tmp_path / "r.txt") if a == "r.txt" else a for a in args]
+    assert_same_streams(resolved)
+
+
+@pytest.mark.parametrize("args", [
+    ["-t", "wmt22", "-l", "en-de", "--echo", "ref:C"],       # a numbered reference that pair lacks
+    ["-t", "wmt16", "-l", "en-de", "--echo", "nope"],        # a field no pair has
+    ["-t", "wmt21/AB", "--list"],
+], ids=lambda a: " ".join(a))
+def test_test_set_field_lists(args):
+    """`--echo` field errors and `-t X --list` carry the set's fields, compared as a set."""
+    assert_same_fields(args)
+
+
+ECHO_CASES = [
+    ["-t", "wmt16", "-l", "en-de", "--echo", "src"],
+    ["-t", "wmt16", "-l", "en-de", "--echo", "ref"],
+    ["-t", "wmt16", "-l", "en-de", "--echo", "docid"],
+    ["-t", "wmt16", "-l", "en-de", "--echo", "origlang"],
+    ["-t", "wmt16", "-l", "en-de", "--echo", "genre"],
+    ["-t", "wmt16", "-l", "en-de", "--echo", "src", "ref", "docid"],
+    ["-t", "wmt16", "-l", "en-de", "--echo", "all"],
+    ["-t", "wmt22", "-l", "en-de", "--echo", "ref:A"],
+    ["-t", "wmt22", "-l", "en-de", "--echo", "ref:B"],
+    ["-t", "wmt24", "-l", "en-de", "--echo", "ref"],
+    ["-t", "wmt22", "-l", "cs-en", "--echo", "ref"],
+    ["-t", "wmt21/AB", "-l", "en-de", "--echo", "ref:A"],
+    ["-t", "wmt22", "-l", "de-fr", "--echo", "Online-A"],
+    ["-t", "wmt22", "-l", "de-fr", "--echo", "LT22", "Online-W"],
+]
+
+
+@pytest.mark.parametrize("args", ECHO_CASES, ids=lambda a: " ".join(a))
+def test_echo_from_a_cached_set(args):
+    """`--echo` prints the set's fields exactly as sacreBLEU does, from the same cache.
+
+    A cached set is required, so this skips (rather than failing) where none is present: the data
+    lives in `$SACREBLEU`, not in `$SWADESH_DATA`.
+    """
+    if not _have_set("wmt16"):
+        pytest.skip("no cached test set under $SACREBLEU")
+    assert_same_streams(args)
+
+
+SCORE_FROM_SET = [
+    ["-m", "bleu", "chrf", "ter"],
+    ["-m", "bleu"],
+    ["-sl"],
+    ["-ci", "-cin", "40"],
+    ["-f", "text"],
+]
+
+
+@pytest.mark.parametrize("flags", SCORE_FROM_SET, ids=lambda a: " ".join(a))
+@pytest.mark.parametrize("set_pair", [("wmt16", "en-de"), ("wmt22", "de-fr"), ("wmt24", "en-de")])
+def test_score_from_a_cached_set(tmp_path, set_pair, flags):
+    """Scoring with `-t`: the reference comes from the set, so no reference file is given."""
+    name, pair = set_pair
+    if not _have_set(name):
+        pytest.skip("no cached test set under $SACREBLEU")
+    ref = tmp_path / "hyp.txt"
+    ref_rc, ref_out, ref_err = run(SACREBLEU, ["-t", name, "-l", pair, "--echo", "ref"])
+    assert ref_rc == 0, ref_err
+    ref.write_bytes(ref_out)
+    assert_same_streams(["-t", name, "-l", pair, "-i", str(ref), *flags])
+
+
+@pytest.mark.parametrize("set_pair,expected", [
+    ("wmt22", "ref:A"), ("wmt24", "ref:refA"), ("wmt21/AB", "ref:A"),
+], ids=lambda x: str(x))
+def test_the_default_reference_is_deterministic(tmp_path, set_pair, expected):
+    """swadesh's own rule, where sacreBLEU's listing order is random.
+
+    `--echo ref` is the plain `ref` when a set has one, else the first `ref:*` alphabetically - and
+    that matches the oracle's *stable* default on every set measured (wmt22 en-de `ref:A`, cs-en
+    `ref:B`, wmt24 en-de `ref:refA`, wmt21/AB `ref:A`). The oracle's field *list* order is not
+    reproducible, so this pins our behaviour rather than comparing the listing.
+    """
+    if not _have_set(set_pair.split("/")[0]):
+        pytest.skip("no cached test set under $SACREBLEU")
+    pair = "en-de" if set_pair != "wmt22" else "en-de"
+    ours = run(SWADESH, ["-t", set_pair, "-l", pair, "--echo", "ref"])[1]
+    want = run(SWADESH, ["-t", set_pair, "-l", pair, "--echo", expected])[1]
+    assert ours == want, set_pair
+
+
+def test_a_cold_cache_is_refused_for_now(tmp_path):
+    """Interim divergence, registered in docs/parity-report.md: with a cold cache sacreBLEU
+    downloads the set and scores; swadesh refuses with a reason until the downloader lands
+    (PLAN.md WS0.3). This test pins our interim message so it cannot pass silently."""
+    env = dict(ENV)
+    env["SACREBLEU"] = str(tmp_path / "empty-cache")
+    proc = subprocess.run(
+        [str(SWADESH), "-t", "wmt16", "-l", "en-de", "--echo", "src", "--python-version", PYVER],
+        capture_output=True, env=env,
+    )
+    assert proc.returncode == 1
+    assert proc.stdout == b""
+    assert b"no downloader yet" in proc.stderr
+
+
+def test_citation_for_a_test_set():
+    """Documented divergence: sacreBLEU 2.6.0 crashes on `--citation -t X`
+    (`TypeError: argument of type 'WMTXMLDataset' is not iterable`, from its own
+    `'citation' not in DATASETS[test_set]` test against Dataset objects). swadesh prints the
+    catalogue's citation instead, which is the behaviour a user wants."""
+    rc, out, err = run(SWADESH, ["-t", "wmt16", "--citation"])
+    assert rc == 0, err
+    assert out.startswith(b"@InProceedings")
+    ref_rc, ref_out, ref_err = run(SACREBLEU, ["-t", "wmt16", "--citation"])
+    assert ref_rc != 0 and ref_out == b"" and b"not iterable" in ref_err
+
+
+def test_list_with_a_set_and_an_unknown_pair():
+    """Documented divergence: sacreBLEU crashes on `-t X -l BAD --list` (traceback, non-zero).
+    swadesh lists the set's pairs, ignoring `-l`, which cannot crash and is what the flag is for."""
+    rc, out, err = run(SWADESH, ["-t", "wmt16", "-l", "bogus", "--list"])
+    assert rc == 0 and b"en-de:" in out, (rc, out, err)
+    ref_rc, ref_out, _ = run(SACREBLEU, ["-t", "wmt16", "-l", "bogus", "--list"])
+    assert ref_rc != 0 and ref_out == b""

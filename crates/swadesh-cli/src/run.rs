@@ -14,6 +14,7 @@ use swadesh_core::{
 };
 
 use crate::args::{Cli, TOKENIZE_CHOICES};
+use crate::dataset;
 use crate::input;
 use crate::lower::py_lower;
 use crate::pyfmt::fixed;
@@ -29,6 +30,16 @@ const NATIVE_TOKENIZERS: &[&str] = &["none", "13a", "intl", "zh", "char"];
 pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
     // `--list` short-circuits before anything is read, as sacreBLEU does.
     if cli.list {
+        // With `-t`, list that set's pairs and fields; an unknown set prints nothing at all and
+        // exits 0, which is what the oracle does (measured).
+        if let Some(name) = &cli.test_set {
+            if let Some(found) = dataset::lookup(name) {
+                for (pair, fields) in &found.pairs {
+                    writeln!(out, "{pair}: {}", fields.join(", ")).map_err(io_err)?;
+                }
+            }
+            return Ok(());
+        }
         writeln!(out, "The available test sets are:").map_err(io_err)?;
         for ds in crate::datasets::DATASETS {
             writeln!(out, "{:<30}: {}", ds.name, ds.description).map_err(io_err)?;
@@ -40,10 +51,93 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
         return Err(Fail { code: 1, msg: String::new() });
     }
     // `--citation` needs a test set: sacreBLEU has no default citation, and the check comes before
-    // the reference checks but after the sentence-level one (both measured).
-    if cli.citation {
+    // the reference checks but after the sentence-level one (both measured). With `-t` the oracle
+    // crashes (`TypeError: argument of type 'WMTXMLDataset' is not iterable`), so printing the
+    // catalogue's own citation is a documented divergence rather than a reproduction of the crash.
+    if cli.citation && cli.test_set.is_none() {
         eprintln!("sacreBLEU: I need a test set (-t).");
         return Err(Fail { code: 1, msg: String::new() });
+    }
+
+    // The test set, when `-t` names one: the references come from it, so the reference checks
+    // below do not apply. Measured order: the `-t`-versus-positional conflict, then the missing
+    // language pair, then the set lookup, then the pair.
+    let mut test_set: Option<(dataset::Found, String)> = None;
+    if let Some(name) = cli.test_set.clone() {
+        if !cli.refs.is_empty() {
+            eprintln!("sacreBLEU: I need exactly one of (a) a predefined test set (-t) or (b) a list of references");
+            return Err(Fail { code: 1, msg: String::new() });
+        }
+        let found = dataset::lookup(&name).ok_or_else(|| dataset::unknown_set(&name))?;
+        if cli.citation {
+            // The citation of a built-in set is in the catalogue; a user set may carry `.citation`.
+            let citation = dataset::citation_of(&name)
+                .or_else(|| dataset::read_field(&found.dir.join("citation")).ok().map(|l| l.join("\n")));
+            match citation {
+                Some(text) => writeln!(out, "{text}").map_err(io_err)?,
+                None => {
+                    eprintln!("sacreBLEU: No citation for test set '{name}'.");
+                    return Err(Fail { code: 1, msg: String::new() });
+                }
+            }
+            return Ok(());
+        }
+        let Some(pair) = cli.langpair.clone() else {
+            eprintln!("sacreBLEU: I need a language pair (-l). Use --list to see available language pairs for this test set.");
+            return Err(Fail { code: 1, msg: String::new() });
+        };
+        if found.fields_of(&pair).is_none() {
+            let available: Vec<String> = found.pairs.iter().map(|(p, _)| p.clone()).collect();
+            return Err(dataset::unknown_pair(&name, &pair, &available));
+        }
+        test_set = Some((found, pair));
+    }
+
+    // `--echo FIELD...`: print the set's text and quit. `all` means every field, in the set's own
+    // order; anything else must be a field the pair has.
+    if let Some((found, pair)) = &test_set {
+        if !cli.echo.is_empty() {
+            let fields = found.fields_of(pair).expect("the pair was checked above");
+            let default_ref = found.default_reference(pair);
+            let wanted: Vec<String> = if cli.echo.iter().any(|e| e == "all") {
+                fields.clone()
+            } else {
+                let mut wanted = Vec::with_capacity(cli.echo.len());
+                for field in &cli.echo {
+                    if fields.contains(field) {
+                        wanted.push(field.clone());
+                    } else if field == "ref" && default_ref.is_some() {
+                        // `ref` stays accepted as an alias for the default reference, which the
+                        // oracle documents in its own field error ("will return ref:A").
+                        wanted.push(default_ref.clone().expect("checked"));
+                    } else {
+                        return Err(dataset::unknown_field(
+                            &found.name,
+                            pair,
+                            field,
+                            fields,
+                            default_ref.as_deref(),
+                        ));
+                    }
+                }
+                wanted
+            };
+            let mut columns: Vec<Vec<String>> = Vec::with_capacity(wanted.len());
+            for field in &wanted {
+                let path = dataset::field_path(found, pair, field);
+                if !path.exists() {
+                    return Err(dataset::not_cached(found, pair, field, &path));
+                }
+                columns.push(dataset::read_field(&path)?);
+            }
+            let rows = columns.iter().map(|c| c.len()).max().unwrap_or(0);
+            for i in 0..rows {
+                let line: Vec<&str> =
+                    columns.iter().map(|c| c.get(i).map(String::as_str).unwrap_or("")).collect();
+                writeln!(out, "{}", line.join("\t")).map_err(io_err)?;
+            }
+            return Ok(());
+        }
     }
     if cli.num_refs != 1 && cli.refs.len() > 1 {
         return fail(
@@ -52,7 +146,7 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
              in a single file. You cannot then provide multiple reference files.",
         );
     }
-    if cli.refs.is_empty() {
+    if cli.refs.is_empty() && test_set.is_none() {
         eprintln!(
             "sacreBLEU: If manual references given, make sure to provide them before the \
              -i/--input argument to avoid confusion."
@@ -80,7 +174,18 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
         bleu_tokenizer(cli)?;
     }
 
-    let refs = read_refs(cli)?;
+    // The references: the set's default reference when `-t` was used, else the positional files.
+    let refs: Vec<Vec<String>> = match &test_set {
+        Some((found, pair)) => {
+            let field = found.default_reference(pair).unwrap_or_else(|| "ref".to_string());
+            let path = dataset::field_path(found, pair, &field);
+            if !path.exists() {
+                return Err(dataset::not_cached(found, pair, &field, &path));
+            }
+            vec![dataset::read_field(&path)?]
+        }
+        None => read_refs(cli)?,
+    };
     let (systems, sys_names) = read_systems(cli)?;
 
     // sacreBLEU's order of checks is measured, not chosen (docs/lab-notebook.md). The systems are
@@ -152,6 +257,15 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
     }
     if systems.iter().any(|s| refs.iter().any(|r| r.len() != s.len())) {
         eprintln!("sacreBLEU: System and reference streams have different lengths.");
+        // With a test set the oracle adds a cache hint naming the set's directory (measured).
+        if let Some((found, _)) = &test_set {
+            eprintln!("sacreBLEU: This could be an issue with your system output or with sacreBLEU's reference database if -t is given.");
+            eprintln!("sacreBLEU: For the latter, try cleaning out the cache by typing:");
+            eprintln!();
+            eprintln!("sacreBLEU:   rm -r {}", found.dir.display());
+            eprintln!();
+            eprintln!("sacreBLEU: The test sets will be re-downloaded the next time you run sacreBLEU.");
+        }
         return Err(Fail { code: 1, msg: String::new() });
     }
     let nrefs = refs.len();

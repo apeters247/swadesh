@@ -491,16 +491,16 @@ planning aid, not a commitment.
 
 | ID | Milestone | Task | Est | Status |
 |---|---|---|---|---|
-| WS1.1 | M0 | Resolution roots and discovery | 1 | todo |
-| WS1.2 | M0 | `-t NAME --list` for a user set | 0.5 | todo |
+| WS1.1 | M0 | Resolution roots and discovery | 1 | **done** |
+| WS1.2 | M0 | `-t NAME --list` for a user set | 0.5 | **done** |
 | WS1.3 | M0 | `--citation` from a user set | 0.5 | todo |
 | WS1.4 | M0 | Docs and examples for own data | 0.5 | todo |
 | WS1.5 | M0 | `swadesh check-set` validator | 1 | todo |
-| WS0.1 | M0 | Shared dataset reader | 1 | todo |
-| WS0.2 | M0 | `-t` for the built-in catalogue | 2 | todo |
+| WS0.1 | M0 | Shared dataset reader | 1 | **done** |
+| WS0.2 | M0 | `-t` for the built-in catalogue | 2 | **part done** (cached sets; the cold path needs WS0.3) |
 | WS0.3 | M0 | The downloader (feature-gated) | 3 | todo |
 | WS0.4 | M0 | `--download NAME -l PAIR` | 0.5 | todo |
-| WS0.5 | M0 | `--echo FIELD...` | 1 | todo |
+| WS0.5 | M0 | `--echo FIELD...` | 1 | **done** |
 | WS0.6 | M0 | `-ol/--origlang`, `--subset` | 1 | todo |
 | WS0.7 | M0 | `-d/--detail` breakdown | 1.5 | todo |
 | WS0.8 | M0 | Small divergences + real-model re-verify | 3 | todo |

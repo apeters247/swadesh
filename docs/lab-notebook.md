@@ -4496,3 +4496,56 @@ adoption tracking) and quality/ops (WS-8).
 divergences, the user-set data layer - so resuming that goal means executing M0. WS-1 (the user-set
 data layer) is specced already (`docs/spec/user-test-sets.md`) and is first, because D-6 makes it the
 thing the downloader feeds rather than a parallel path.
+
+## 2026-11-26 (continued) - M0 slice 1: the test-set data layer, and a reproducibility break found
+
+**Attempted.** The first slice of M0, which is the previously blocked goal: the shared dataset reader
+(WS0.1), the user-root resolution (WS1.1), and `-t`/`--echo`/`-t X --list` for sets that are already
+cached (WS0.2 and WS0.5, the cached half). No downloader yet - that is WS0.3.
+
+**The catalogue had to carry more than names.** `datasets.rs` held descriptions, URLs, md5s and
+language pairs, but not the *field names*, and `--echo all`, the "available fields" error, and the
+choice of default reference all need them. They are measured from the oracle's own `-t NAME --list`
+(black-box, the documented surface) and the generator now asserts that the listed language pairs
+match the registry's declared order. A first attempt to reconstruct fields from the registry's flat
+URL array failed and was useful: the array is *not* per field - one archive serves several fields
+(`iwslt17`: 60 fields over 12 URLs) - so the fields cannot be derived from it. `--list` output is
+byte-identical before and after the change (compared with `cmp`).
+
+**Found: sacreBLEU's own field list is not reproducible.** `-t wmt22 --list` printed
+`src, ref:A, ref:B, ...` six times and `src, ref:B, ref:A, ...` six times over twelve runs; the same
+flip appears in the "available fields" error line and in wmt24's `ref:refA`/`ref:refB`. Everything
+else in the listing is stable (wmt16's `src, ref, docid, genre, origlang` was 12/12, and wmt22 de-fr's
+metadata order 12/12), so the randomness is confined to the numbered-reference subgroup. The *default
+reference* is stable, and it is the plain `ref` when the set has one, else the first `ref:*`
+alphabetically - verified against four sets: wmt22 en-de (`ref:A`), wmt22 cs-en (`ref:B`), wmt24 en-de
+(`ref:refA`), wmt21/AB (`ref:A`).
+
+That makes byte-identity for those two lines *impossible*, so the honest instrument is: swadesh is
+deterministic (declared order, `ref:*` sorted, so the default reference is first), the field *sets*
+are compared against the oracle, and the divergence is registered with its measurements - and noted
+as material for the findings note (WS7.1), because "the same command prints a different order on the
+next run" is exactly the kind of reproducibility break the note is about.
+
+**Also measured and implemented.** The reference file is `<root>/<name>/<prefix>.<pair>.<field>`,
+where a slash in the set name becomes a directory (`wmt21/AB` -> `wmt21/AB/wmt21_AB.en-de.ref-A`) and
+a reference's colon becomes a dash while a system's dash does not (`NVIDIA-NeMo` stays). `--echo ref`
+is an alias for the default reference, and the oracle says so in its own error
+(`'ref' also allowed for backwards compatibility (will return ref:A)`), which we reproduce. With `-t`
+the length-mismatch error gains a four-line cache hint naming `rm -r <dir>`, reproduced exactly. The
+`-t`/positional conflict, the missing `-l`, an empty set name, an unknown set, an unknown pair and an
+unknown field are all byte-identical, including the `-t nope --list` case, which prints nothing at all
+and exits 0.
+
+**Acceptance.** A 36-case byte-diff (every `--echo` field, three sets, the slash-name set, two system
+fields, scoring with six flag combinations, `--echo all`, the alias, and eleven error paths) is 0
+diffs on stdout, stderr and exit code; the two field-order lines are compared as sets. `tests/`:
+65 cases pass for this area (41 new). `cargo test --release --workspace`: green.
+
+**Divergences registered** (`docs/parity-report.md`): the field-list order (above), `-t X -l BAD
+--list` (the oracle crashes, we list the pairs), the cold cache (interim, closed by WS0.3), and
+`--citation -t X` (the oracle crashes; we print the catalogue's citation).
+
+**Next.** WS0.3: the downloader behind the `downloader` cargo feature (HTTP, md5, extraction into
+`raw/`, then the five archive parsers), which turns the cold-cache interim into real fetching; then
+`-ol/--subset`, `-d/--detail`, `--download`, and the remaining WS0.8 divergences.
