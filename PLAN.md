@@ -502,7 +502,7 @@ planning aid, not a commitment.
 | WS0.4 | M0 | `--download NAME -l PAIR` | 0.5 | todo |
 | WS0.5 | M0 | `--echo FIELD...` | 1 | **done** |
 | WS0.6 | M0 | `-ol/--origlang`, `--subset` | 1 | **done** |
-| WS0.7 | M0 | `-d/--detail` breakdown | 1.5 | todo |
+| WS0.7 | M0 | `-d/--detail` breakdown | 1.5 | **done** |
 | WS0.8 | M0 | Small divergences + real-model re-verify | 3 | todo |
 | WS2.1 | M1 | Public repo and hygiene | 1 | todo |
 | WS2.2 | M1 | Release pipeline | 2 | todo |

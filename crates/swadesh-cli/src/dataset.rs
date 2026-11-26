@@ -241,6 +241,71 @@ pub fn unknown_field(
     Fail { code: 1, msg: String::new() }
 }
 
+/// The `(origlang, domain)` groups `-d/--detail` reports, in the order sacreBLEU prints them:
+/// ascending by source language, then by domain, with `ALL` standing in for a missing annotation
+/// (and sorting first, being upper case). Each source language gets an `ALL` row over its own
+/// segments plus one row per domain it contains - wmt22 en-de prints `ALL` 2037 and then
+/// conversation 484, ecommerce 530, news 511, social 512, which sum to the same 2037.
+pub fn groups(found: &Found, pair: &str) -> Result<Vec<(String, String, Vec<usize>)>, Fail> {
+    let fields = found.fields_of(pair).cloned().unwrap_or_default();
+    let read = |name: &str| -> Result<Option<Vec<String>>, Fail> {
+        if !fields.iter().any(|f| f == name) {
+            return Ok(None);
+        }
+        let path = field_path(found, pair, name);
+        if !path.exists() {
+            return Err(not_cached(found, pair, name, &path));
+        }
+        Ok(Some(read_field(&path)?))
+    };
+    let origlangs = read("origlang")?;
+    let domains = read("domain")?;
+    let len = origlangs
+        .as_ref()
+        .map(|v| v.len())
+        .or_else(|| domains.as_ref().map(|v| v.len()))
+        .unwrap_or(0);
+    let mut langs: Vec<String> = match &origlangs {
+        Some(v) => v.iter().cloned().collect(),
+        None => vec!["ALL".to_string()],
+    };
+    langs.sort();
+    langs.dedup();
+    let mut doms: Vec<String> = match &domains {
+        Some(v) => v.iter().cloned().collect(),
+        None => Vec::new(),
+    };
+    doms.sort();
+    doms.dedup();
+    let mut keys: Vec<(String, String)> = Vec::new();
+    for lang in &langs {
+        keys.push((lang.clone(), "ALL".to_string()));
+        for dom in &doms {
+            keys.push((lang.clone(), dom.clone()));
+        }
+    }
+    let mut out = Vec::new();
+    for (lang, dom) in keys {
+        let mut indices = Vec::new();
+        for i in 0..len {
+            let lang_ok = origlangs.as_ref().map(|v| v.get(i).map(String::as_str) == Some(lang.as_str())).unwrap_or(true);
+            // `ALL` is the aggregate row over every domain, not a literal annotation.
+            let dom_ok = dom == "ALL"
+                || domains
+                    .as_ref()
+                    .map(|v| v.get(i).map(String::as_str) == Some(dom.as_str()))
+                    .unwrap_or(false);
+            if lang_ok && dom_ok {
+                indices.push(i);
+            }
+        }
+        if !indices.is_empty() {
+            out.push((lang, dom, indices));
+        }
+    }
+    Ok(out)
+}
+
 /// The segments a set's `-ol`/`--subset` filters select, as indices into the unfiltered set.
 ///
 /// Measured: `-ol en` keeps `origlang == en` (1500 of wmt16 en-de's 2999 segments) and `non-en`

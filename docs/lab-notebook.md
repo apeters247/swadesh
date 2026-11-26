@@ -4597,3 +4597,53 @@ which is the direction the plan wants.
 **Next.** WS0.3, the downloader behind the `downloader` cargo feature, which is the last piece of `-t`
 that still refuses (the cold-cache interim); then `--download` (WS0.4), `-d/--detail` (WS0.7) and the
 WS0.8 divergences.
+
+## 2026-11-26 (continued) - M0 slice 3: `-d/--detail`, and the columns measured to the space
+
+**Attempted.** WS0.7: the per-group breakdown. It needs the annotation fields only, so like the
+filters it needs no downloader.
+
+**What the block is, measured.** After the score line(s), one line per metric per group:
+
+    origlang=en domain=ALL          : sentences=2037   BLEU  = 100.0
+    origlang=en domain=conversation : sentences=484    chrF2 = 100.0
+
+with three paddings, each established by measurement rather than by reading anything: the domain name
+to its widest value (`ALL` lines up under `conversation`), the metric name to its widest (`BLEU`
+against `chrF2`), and the *sentence count to at least four characters* - the case that settled it is
+wmt24 en-de, whose counts are all three digits (997/206/149/531/111) and are still padded to four,
+while wmt16's four-digit counts are not padded further. No cached set has a five-digit group, so
+`max(4, digits)` is the reading that keeps every measured case exact and is recorded as such.
+
+Grouping: every source language gets an `ALL` row over its own segments plus one row per domain it
+contains (wmt22 en-de: 2037 = 484 + 530 + 511 + 512), ordered ascending by language then domain with
+`ALL` first (upper case sorts first), and `--detail` is the long form of `-d`. `-d` **forces the text
+form** (`-d -f json` prints the text score line followed by the detail lines), `-w` applies to the
+group scores too, `-sl` prints no detail block, and with no test set the oracle prints
+`No subset information found. Consider using --origlang argument.` on stdout with exit 0 - all
+reproduced.
+
+**Two bugs found by the acceptance run.** `-d` first *panicked* (`index out of bounds: the len is
+1500 but the index is 1734`) because `groups` indexes the unfiltered set while the arrays had already
+been masked by `-ol` - the group indices now map through the mask into positions. And the `ALL`
+domain row was built as a literal annotation comparison, so it came out empty and every
+multi-domain set lost its aggregate row; `ALL` means "no domain filter". Both were caught by the
+16-case byte-diff, not by inspection.
+
+**Verification.** 16 detail cases byte-identical (three sets, one and three metrics, `-w 2`,
+`-f json`/`-f text`, `-b`, `-sh`, `-sl`, the long form, and the no-test-set line), plus the
+documented divergence. `tests/test_cli.py`: 26 pass in the detail area; the fast half is re-running.
+`cargo test --release --workspace`: 13 suites green.
+
+**Divergence registered**: `-d` with a segment filter (`-ol`/`--subset`) makes the oracle raise
+`ValueError: max() arg is an empty sequence` after printing the score line; swadesh prints the groups
+of the filtered set - `test_detail_with_a_segment_filter`.
+
+`test_unsupported_options_fail_with_hint` lost `--detail`/`-d` and gained `flores200` and
+`spBLEU-1K`. What is still refused by the binary is now exactly: `-t`'s cold-cache path (WS0.3),
+`--download`, the six exotic tokenizers, `-e` beyond utf-8, and `.gz` input.
+
+**Next.** WS0.3, the downloader behind the `downloader` cargo feature (HTTP, md5, extraction into
+`raw/`, then the archive parsers) - the last piece of `-t` that still refuses; then `--download`
+(WS0.4), and the WS0.8 divergences (`--help`, `-e`, `.gz`, the token list, `-j` lines, negative
+`-cw`, the real-model re-verification).

@@ -616,6 +616,10 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
         return Ok(());
     }
 
+    // `-d/--detail` breaks the corpus score down by group, and it forces the text form: measured,
+    // `-d -f json` prints the text score line followed by the detail lines.
+    let detail = cli.detail && !cli.sentence_level;
+    let json = json && !detail;
     let mut results: Vec<String> = Vec::new();
     for name in &names {
         let (score, sig) = match name.as_str() {
@@ -628,6 +632,101 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
         results.push(score.format(width, cli.score_only, &sig, short, json));
     }
     print_single(&results, json, out).map_err(io_err)?;
+    if detail {
+        match &test_set {
+            // Without a test set there is nothing to group by, and the oracle says so on stdout.
+            None => writeln!(out, "No subset information found. Consider using --origlang argument.")
+                .map_err(io_err)?,
+            Some((found, pair)) => write_detail(
+                cli, out, found, pair, &names, &systems[0], &refs, nrefs, width, &mask,
+            )?,
+        }
+    }
+    Ok(())
+}
+
+/// The `-d/--detail` block: one line per group per metric, in sacreBLEU's measured layout. The
+/// columns are padded to their widest value - the domain name (so `ALL` lines up with
+/// `conversation`), the sentence count, and the metric's display name (so `BLEU` lines up with
+/// `chrF2`).
+#[allow(clippy::too_many_arguments)]
+fn write_detail(
+    cli: &Cli,
+    out: &mut dyn Write,
+    found: &dataset::Found,
+    pair: &str,
+    names: &[String],
+    system: &[String],
+    refs: &[Vec<String>],
+    nrefs: usize,
+    width: usize,
+    mask: &Option<Vec<usize>>,
+) -> Result<(), Fail> {
+    let groups = dataset::groups(found, pair)?;
+    // `groups` indexes the unfiltered set; `system`/`refs` are already masked, so the group is
+    // translated into positions within the mask. (A segment filter and `-d` together make the
+    // oracle raise a traceback; swadesh reports the groups of the filtered set instead - registered.)
+    let positions_of = |idx: &Vec<usize>| -> Vec<usize> {
+        match mask {
+            None => idx.clone(),
+            Some(kept) => kept
+                .iter()
+                .enumerate()
+                .filter(|(_, original)| idx.contains(original))
+                .map(|(position, _)| position)
+                .collect(),
+        }
+    };
+    struct Row {
+        lang: String,
+        domain: String,
+        sentences: usize,
+        metric: String,
+        score: f64,
+    }
+    let mut rows: Vec<Row> = Vec::new();
+    for (lang, domain, idx) in &groups {
+        let idx = positions_of(idx);
+        if idx.is_empty() {
+            continue;
+        }
+        let sub_system: Vec<String> = idx.iter().map(|&i| system[i].clone()).collect();
+        let sub_refs: Vec<Vec<String>> =
+            refs.iter().map(|r| idx.iter().map(|&i| r[i].clone()).collect()).collect();
+        for name in names {
+            let (score, _sig) = match name.as_str() {
+                "BLEU" => bleu_corpus(cli, bleu_tokenizer(cli)?, &sub_system, &sub_refs, nrefs)?,
+                "TER" => ter_corpus(cli, &sub_system, &sub_refs, nrefs)?,
+                _ => chrf_corpus(cli, &sub_system, &sub_refs, nrefs)?,
+            };
+            rows.push(Row {
+                lang: lang.clone(),
+                domain: domain.clone(),
+                sentences: idx.len(),
+                metric: score.name.clone(),
+                score: score.score,
+            });
+        }
+    }
+    let w_domain = rows.iter().map(|r| r.domain.chars().count()).max().unwrap_or(0);
+    // The sentence count is left-justified in a field of at least four characters: wmt24's counts
+    // are all three digits (997/206/149/531/111) and the oracle still pads them to four. No cached
+    // set has a five-digit group, so the upper behaviour is unmeasured; `max(4, digits)` is the
+    // reading that keeps every measured case exact.
+    let w_sentences = rows.iter().map(|r| r.sentences.to_string().len()).max().unwrap_or(1).max(4);
+    let w_metric = rows.iter().map(|r| r.metric.chars().count()).max().unwrap_or(0);
+    for r in &rows {
+        writeln!(
+            out,
+            "origlang={} domain={:<w_domain$} : sentences={:<w_sentences$}   {:<w_metric$} = {}",
+            r.lang,
+            r.domain,
+            r.sentences,
+            r.metric,
+            fixed(r.score, width)
+        )
+        .map_err(io_err)?;
+    }
     Ok(())
 }
 

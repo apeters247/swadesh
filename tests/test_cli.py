@@ -368,17 +368,16 @@ def test_error_exit_codes_match(tmp_path, args, stdin):
 
 
 @pytest.mark.parametrize("args", [
-    ["-t", "wmt22", "-l", "en-de", "--detail"],
-    ["x.txt", "--detail", "-i", "y.txt", "z.txt"],
     ["x.txt", "-i", "y.txt", "--download", "wmt16"],
     ["x.txt", "-i", "y.txt", "-tok", "ja-mecab"],
     ["x.txt", "-i", "y.txt", "-tok", "ko-mecab"],
     ["x.txt", "-i", "y.txt", "-tok", "spm"],
     ["x.txt", "-i", "y.txt", "-tok", "flores101"],
+    ["x.txt", "-i", "y.txt", "-tok", "flores200"],
+    ["x.txt", "-i", "y.txt", "-tok", "spBLEU-1K"],
     ["x.txt", "-i", "y.txt", "-l", "en-ja"],
-    ["x.txt", "-i", "y.txt", "--detail"],
-    ["x.txt", "-i", "y.txt", "-d"],
     ["x.txt", "-i", "y.txt", "-e", "latin-1"],
+    ["x.txt", "-i", "y.txt", "-e", "utf-16"],
 ])
 def test_unsupported_options_fail_with_hint(tmp_path, args):
     rc, out, err = run(SWADESH, args)
@@ -1402,3 +1401,64 @@ def test_filter_with_references_but_no_test_set(tmp_path):
     assert ref_rc == sw_rc == 1
     assert b"Traceback" in ref_err
     assert b"I need a test set (-t) to filter segments" in sw_err
+
+# ------------------------------------------------------------- -d / --detail
+
+DETAIL_CASES = [
+    ["-t", "wmt16", "-l", "en-de", "-d"],
+    ["-t", "wmt16", "-l", "en-de", "-m", "bleu", "chrf", "ter", "-d"],
+    ["-t", "wmt16", "-l", "en-de", "--detail"],
+    ["-t", "wmt22", "-l", "en-de", "-d"],
+    ["-t", "wmt22", "-l", "en-de", "-m", "bleu", "chrf", "-d"],
+    ["-t", "wmt22", "-l", "en-de", "-m", "ter", "-d"],
+    ["-t", "wmt22", "-l", "de-fr", "-d"],
+    ["-t", "wmt24", "-l", "en-de", "-d"],
+    ["-t", "wmt21", "-l", "en-de", "-d"],
+    ["-t", "wmt16", "-l", "en-de", "-d", "-w", "2"],
+    ["-t", "wmt16", "-l", "en-de", "-d", "-f", "json"],   # detail forces the text form
+    ["-t", "wmt16", "-l", "en-de", "-d", "-b"],
+    ["-t", "wmt16", "-l", "en-de", "-d", "-sh"],
+    ["-t", "wmt16", "-l", "en-de", "-d", "-sl"],           # sentence level has no detail block
+]
+
+
+@pytest.mark.parametrize("args", DETAIL_CASES, ids=lambda a: " ".join(a))
+def test_detail_breakdown(tmp_path, args):
+    """`-d/--detail`: one line per (origlang, domain) group per metric, byte for byte.
+
+    The columns are padded by measurement: the domain name to its widest value, the sentence count
+    to at least four characters (wmt24's counts are all three digits and are still padded to four),
+    and the metric name to its widest (`BLEU` against `chrF2`). One `ALL` row per source language
+    aggregates its domains, and `-d` forces the text form (`-d -f json` prints text).
+    """
+    if not _have_set("wmt16"):
+        pytest.skip("no cached test set under $SACREBLEU")
+    name, pair = "wmt16", "en-de"
+    for i, arg in enumerate(args):
+        if arg == "-t":
+            name, pair = args[i + 1], args[i + 3]
+            break
+    hyp = _hyp_from_set(tmp_path, name, pair)
+    assert_same_streams([*args, "-i", hyp])
+
+
+def test_detail_without_a_test_set(tmp_path):
+    """No test set means nothing to group by, and the oracle says so on stdout, exit 0."""
+    refs = tmp_path / "r.txt"
+    refs.write_text("a\nb\n", encoding="utf-8")
+    assert_same_streams([str(refs), "-i", str(refs), "-d"])
+
+
+def test_detail_with_a_segment_filter(tmp_path):
+    """Documented divergence: `-d` with `-ol`/`--subset` makes the oracle raise
+    (`ValueError: max() arg is an empty sequence`, after printing the score line); swadesh prints
+    the groups of the filtered set."""
+    if not _have_set("wmt16"):
+        pytest.skip("no cached test set under $SACREBLEU")
+    hyp = _hyp_from_set(tmp_path, "wmt16", "en-de")
+    args = ["-t", "wmt16", "-l", "en-de", "-d", "-ol", "en", "-i", hyp]
+    rc, out, err = run(SWADESH, args)
+    assert rc == 0, err
+    assert b"origlang=en domain=ALL" in out and out.count(b"origlang=") == 1
+    ref_rc, _, ref_err = run(SACREBLEU, args)
+    assert ref_rc != 0 and b"ValueError" in ref_err
