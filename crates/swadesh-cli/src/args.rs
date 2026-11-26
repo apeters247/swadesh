@@ -54,6 +54,8 @@ options:
   --citation            print the citation for a test set (-t)
   -t, --test-set NAME   score against a named test set instead of reference files
   --echo FIELD ...      print these fields of the test set (or 'all') and quit
+  -ol, --origlang X     keep segments whose source language is X (or 'non-X')
+  --subset X            keep segments whose domain annotation is X
   --max-ngram-order N   BLEU maximum n-gram order (default: 4)
   --python-version X.Y  emulate sacreBLEU running on this CPython (float sum()
                         semantics changed in 3.12 and 3.14; default: 3.12)
@@ -169,6 +171,8 @@ const OPTS: &[Opt] = &[
     o("--citation", "", Nargs::Zero, "citation"),
     o("--test-set", "-t", Nargs::One, "test_set"),
     o("--echo", "", Nargs::Plus, "echo"),
+    o("--origlang", "-ol", Nargs::One, "origlang"),
+    o("--subset", "", Nargs::One, "subset"),
     o("--cite", "", Nargs::Zero, "citation"),
     o("--max-ngram-order", "", Nargs::One, "max_order"),
     o("--python-version", "", Nargs::One, "pyver"),
@@ -186,8 +190,6 @@ const OPTS: &[Opt] = &[
     o("--format", "-f", Nargs::One, "format"),
     // Recognised so that they fail with a helpful message instead of "unknown option".
     u("--download", "", Nargs::One, "--download (test sets) is not supported by swadesh; pip install swadesh"),
-    u("--origlang", "-ol", Nargs::One, "--origlang (test-set subsets) is not supported by swadesh; pip install swadesh"),
-    u("--subset", "", Nargs::One, "--subset (test-set subsets) is not supported by swadesh; pip install swadesh"),
     u("--detail", "-d", Nargs::Zero, "--detail (translationese breakdown) is not supported by swadesh; pip install swadesh"),
     o("--ter-case-sensitive", "", Nargs::Zero, "ter_case_sensitive"),
     o("--ter-asian-support", "", Nargs::Zero, "ter_asian_support"),
@@ -227,6 +229,10 @@ pub struct Cli {
     pub test_set: Option<String>,
     /// `--echo`: print these fields of the test set (or `all`) instead of scoring.
     pub echo: Vec<String>,
+    /// `-ol/--origlang`: keep only segments whose source language is this (`non-X` inverts).
+    pub origlang: Option<String>,
+    /// `--subset`: keep only segments whose domain annotation is this.
+    pub subset: Option<String>,
     pub max_ngram_order: i64,
     pub python_version: (u32, u32),
     pub chrf_char_order: i64,
@@ -376,6 +382,8 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
         citation: false,
         test_set: None,
         echo: Vec::new(),
+        origlang: None,
+        subset: None,
         max_ngram_order: 4,
         python_version: (3, 12),
         chrf_char_order: 6,
@@ -501,6 +509,8 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
             "citation" => cli.citation = true,
             "test_set" => cli.test_set = Some(one()),
             "echo" => cli.echo = values.clone(),
+            "origlang" => cli.origlang = Some(one()),
+            "subset" => cli.subset = Some(one()),
             "max_order" => cli.max_ngram_order = parse_int("--max-ngram-order", &one())?,
             "pyver" => {
                 let v = one();

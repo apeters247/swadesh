@@ -4549,3 +4549,51 @@ diffs on stdout, stderr and exit code; the two field-order lines are compared as
 **Next.** WS0.3: the downloader behind the `downloader` cargo feature (HTTP, md5, extraction into
 `raw/`, then the five archive parsers), which turns the cold-cache interim into real fetching; then
 `-ol/--subset`, `-d/--detail`, `--download`, and the remaining WS0.8 divergences.
+
+## 2026-11-26 (continued) - M0 slice 2: `-ol`/`--subset`, measured to the quirk
+
+**Attempted.** WS0.6, the segment filters, which need no downloader: they only read the set's
+annotation fields.
+
+**What they do, measured.** `-ol en` keeps `origlang == en` (1500 of wmt16 en-de's 2999 segments) and
+`-ol non-en` keeps the other 1499 - a value starting with `non-` inverts, and `-ol non-non-en` matches
+everything (2999), because the prefix is stripped once and compared with `!=`. `--subset X` keeps
+`domain == X` on the sets that have it (wmt22 en-de: conversation 484, social 512, news 511,
+ecommerce 530, lower case, and the two filters compose with AND). Three more things came out of the
+probing:
+
+1. **The filter masks by position, across the whole segment set.** A full-length system output scores
+   against a filtered reference (BLEU 3.3 with `-ol en` on a 2999-line hypothesis against 1500
+   reference segments), while a pre-filtered 1500-line hypothesis is refused with "different
+   lengths". So sacreBLEU selects the same indices from the references *and* from the system output.
+2. **Nothing matched** is two different things: `--echo` prints nothing and exits 0, while scoring
+   refuses with `sacreBLEU: Test set 'wmt16' contains no sentence with origlang=xx` - and the subset
+   value is printed **twice**: `--subset zz` gives `subset=zzzz`, from sacreBLEU concatenating it
+   instead of formatting it. Reproduced exactly, since that line is the observable contract.
+3. A set without the annotation is an error in the oracle's own words:
+   `Exception: No subset annotation available for test set wmt16`, and `--subset` has no fallback to
+   `genre` (wmt16 has `genre` and still refuses).
+
+**Also fixed while measuring.** `-t X -l PAIR --list` prints only *that pair's* line; without `-l` it
+prints all of them (both had to be reproduced). And a filter with references but no `-t` makes the
+oracle raise a traceback, so the refusal had to move *after* the no-reference check - otherwise
+`-ol en` with no references at all would have printed our message where the oracle prints its own
+catalogue message. That ordering is now the measured one.
+
+**Verification.** A 23-case strict byte-diff (every filter on `--echo`, on scoring for two sets,
+`--echo all` and two-column echo, both filters together, the zero-match paths for echo and scoring,
+`--list` with `-l`, the no-annotation refusal, `-ol` on de-fr where every segment is `de`) is 0 diffs
+on stdout, stderr and exit code; two cases are the *known* traceback divergences and are asserted
+separately. `tests/test_cli.py`: 431 passed, 3 xfailed on the fast half, 59 in the `-t`/filter area.
+`cargo test --release --workspace`: 13 suites green.
+
+**Divergences registered** (three new rows): `--subset` on a set with no `domain` field (the oracle
+crashes; we print the exception's own last line, same exit code), `-ol`/`--subset` with references and
+no `-t` (the oracle crashes; we refuse in one line), and `-t X -l BAD --list` (the oracle crashes; we
+list nothing, like an unknown set). `test_unsupported_options_fail_with_hint` lost the `--origlang`
+and `--subset` cases and gained `--download`, `-d` and `flores101` - the list shrinks as flags land,
+which is the direction the plan wants.
+
+**Next.** WS0.3, the downloader behind the `downloader` cargo feature, which is the last piece of `-t`
+that still refuses (the cold-cache interim); then `--download` (WS0.4), `-d/--detail` (WS0.7) and the
+WS0.8 divergences.

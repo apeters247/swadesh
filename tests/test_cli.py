@@ -369,15 +369,15 @@ def test_error_exit_codes_match(tmp_path, args, stdin):
 
 @pytest.mark.parametrize("args", [
     ["-t", "wmt22", "-l", "en-de", "--detail"],
-    ["-t", "wmt22", "-l", "en-de", "--origlang", "en"],
     ["x.txt", "--detail", "-i", "y.txt", "z.txt"],
-    ["-t", "wmt16", "--subset", "x"],
+    ["x.txt", "-i", "y.txt", "--download", "wmt16"],
     ["x.txt", "-i", "y.txt", "-tok", "ja-mecab"],
     ["x.txt", "-i", "y.txt", "-tok", "ko-mecab"],
     ["x.txt", "-i", "y.txt", "-tok", "spm"],
+    ["x.txt", "-i", "y.txt", "-tok", "flores101"],
     ["x.txt", "-i", "y.txt", "-l", "en-ja"],
     ["x.txt", "-i", "y.txt", "--detail"],
-    ["x.txt", "-i", "y.txt", "--subset", "x"],
+    ["x.txt", "-i", "y.txt", "-d"],
     ["x.txt", "-i", "y.txt", "-e", "latin-1"],
 ])
 def test_unsupported_options_fail_with_hint(tmp_path, args):
@@ -1305,9 +1305,100 @@ def test_citation_for_a_test_set():
 
 
 def test_list_with_a_set_and_an_unknown_pair():
-    """Documented divergence: sacreBLEU crashes on `-t X -l BAD --list` (traceback, non-zero).
-    swadesh lists the set's pairs, ignoring `-l`, which cannot crash and is what the flag is for."""
+    """Documented divergence: sacreBLEU crashes on `-t X -l BAD --list` (traceback, non-zero);
+    swadesh lists nothing for that pair and exits 0, like an unknown set."""
     rc, out, err = run(SWADESH, ["-t", "wmt16", "-l", "bogus", "--list"])
-    assert rc == 0 and b"en-de:" in out, (rc, out, err)
+    assert rc == 0 and out == b"", (rc, out, err)
     ref_rc, ref_out, _ = run(SACREBLEU, ["-t", "wmt16", "-l", "bogus", "--list"])
     assert ref_rc != 0 and ref_out == b""
+
+# ------------------------------------------------- -ol / --subset (segment filters)
+
+def _hyp_from_set(tmp_path, name, pair):
+    """A full-length hypothesis for a set: its own default reference, so scores are 100-ish and a
+    filter that masks by position can be told from one that does not."""
+    rc, out, err = run(SACREBLEU, ["-t", name, "-l", pair, "--echo", "ref"])
+    assert rc == 0, err
+    path = tmp_path / f"hyp-{name.replace('/', '_')}-{pair}.txt"
+    path.write_bytes(out)
+    return str(path)
+
+
+FILTER_CASES = [
+    ["-t", "wmt16", "-l", "en-de", "--echo", "src", "-ol", "en"],
+    ["-t", "wmt16", "-l", "en-de", "--echo", "src", "-ol", "non-en"],
+    ["-t", "wmt16", "-l", "en-de", "--echo", "src", "-ol", "xx"],        # nothing matches
+    ["-t", "wmt16", "-l", "en-de", "--echo", "src", "-ol", "non-non-en"],
+    ["-t", "wmt16", "-l", "en-de", "--echo", "docid", "origlang", "-ol", "en"],
+    ["-t", "wmt16", "-l", "en-de", "--echo", "all", "-ol", "non-en"],
+    ["-t", "wmt22", "-l", "en-de", "--echo", "src", "--subset", "conversation"],
+    ["-t", "wmt22", "-l", "en-de", "--echo", "src", "--subset", "nope"],
+    ["-t", "wmt22", "-l", "en-de", "--echo", "src", "-ol", "en", "--subset", "social"],
+    ["-t", "wmt16", "-l", "en-de", "--list", "-ol", "en"],
+]
+
+
+@pytest.mark.parametrize("args", FILTER_CASES, ids=lambda a: " ".join(a))
+def test_segment_filters_on_echo(args):
+    """`-ol`/`--subset` filter the segments a set reports, byte for byte.
+
+    `-ol en` keeps `origlang == en` (1500 of wmt16 en-de's 2999) and `non-en` the rest; `--subset X`
+    keeps `domain == X`; a value nothing matches prints nothing and exits 0. A filter does not need
+    the reference data, only the annotation fields, so most of these run with no cache at all.
+    """
+    if not _have_set("wmt16"):
+        pytest.skip("no cached test set under $SACREBLEU")
+    assert_same_streams(args)
+
+
+@pytest.mark.parametrize("flags", [
+    ["-ol", "en"],
+    ["-ol", "non-en"],
+    ["--subset", "conversation"],
+    ["--subset", "zz"],                      # nothing matches: the oracle's doubled value
+    ["-ol", "en", "--subset", "social"],
+    ["-ol", "zz", "--subset", "zz"],
+])
+def test_segment_filters_when_scoring(tmp_path, flags):
+    """The filter masks the reference and the system output **by position**, and a filter that keeps
+    nothing is refused with the oracle's own line (`subset=zzzz`, its value printed twice)."""
+    if not _have_set("wmt16"):
+        pytest.skip("no cached test set under $SACREBLEU")
+    hyp = _hyp_from_set(tmp_path, "wmt22", "en-de") if "--subset" in flags else _hyp_from_set(
+        tmp_path, "wmt16", "en-de")
+    pair = ["-t", "wmt22", "-l", "en-de"] if "--subset" in flags else ["-t", "wmt16", "-l", "en-de"]
+    assert_same_streams([*pair, "-i", hyp, "-m", "bleu", *flags])
+
+
+def test_filter_without_a_test_set_and_no_references():
+    """Byte-identical: with no references at all the oracle prints its own catalogue message, and so
+    do we - the filter is checked after the reference check, which is the measured order."""
+    refs = Path("nonexistent-reference.txt")
+    assert_same_streams(["-i", str(refs), "-ol", "en"])
+
+
+def test_subset_without_a_domain_annotation():
+    """Documented divergence: sacreBLEU raises a traceback for `--subset` on a set with no `domain`
+    field (wmt16 has `genre` instead and still refuses); swadesh prints the exception's own last
+    line as a message. Exit codes match."""
+    args = ["-t", "wmt16", "-l", "en-de", "--echo", "src", "--subset", "news"]
+    ref_rc, ref_out, ref_err = run(SACREBLEU, args)
+    sw_rc, sw_out, sw_err = run(SWADESH, args)
+    assert ref_rc == sw_rc == 1 and sw_out == ref_out == b""
+    assert b"Traceback" in ref_err
+    assert sw_err.strip() == b"Exception: No subset annotation available for test set wmt16"
+
+
+def test_filter_with_references_but_no_test_set(tmp_path):
+    """Documented divergence: with reference files and no `-t`, filtering makes the oracle raise a
+    traceback; swadesh refuses in one line. Exit codes match."""
+    refs = tmp_path / "r.txt"
+    refs.write_text("a\nb\n", encoding="utf-8")
+    hyp = tmp_path / "h.txt"
+    hyp.write_text("a\nb\n", encoding="utf-8")
+    args = [str(refs), "-i", str(hyp), "-m", "bleu", "-ol", "en"]
+    ref_rc, _, ref_err = run(SACREBLEU, args)
+    sw_rc, _, sw_err = run(SWADESH, args)
+    assert ref_rc == sw_rc == 1
+    assert b"Traceback" in ref_err
+    assert b"I need a test set (-t) to filter segments" in sw_err

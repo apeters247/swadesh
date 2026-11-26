@@ -35,6 +35,13 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
         if let Some(name) = &cli.test_set {
             if let Some(found) = dataset::lookup(name) {
                 for (pair, fields) in &found.pairs {
+                    // With `-l` only that pair is listed (measured); a pair the set does not have
+                    // lists nothing, like an unknown set (the oracle crashes on that combination).
+                    if let Some(wanted) = &cli.langpair {
+                        if wanted != pair {
+                            continue;
+                        }
+                    }
                     writeln!(out, "{pair}: {}", fields.join(", ")).map_err(io_err)?;
                 }
             }
@@ -93,6 +100,33 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
         test_set = Some((found, pair));
     }
 
+    // `-ol`/`--subset` are segment filters, and they apply to the whole segment set: the reference,
+    // the system output *by position*, and what `--echo` prints. Both need a test set - without one
+    // the oracle raises a traceback, so swadesh reports a clean error instead (registered).
+    let mut filter_without_set = false;
+    let mask: Option<Vec<usize>> = match (&test_set, cli.origlang.as_deref(), cli.subset.as_deref()) {
+        (None, None, None) => None,
+        (None, _, _) => {
+            filter_without_set = true;
+            None
+        }
+        (Some((found, pair)), origlang, subset) => {
+            if origlang.is_none() && subset.is_none() {
+                None
+            } else {
+                Some(dataset::segment_filter(found, pair, origlang, subset)?)
+            }
+        }
+    };
+    if let Some(kept) = &mask {
+        // Nothing matched: `--echo` prints nothing and exits 0 (measured), scoring refuses with the
+        // oracle's line - including its doubled subset value.
+        if kept.is_empty() && cli.echo.is_empty() {
+            let name = &test_set.as_ref().expect("a test set implies a mask").0.name;
+            return Err(dataset::no_sentence(name, cli.origlang.as_deref(), cli.subset.as_deref()));
+        }
+    }
+
     // `--echo FIELD...`: print the set's text and quit. `all` means every field, in the set's own
     // order; anything else must be a field the pair has.
     if let Some((found, pair)) = &test_set {
@@ -130,8 +164,11 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
                 }
                 columns.push(dataset::read_field(&path)?);
             }
-            let rows = columns.iter().map(|c| c.len()).max().unwrap_or(0);
-            for i in 0..rows {
+            let rows: Vec<usize> = match &mask {
+                Some(kept) => kept.clone(),
+                None => (0..columns.iter().map(|c| c.len()).max().unwrap_or(0)).collect(),
+            };
+            for i in rows {
                 let line: Vec<&str> =
                     columns.iter().map(|c| c.get(i).map(String::as_str).unwrap_or("")).collect();
                 writeln!(out, "{}", line.join("\t")).map_err(io_err)?;
@@ -155,6 +192,13 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
         let names: Vec<String> =
             crate::datasets::DATASETS.iter().rev().map(|d| format!("'{}'", d.name)).collect();
         eprintln!("sacreBLEU: [{}]", names.join(", "));
+        return Err(Fail { code: 1, msg: String::new() });
+    }
+    // A segment filter needs a test set. With no references at all the oracle prints its own
+    // catalogue message (which the check above already did); with references it raises a traceback,
+    // so swadesh refuses in one line instead (registered).
+    if filter_without_set {
+        eprintln!("sacreBLEU: I need a test set (-t) to filter segments with -ol/--subset.");
         return Err(Fail { code: 1, msg: String::new() });
     }
     if cli.width < 0 {
@@ -187,6 +231,16 @@ pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
         None => read_refs(cli)?,
     };
     let (systems, sys_names) = read_systems(cli)?;
+    // A segment filter keeps the same indices in the reference and in every system, which is why a
+    // full-length system output scores against a filtered reference (measured).
+    let select = |lines: &[String]| -> Vec<String> {
+        match &mask {
+            Some(kept) => kept.iter().filter_map(|&i| lines.get(i).cloned()).collect(),
+            None => lines.to_vec(),
+        }
+    };
+    let refs: Vec<Vec<String>> = refs.iter().map(|r| select(r)).collect();
+    let systems: Vec<Vec<String>> = systems.iter().map(|s| select(s)).collect();
 
     // sacreBLEU's order of checks is measured, not chosen (docs/lab-notebook.md). The systems are
     // named first: the paired tests drop a later system that shares the baseline's name, with a

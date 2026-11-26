@@ -241,6 +241,89 @@ pub fn unknown_field(
     Fail { code: 1, msg: String::new() }
 }
 
+/// The segments a set's `-ol`/`--subset` filters select, as indices into the unfiltered set.
+///
+/// Measured: `-ol en` keeps `origlang == en` (1500 of wmt16 en-de's 2999 segments) and `non-en`
+/// keeps the rest; a value starting with `non-` therefore inverts. `--subset X` keeps
+/// `domain == X` (wmt22 en-de: conversation 484, social 512, news 511, ecommerce 530, lower case).
+/// A set without the annotation is an error in the oracle's own words; `--subset` has no fallback
+/// to `genre` (wmt16 has `genre` and still refuses).
+pub fn segment_filter(
+    found: &Found,
+    pair: &str,
+    origlang: Option<&str>,
+    subset: Option<&str>,
+) -> Result<Vec<usize>, Fail> {
+    let fields = found.fields_of(pair).ok_or_else(|| {
+        Fail { code: 1, msg: format!("unknown language pair {pair} for test set {}", found.name) }
+    })?;
+    let origlangs = match origlang {
+        None => None,
+        Some(wanted) => {
+            if !fields.iter().any(|f| f == "origlang") {
+                eprintln!("Exception: No origlang annotation available for test set {}", found.name);
+                return Err(Fail { code: 1, msg: String::new() });
+            }
+            let path = field_path(found, pair, "origlang");
+            if !path.exists() {
+                return Err(not_cached(found, pair, "origlang", &path));
+            }
+            Some(read_field(&path)?)
+        }
+    };
+    let domains = match subset {
+        None => None,
+        Some(_) => {
+            if !fields.iter().any(|f| f == "domain") {
+                eprintln!("Exception: No subset annotation available for test set {}", found.name);
+                return Err(Fail { code: 1, msg: String::new() });
+            }
+            let path = field_path(found, pair, "domain");
+            if !path.exists() {
+                return Err(not_cached(found, pair, "domain", &path));
+            }
+            Some(read_field(&path)?)
+        }
+    };
+    let len = origlangs.as_ref().map(|l| l.len()).or_else(|| domains.as_ref().map(|l| l.len())).unwrap_or(0);
+    let mut keep = Vec::new();
+    for i in 0..len {
+        if let (Some(langs), Some(wanted)) = (&origlangs, origlang) {
+            let actual = langs.get(i).map(String::as_str).unwrap_or("");
+            let ok = match wanted.strip_prefix("non-") {
+                Some(rest) => actual != rest,
+                None => actual == wanted,
+            };
+            if !ok {
+                continue;
+            }
+        }
+        if let (Some(doms), Some(wanted)) = (&domains, subset) {
+            let actual = doms.get(i).map(String::as_str).unwrap_or("");
+            if actual != wanted {
+                continue;
+            }
+        }
+        keep.push(i);
+    }
+    Ok(keep)
+}
+
+/// The oracle's "no sentence matched" line, with its formatting quirk reproduced: the subset value
+/// is printed **twice** (`--subset zz` gives `subset=zzzz`, measured), because sacreBLEU
+/// concatenates it instead of formatting it.
+pub fn no_sentence(name: &str, origlang: Option<&str>, subset: Option<&str>) -> Fail {
+    let mut parts = Vec::new();
+    if let Some(lang) = origlang {
+        parts.push(format!("origlang={lang}"));
+    }
+    if let Some(value) = subset {
+        parts.push(format!("subset={value}{value}"));
+    }
+    eprintln!("sacreBLEU: Test set '{name}' contains no sentence with {}", parts.join(" "));
+    Fail { code: 1, msg: String::new() }
+}
+
 /// The catalogue's citation for a built-in set. sacreBLEU 2.6.0 crashes on `--citation -t X`
 /// (`TypeError: argument of type 'WMTXMLDataset' is not iterable`), so printing this is a
 /// documented divergence rather than a reproduction of its traceback.
