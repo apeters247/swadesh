@@ -1,27 +1,33 @@
-# Release notes (private)
+# Releasing swadesh
 
-swadesh is dual-licensed (AGPL-3.0-or-later, plus a commercial licence) and is **not published**.
-The GitHub repository `apeters247/swadesh` is private. There is no PyPI release, no crates.io
-release and no Hugging Face post, and none should be created.
+**Status: publishing is in scope.** Until 2026-11-26 this file said the opposite - no public repo, no
+PyPI, no crates.io, no `v*` tags. That was a *timing* decision, taken while the tree was being made
+clean-room and the licence set assembled; both are done, so the tree ships. See `PLAN.md` D-1 and the
+release checklist in `PLAN.md` §9.
 
-## Building a local artefact
+## What ships
 
-    VIRTUAL_ENV=$HOME/venv-ter ~/venv-ter/bin/maturin build --release -o dist/
-    cargo build --release -p swadesh-cli        # standalone binary; not carried by the wheel
+- the `swadesh` Python package on PyPI (tier-1 wheels + sdist), carrying `swadesh-mcp` too;
+- the standalone binary on the release page (Linux musl, macOS arm64/x86_64, Windows) - no Python
+  needed, which is the point of the Rust CLI;
+- the Rust crates `swadesh-core` and `swadesh-cli` on crates.io;
+- the wasm build on npm (once WS3.4 lands) and a Docker image;
+- the docs site built from `docs/` (WS2.8).
 
-## Shipping a change
+## Before a tag exists
 
-1. Run the suites: `cargo test --release --workspace` and
-   `~/venv311/bin/python -m pytest tests/ -q`.
-2. Record the session in `docs/lab-notebook.md`: attempted, measured numbers, failures and why,
-   decisions and reasons, next step.
-3. Commit, then push to the private remote.
+Run every item in `PLAN.md` §9: the suites green, the divergence register current, licence and notice
+currency, benchmarks regenerated so no README number is hand-typed, `CHANGELOG.md` written from the
+notebook, and `tools/smoke_install.sh` passing for every channel - built from the branch, not the tag.
 
-## What not to do
+## After the tag
 
-- Do not create a `v*` tag. `.github/workflows/release.yml` no longer reacts to tags and contains no
-  publish job.
-- Do not run `maturin publish`, `cargo publish` or `twine upload`.
-- Do not add PyPI trusted publishing or crates.io tokens.
-- Public launch copy, the playground and the outreach drafts under `docs/` stay internal until the
-  licence and parity questions are settled.
+Re-run `tools/smoke_install.sh` against the *published* artefacts, mint the DOI, record the adoption
+row, and append the notebook entry naming the version and the numbers.
+
+## Still true
+
+- AGPL-3.0-or-later plus a commercial licence is the model; `docs/licensing.md` states the boundary.
+- The repository never redistributes third-party corpora (D-7); sets are fetched from the catalogue
+  and hash-verified.
+- Parity never bends: new features are opt-in and off the default output (D-4).

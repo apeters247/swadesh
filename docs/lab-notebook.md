@@ -4450,3 +4450,49 @@ wording, `--echo` shape, the language-pair error) is measured and already in `cl
 everything it does not define (resolution roots, field discovery, the user-set `--list` order) is
 swadesh's own design, and the file says so rather than implying an oracle for it. `NOTICE` now names
 the spec, and no data or licence position changes - a user set is the user's own files.
+
+## 2026-11-26 (continued) - the owner lifts the publication ban; PLAN.md rewritten as the master plan
+
+**Decision, recorded because it changes the project's scope.** Until today the rule was "never
+publish": no public repo, no PyPI, no crates.io, no Hugging Face, no `v*` tag, and `LAUNCH.md`/
+`release.yml` were neutered to match. The owner has now clarified that this was a *timing* decision -
+"don't publish at that time" - taken while the tree was being made clean-room and the licence set
+assembled. Both are done, so publishing is in scope (PLAN.md **D-1**). Nothing about parity changes;
+what changes is that the work has somewhere to go.
+
+**The other decisions taken in the same conversation**, and why:
+
+* **The `-t` downloader is native Rust, behind a `downloader` cargo feature** (D-2). This closes the
+  blocker that stopped the previous session: option 1, with the "dependency-free, cache-only" build
+  kept alive as a free by-product of the feature gate. Rationale: item 1 of the goal requires
+  `--download` to work, the binary must stay self-contained for the "needs no Python" promise, and the
+  measured costs are bounded (crate registry reachable on troy-1, licence test already guards the set,
+  `swadesh-cli` already has a feature table and `swadesh-wasm` already consumes it with
+  `default-features = false`).
+* **Rust owns every metric; Python is compatibility only; other languages enter through a documented
+  CLI+JSON contract, a C ABI, wasm, or MCP** (D-3). No metric is ever implemented twice.
+* **New features are opt-in and off the parity default** (D-4), carried forward from
+  `docs/feature-ideas.md`'s own rule that nothing may change a score.
+
+**PLAN.md.** The old 52-line file described a VPS worktree workflow and a tree with no TER, no Rust
+CLI, no significance tests and no catalogue - it would have misled an agent. It is replaced by a
+master plan: non-negotiables, the architecture policy, the decision log, the measured baseline, eight
+workstreams with ~57 tasks (each with a runnable acceptance line and an effort estimate), six
+milestones with exit criteria, the measurement harness and its floors, a risk register, a release
+checklist (which replaces the old prohibition), a task tracker, and an explicit working protocol for
+an agentic coder. `LAUNCH.md` was flipped from "not published" to the release note pointing at it.
+
+**What moved.** The conversations's feature review is now written down as workstreams rather than
+ideas: researcher features (WS-4: multiple-comparison correction, power, document-level scoring,
+metric meta-evaluation, a reproducibility receipt carrying corpus hashes, error-analysis export), the
+developer/agent cluster (WS-5: a CI quality gate, a GitHub Action, reference auditing, human-readable
+reports, pandas helpers), Hugging Face integration (WS-6: an `evaluate` module, a lighteval plugin,
+the Hub route for `-t`, a Space), language hooks (WS-3: the JSON contract, a C ABI, six language
+examples, npm, an optional HTTP service, the MCP verbs), packaging and governance (WS-2), the
+recognition work (WS-7: the findings note, the metrics-task submission, the upstream conversation,
+adoption tracking) and quality/ops (WS-8).
+
+**Next.** M0 is exactly the blocked goal's end state - the test-set group, `--detail`, the remaining
+divergences, the user-set data layer - so resuming that goal means executing M0. WS-1 (the user-set
+data layer) is specced already (`docs/spec/user-test-sets.md`) and is first, because D-6 makes it the
+thing the downloader feeds rather than a parallel path.
