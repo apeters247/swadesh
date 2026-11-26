@@ -3,6 +3,7 @@
 //! supports. Used by the `swadesh` binary and the WebAssembly playground.
 
 pub mod args;
+pub mod datasets;
 pub mod input;
 mod lower;
 mod pyfmt;

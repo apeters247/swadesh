@@ -26,6 +26,14 @@ use crate::{fail, Fail};
 const NATIVE_TOKENIZERS: &[&str] = &["none", "13a", "intl", "zh", "char"];
 
 pub fn execute(cli: &Cli, out: &mut dyn Write) -> Result<(), Fail> {
+    // `--list` short-circuits before anything is read, as sacreBLEU does.
+    if cli.list {
+        writeln!(out, "The available test sets are:").map_err(io_err)?;
+        for ds in crate::datasets::DATASETS {
+            writeln!(out, "{:<30}: {}", ds.name, ds.description).map_err(io_err)?;
+        }
+        return Ok(());
+    }
     if cli.sentence_level && cli.metrics.len() > 1 {
         return fail(1, "Only one metric can be used in sentence-level mode.");
     }

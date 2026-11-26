@@ -370,14 +370,14 @@ def test_error_exit_codes_match(tmp_path, args, stdin):
 @pytest.mark.parametrize("args", [
     ["-t", "wmt22", "-l", "en-de"],
     ["-t", "wmt22", "-l", "en-de", "--confidence"],
-    ["x.txt", "--paired-bs", "-i", "y.txt", "z.txt"],
+    ["x.txt", "--detail", "-i", "y.txt", "z.txt"],
     ["x.txt", "-i", "y.txt", "--citation"],
     ["x.txt", "-i", "y.txt", "-tok", "ja-mecab"],
     ["x.txt", "-i", "y.txt", "-tok", "ko-mecab"],
     ["x.txt", "-i", "y.txt", "-tok", "spm"],
     ["x.txt", "-i", "y.txt", "-l", "en-ja"],
     ["x.txt", "-i", "y.txt", "--detail"],
-    ["x.txt", "-i", "y.txt", "--list"],
+    ["x.txt", "-i", "y.txt", "--subset", "x"],
     ["x.txt", "-i", "y.txt", "-e", "latin-1"],
 ])
 def test_unsupported_options_fail_with_hint(tmp_path, args):
@@ -822,3 +822,15 @@ def test_paired_bootstrap_with_a_float32_metric(wmt_files):
     assert ref_rc != 0 and ref_out == b""
     assert b"not JSON serializable" in ref_err
     assert sw_rc == 0 and sw_out.startswith(b"[") and b'"ci"' in sw_out
+
+
+# ------------------------------------------------------------------ test-set catalogue
+
+def test_list_test_sets():
+    """`--list` prints the catalogue and quits before anything is read."""
+    assert assert_same(["--list"]) == 0
+
+
+def test_list_short_circuits_other_arguments():
+    """The files given do not exist, and sacreBLEU still just lists the test sets."""
+    assert assert_same(["x.txt", "-i", "y.txt", "--list"]) == 0

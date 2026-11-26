@@ -4057,3 +4057,27 @@ stderr byte-for-byte where the message is sacreBLEU's own.
 
 **Next.** Slice 1c-iii: the multi-system `-f text`/`-f latex` table (the `tabulate` port). Then test
 sets, which unlock `--citation` and `--detail`.
+
+## 2026-11-26 (continued) - slice 2, first part: the test-set catalogue and `--list`
+
+**Done.** `tools/gen_datasets.py` extracts sacreBLEU's own dataset registry (names, descriptions,
+download URLs, md5 sums, language pairs and citations for 67 test sets) into
+`crates/swadesh-cli/src/datasets.rs`, and the binary answers `--list` from it. `--list` short-circuits
+before any file is read, exactly as sacreBLEU does.
+
+**Verified.** `diff <(swadesh --list) <(python -m sacrebleu --list)` is empty — **byte-identical**,
+all 67 rows and the header. Permanent as two parity tests (the plain call, and the call with
+non-existent files alongside it, which still just lists). Suite 480 -> 482.
+
+**Also fixed.** `test_unsupported_options_fail_with_hint` had a stale case: it listed
+`["x.txt", "--paired-bs", ...]` among the options the binary does *not* support, from before the
+paired slice made that flag real. The case now uses `--detail`, which is still missing, and the
+`--list` case moved to `--subset`. That is the third time this list has needed updating as flags
+landed, which is the intended direction: the goal shrinks it to nothing.
+
+**The data dependency, disclosed.** The catalogue is sacreBLEU's data under Apache-2.0, so `NOTICE`
+now records it alongside the Unicode tables, and the file says it is generated, never hand-edited.
+
+**Next.** `--citation` (which needs `-t` and the catalogue, both now in hand), then the downloader and
+the five format parsers for `-t`/`--download`/`--echo`, then `--origlang`/`--subset`, then
+`--detail`. The multi-system text/latex table is still the one CLI formatting gap.

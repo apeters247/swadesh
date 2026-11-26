@@ -50,6 +50,7 @@ options:
   -pbsn, --paired-bs-n N
                         resamples for --paired-bs (default: 1000)
   -pj, --paired-jobs N  worker processes for the paired test (default: 1)
+  --list                print the available test sets and quit
   --max-ngram-order N   BLEU maximum n-gram order (default: 4)
   --python-version X.Y  emulate sacreBLEU running on this CPython (float sum()
                         semantics changed in 3.12 and 3.14; default: 3.12)
@@ -128,6 +129,7 @@ const OPTS: &[Opt] = &[
     o("--paired-ar-n", "-parn", Nargs::One, "paired_ar_n"),
     o("--paired-bs-n", "-pbsn", Nargs::One, "paired_bs_n"),
     o("--paired-jobs", "-pj", Nargs::One, "paired_jobs"),
+    o("--list", "", Nargs::Zero, "list"),
     o("--max-ngram-order", "", Nargs::One, "max_order"),
     o("--python-version", "", Nargs::One, "pyver"),
     o("--chrf-char-order", "-cc", Nargs::One, "cc"),
@@ -189,6 +191,8 @@ pub struct Cli {
     pub paired_ar_n: i64,
     pub paired_bs_n: i64,
     pub paired_jobs: i64,
+    /// `--list`: print the test-set catalogue and quit.
+    pub list: bool,
     pub max_ngram_order: i64,
     pub python_version: (u32, u32),
     pub chrf_char_order: i64,
@@ -324,6 +328,7 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
         paired_ar_n: 10000,
         paired_bs_n: 1000,
         paired_jobs: 1,
+        list: false,
         max_ngram_order: 4,
         python_version: (3, 12),
         chrf_char_order: 6,
@@ -431,6 +436,7 @@ pub fn parse(argv: &[String]) -> Result<Action, Fail> {
             "paired_ar_n" => cli.paired_ar_n = parse_int("--paired-ar-n", &one())?,
             "paired_bs_n" => cli.paired_bs_n = parse_int("--paired-bs-n", &one())?,
             "paired_jobs" => cli.paired_jobs = parse_int("--paired-jobs", &one())?,
+            "list" => cli.list = true,
             "max_order" => cli.max_ngram_order = parse_int("--max-ngram-order", &one())?,
             "pyver" => {
                 let v = one();
