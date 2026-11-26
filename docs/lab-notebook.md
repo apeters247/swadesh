@@ -4905,3 +4905,45 @@ console script run the binary is no longer "a day of flags": it is the `--help` 
 
 **Next.** The remaining "shapes" (`.zip`/plain-`.gz` download, `wmt17/ms`, `wmt19/google/*`), then the
 WS0.8 small divergences and slice 4 (the console script running the binary).
+
+## 2026-11-26 (continued) - M0 slice 10: the CLI's `--help` and `--version`, measured
+
+**Attempted.** The two remaining informational flags, which were documented divergences. Measured
+`tests/test_parity.py`'s own CLI case list against the oracle and the Rust binary: **scoring was
+already 43/43 and informational 9/13** - the only failures were `--help`, `-h`, `--version`, `-V`.
+So the binary was one transcription away from the whole list.
+
+**`--help`.** sacreBLEU's help is argparse's: 149 lines at the default 80 columns, and the parity
+harness compares it with whitespace *collapsed*, so only the tokens (options, metavars, order,
+descriptions) matter, not the wrapping. Transcribed it verbatim and substituted the program name in
+the usage line. The one cost: swadesh's own additions (`--python-version`, `--max-ngram-order`) are
+no longer listed in `--help`; they moved to `docs/spec/cli-contract.md` and the guide.
+
+**`--version`.** Was `swadesh 0.1.0 (sacreBLEU 2.6.0)`; the harness normalises argparse's
+`PROG X.Y.Z` shape (`\A(PROG) (\d+\.\d+\.\d+)\n`), so it is now `swadesh 2.6.0` - which also keeps
+`test_version_reports_both` (it still contains `swadesh` and `2.6.0`).
+
+**Verification.** `diff <(sacrebleu --help) <(swadesh --help)` after normalising the program name and
+collapsing whitespace: empty. The help/version/usage area of `tests/test_cli.py`: 32 passed, 1
+xfailed. No other test touches either flag.
+
+**What this does *not* finish, and why.** Item 4 (the console script running the binary) now needs
+only these error-path divergences, measured against the oracle's last stderr line and exit code:
+
+| case | oracle | the binary |
+| --- | --- | --- |
+| `-tok ja-mecab` | rc 1, last line `    pip install sacrebleu[ja]` | rc 2, `swadesh: error: ... not built into swadesh ...` |
+| a missing input file | rc 1, `FileNotFoundError: [Errno 2] No such file or directory: 'x'` | rc 1, `swadesh: error: x: No such file or directory (os error 2)` |
+| invalid UTF-8 input | rc 1, `UnicodeDecodeError: ... in position 0: invalid start byte` | rc 1, `swadesh: error: UnicodeDecodeError: ... in x (position 0)` |
+
+These conflict with a *tested, deliberate* design: `test_unsupported_options_fail_with_hint` asserts
+the binary refuses an unbuilt tokenizer with `swadesh: error:` and exit code 2, while the parity
+harness requires the oracle's exit code 1; and `docs/parity-report.md` records "raise a Python
+traceback vs print a clean message, same exit code" as an accepted divergence. So the console
+script->binary switch is a decision, not a transcription, and it is reported rather than made here.
+
+**Numbers.** `cargo test --release --workspace`: 13 suites green, 0 failed. Full `tests/test_cli.py`:
+**667 passed, 3 skipped, 3 xfailed** - unchanged, which is the point: only `--help`/`--version` text moved.
+The help/version/usage area: 32 passed / 1 xfailed.
+
+**Next.** The console-script decision for item 4, then the WS0.8 leftovers.

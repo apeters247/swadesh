@@ -11,6 +11,22 @@ written before the Phase 4 work and records the contract the code is held to.
 References are positional files, one segment per line. Hypotheses come from stdin unless `-i` is
 given. Both are read as UTF-8; other encodings are refused (`-e` accepts only `utf-8`).
 
+## `--help` and `--version` (measured 2026-11-26)
+
+Both are the oracle's own text, with one substitution: the program name.
+
+* **`--help`/`-h`** prints sacreBLEU 2.6.0's full argparse help (149 lines at the default 80
+  columns) with `usage: sacrebleu` written `usage: swadesh`. Unlike the usage *block* that argparse
+  prints above an argument error, the help is compared with whitespace collapsed, so the wrapping
+  need not be reproduced line for line - but every option, its metavars, its order and its
+  description must be the oracle's (`tests/test_parity.py`'s CLI section compares them).
+* **`--version`/`-V`** prints `swadesh 2.6.0`: argparse's `%(prog)s %(version)s` shape, with the
+  program name - and nothing else - differing from `sacrebleu 2.6.0`. (Until 2026-11-26 it printed
+  `swadesh 0.1.0 (sacreBLEU 2.6.0)`; the argparse shape is what the parity harness normalises.)
+
+swadesh's own additions (`--python-version`, `--max-ngram-order`) are therefore *not* listed in
+`--help`; they are documented here and in `docs/guide.md`.
+
 ## Metrics
 
 `-m` selects one or more of `bleu`, `chrf`, `ter`; default `bleu`. Multiple metrics print in the

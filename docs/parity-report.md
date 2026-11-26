@@ -150,8 +150,9 @@ a `fork` instead of reusing the inherited one.
    Sequence[str]`). The constructor annotations match exactly, and the test checks them.
 4. **CLI program name.** `swadesh` replaces `sacrebleu` in the usage line and in argparse errors.
    argparse wraps usage text at the name's length, so the usage text is compared with whitespace
-   collapsed. `--version` prints `swadesh 0.1.0 (sacreBLEU 2.6.0)` where sacreBLEU prints
-   `sacrebleu 2.6.0`: it reports swadesh's own version as well as the compatibility one. Scores,
+   collapsed. `--version` prints `swadesh 2.6.0` where sacreBLEU prints `sacrebleu 2.6.0` -
+   argparse's own shape, with the program name the only difference (it was `swadesh 0.1.0
+   (sacreBLEU 2.6.0)` until 2026-11-26). Scores,
    tables, echoed data and exit codes are compared byte for byte.
 5. **Uncaught exceptions.** The traceback frames differ (`cli.py` / `swadesh` entry point vs
    `sacrebleu`). The exit code and the final exception line are compared, and they match.
@@ -180,9 +181,9 @@ implements them:
 | `-m chrf --paired-bs` (and TER) | **crashes**: `TypeError: Object of type float32 is not JSON serializable` | prints the interval | `test_paired_bootstrap_with_a_float32_metric` |
 | `--citation -t <set>` | **crashes**: `TypeError: argument of type 'WMTXMLDataset' is not iterable` | refused with the `-t` hint | `docs/spec/cli-contract.md` |
 | `-w -1`, `-l en`, a missing input file | raise a Python traceback | print a clean message, same exit code | the exit code and stdout match; reproducing a traceback is not worth matching |
-| `--help`/`-h` | the full 149-line argparse help | the usage section matches; the option descriptions are swadesh's own | transcribing the descriptions would advertise the flags in the table above |
-| `--version` | `sacrebleu 2.6.0` | `swadesh 0.1.0 (sacreBLEU 2.6.0)` | reports swadesh's own version as well |
-| `--max-ngram-order`, `--python-version` | not flags (unrecognized) | swadesh additions | `--python-version` selects the CPython float-summation semantics to emulate |
+| `--help`/`-h` | the full 149-line argparse help | the same text, transcribed, with `swadesh` as the program name (the one intentional difference) | 2026-11-26: transcribed so the Rust binary's help matches the oracle token for token |
+| `--version` | `sacrebleu 2.6.0` | `swadesh 2.6.0` | argparse-shaped; the program name is the only difference |
+| `--max-ngram-order`, `--python-version` | not flags (unrecognized) | swadesh additions, listed in `docs/spec/cli-contract.md` rather than in `--help` (which is now the oracle's own text) | `--python-version` selects the CPython float-summation semantics to emulate |
 
 | the field list in `-t X --list` and in the "available fields" error | **not reproducible**: `-t wmt22 --list` printed `ref:A, ref:B` six times and `ref:B, ref:A` six times over twelve runs, the order following a hash-randomised mapping. Only the numbered-reference subgroup flips; the metadata and system order was stable 12/12 | deterministic: the set's declared order with the `ref:*` subgroup sorted, so the default reference is first | `test_test_set_field_lists` compares the lists as *sets*; `test_echo_from_a_cached_set` byte-compares every `--echo`. Recorded for the findings note (WS7.1) |
 | `-t X -l BAD --list` | crashes (traceback, non-zero) | lists nothing for that pair, exit 0 | `test_list_with_a_set_and_an_unknown_pair` |
