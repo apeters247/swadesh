@@ -5078,7 +5078,24 @@ registered "exit code and stdout match; reproducing a traceback is not worth mat
 **Result.** 49 of the 51 probed forms are now byte-identical (the two exceptions are the pinned
 negative-order divergences).
 
+**A second probe, 41 more forms, found four more real gaps** (recorded here for the next slice, not
+fixed in this one):
+
+1. **`--opt=value` is broken for `nargs='+'` options.** `--metrics=bleu r.txt -i h.txt` makes swadesh
+   take `r.txt` as a second metric and fail with `invalid choice: 'r.txt'`; the oracle scores. The
+   same form on `--input=h.txt` sends swadesh down the wrong branch entirely. Attached values on
+   options that take one value (`--echo=src`, `--format=json`, `--tokenize=intl`) are fine.
+2. **`--echo all extra`** - the oracle refuses with `sacreBLEU: Cannot use --echo all with other
+   fields` (exit 1); swadesh prints all the fields and ignores `extra`.
+3. **`-sl -ci`** - the oracle refuses with `sacreBLEU: Statistical tests are unavailable in
+   sentence-level mode.` (exit 1); swadesh scores.
+4. **`-t wmt16,wmt17`** - the oracle concatenates the sets (the help documents a comma-separated
+   list); swadesh refuses an unknown set.
+
+Two more of the 41 were probe artefacts or the registered class: `r.txt -i h.txt --` (the probe's
+own trailing `--python-version` lands after `--`) and `-w -1` (already in the traceback row).
+
 **Numbers.** See the code commit.
 
-**Next.** The unconsumed-token list, `-j > 1` status lines, the real-model re-verification, and the
-`.zip`/plain-`.gz` *download* shapes.
+**Next.** Those four gaps, then the real-model re-verification and the `.zip`/plain-`.gz` *download*
+shapes.

@@ -51,7 +51,7 @@ pub fn error_stderr(f: &Fail) -> String {
     if f.code == 2 && args::is_argparse_error(&f.msg) {
         out.push_str(args::USAGE_BLOCK);
     }
-    if is_python_error(&f.msg) {
+    if is_python_error(&f.msg) || is_sacrebleu_error(&f.msg) {
         out.push_str(&f.msg);
     } else {
         out.push_str("swadesh: error: ");
@@ -59,6 +59,13 @@ pub fn error_stderr(f: &Fail) -> String {
     }
     out.push('\n');
     out
+}
+
+/// A message that is already a sacreBLEU diagnostic (`sacreBLEU: FATAL: ...`), printed as it stands
+/// for the same reason: the rest of the CLI writes those straight to stderr, and the parity harness
+/// compares them.
+fn is_sacrebleu_error(msg: &str) -> bool {
+    msg.starts_with("sacreBLEU: ")
 }
 
 fn is_python_error(msg: &str) -> bool {

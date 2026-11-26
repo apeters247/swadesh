@@ -927,7 +927,7 @@ fn read_refs(cli: &Cli) -> Result<Vec<Vec<String>>, Fail> {
                 return fail(
                     17,
                     format!(
-                        "FATAL: line {}: expected {} fields, but found {}.",
+                        "sacreBLEU: FATAL: line {}: expected {} fields, but found {}.",
                         idx + 1,
                         cli.num_refs,
                         parts.len()
@@ -961,7 +961,7 @@ fn read_systems(cli: &Cli) -> Result<(Vec<Vec<String>>, Vec<String>), Fail> {
             // Tab-separated hypotheses: each line holds one segment per system.
             let n = lines[0].split('\t').count();
             if lines.iter().any(|l| l.split('\t').count() != n) {
-                return fail(17, "FATAL: the number of tab-delimited fields in the input stream differ across lines.");
+                return fail(17, "sacreBLEU: FATAL: the number of tab-delimited fields in the input stream differ across lines.");
             }
             let mut systems: Vec<Vec<String>> = vec![Vec::with_capacity(lines.len()); n];
             for line in &lines {

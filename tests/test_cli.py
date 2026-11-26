@@ -1227,6 +1227,29 @@ def test_unrecognized_arguments_lists_every_token(tmp_path):
     assert ref_rc == sw_rc == 2
     assert _norm_argerr(sw_err) == _norm_argerr(ref_err)
 @pytest.mark.xfail(strict=True, reason=(
+    "documented divergence: sacreBLEU's `-cc -1` raises IndexError from inside chrF; swadesh refuses "
+    "a negative character order with a clean message and the same exit code (docs/parity-report.md)"))
+def test_negative_chrf_char_order(tmp_path):
+    refs = tmp_path / "r.txt"
+    refs.write_text("the cat sat on the mat\nhello world here\n", encoding="utf-8")
+    hyp = tmp_path / "h.txt"
+    hyp.write_text("the cat sat on a mat\nhello there world\n", encoding="utf-8")
+    assert_same_streams([str(refs), "-i", str(hyp), "-m", "chrf", "-cc", "-1", "-f", "text"])
+
+
+def test_num_refs_field_count_message_matches(tmp_path):
+    """`-nr N` splits each reference on tabs, and a line with the wrong field count is sacreBLEU's own
+    diagnostic (`sacreBLEU: FATAL: line 1: expected 2 fields, but found 1.`, exit code 17) - not a
+    `swadesh: error:` message. The `-nr` area had carried swadesh's prefix by accident."""
+    refs = tmp_path / "r.txt"
+    refs.write_text("the cat sat\nhello world\n", encoding="utf-8")
+    hyp = tmp_path / "h.txt"
+    hyp.write_text("the cat sat\nhello world\n", encoding="utf-8")
+    for n in ("0", "2"):
+        assert_same_streams(["-nr", n, str(refs), "-i", str(hyp)])
+
+
+@pytest.mark.xfail(strict=True, reason=(
     "documented divergence: sacreBLEU accepts a negative --chrf-word-order (`nw:-1` in the "
     "signature, a reduced order and a different score); swadesh refuses it with a hint"))
 def test_negative_chrf_word_order(tmp_path):

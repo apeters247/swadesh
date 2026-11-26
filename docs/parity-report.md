@@ -73,8 +73,7 @@ Not covered: `--download` (needs network; it fetches a set and quits). `spm`, `f
 | `tests/test_frozen_oracle.py`, `test_provenance.py`, `test_score_objects.py`, `test_estimate_ci.py`, `test_dependency_licences.py`, `test_version.py`, `test_base_port.py`, `test_metrics_fallback.py`, `test_ter_preprocess.py`, `test_regressions.py`, `test_numrefs_none_refs.py` | 0 failed (with `test_parity.py`, 673 passed / 58 skipped together) |
 | `tests/test_differential.py` | 79 passed |
 | `tests/test_fuzz_unicode.py` + `tests/test_coverage_gaps.py` | 72 passed |
-| `tests/test_ter.py` + `tests/test_deep.py` | 61 passed, 2 skipped, 0 failed (12m53s - the slow pair, run on its own) |
-| `tests/test_differential_long.py` | 46 passed (14m16s) |
+| `tests/test_ter.py` + `test_deep.py` + `test_differential_long.py` | **107 passed, 2 skipped, 0 failed** (22m56s, re-measured 2026-11-26 on this tree) |
 | `tests/test_mutation_kills.py` | 14 passed |
 | `tests/test_mcp.py` + `test_regressions.py` + `test_numrefs_none_refs.py` | 10 passed |
 
