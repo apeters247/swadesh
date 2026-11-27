@@ -109,7 +109,24 @@ be packaged before its sibling exists on the registry.
    curl -sL https://github.com/apeters247/swadesh/archive/refs/tags/v0.1.0.tar.gz | shasum -a 256
    ```
 
-4. On a machine with Homebrew:
+4. On a machine with Homebrew. **Status, 2026-11-27:** the formula in this repository is filled in with
+   `v0.1.0`'s checksum (`06b15207…8ceea`) and its install and test steps were executed the direct way,
+   because there is no Homebrew on troy-1:
+
+   ```bash
+   curl -sL https://github.com/apeters247/swadesh/archive/refs/tags/v0.1.0.tar.gz | shasum -a 256
+   # 06b15207b4eeaf3944c775fdfe93d94651aa2b3273ef26acf2fc15e04b88ceea
+   tar xzf v0.1.0.tar.gz && cd swadesh-0.1.0
+   cargo build --release -p swadesh-cli            # what `cargo install` runs: 3.6 MB binary
+   ./target/release/swadesh --version             # swadesh 2.6.0
+   ./target/release/swadesh ref.txt -i hyp.txt -m bleu   # JSON with "name": "BLEU"
+   ```
+
+   Both `assert_match` lines in the formula's `test` block were checked against that binary. What is
+   *not* verified here: Homebrew itself (the formula's Ruby syntax, `std_cargo_args(path:)` and
+   `brew audit`), which needs a machine with brew.
+
+5. On a machine with Homebrew:
 
    ```bash
    brew install --build-from-source apeters247/tap/swadesh
