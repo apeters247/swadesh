@@ -5394,3 +5394,40 @@ tokenized - exactly what a cross-language sweep surfaces, and exactly what a use
 Japanese would have seen.
 
 **Next.** Nothing open on the parity axis; the remaining work is the release checklist.
+
+## 2026-11-26 (continued) - release preparation, and the one step that needs the owner
+
+**Attempted.** The release checklist in `PLAN.md` §9, as far as it can be taken without PyPI
+credentials - and there are none: no `twine`, no `~/.pypirc`, no `TWINE_*`/`PYPI_*` variables on
+troy-1 or the VPS (checked both).
+
+**Landed.**
+
+- **`tools/smoke_install.sh`**, new, and it passes for both channels: the wheel and the sdist built
+  from the branch, installed into a throwaway venv with `uv`, then six checks - `import swadesh as
+  sacrebleu` and a corpus score (BLEU 61.7139 on the sample), `swadesh.patch()` agreeing with swadesh,
+  the console script's `--version` (`swadesh 2.6.0`) and a three-metric score `[61.7, 74.3, 23.1]`,
+  `swadesh.verify` printing "identical", and the MCP server importing.
+- **`CHANGELOG.md`**'s 0.1.0 section rewritten from the notebook. It still claimed that "corpus
+  scores, signatures and formatting still come from sacreBLEU's Python code", that the console script
+  is sacreBLEU's CLI "with swadesh patched in", that the bootstrap draw "still comes from NumPy", and
+  that TER is not byte-exact yet. All four are untrue of this tree; the release note now describes
+  what actually ships, with today's verification numbers and the honest limitations.
+- **`.github/workflows/release.yml`**: its header said "Do not add a publish job. Pushing a v* tag
+  does nothing" - D-1's timing decision. It now builds on `workflow_dispatch` and **publishes on a
+  `v*` tag through PyPI trusted publishing** (OIDC, so no token is stored), with a `publish-pypi` job
+  that needs all four build jobs and runs in the `pypi` environment with `id-token: write`. The YAML
+  parses and the trigger and job graph were verified. `LAUNCH.md` records the two PyPI-side steps (a
+  pending publisher naming owner `apeters247`, repository `swadesh`, workflow `release.yml`,
+  environment `pypi`) and the token alternative for anyone who prefers it.
+
+**What only the owner can do.** Create that pending publisher on PyPI - or hand over a token - and
+then push `v0.1.0`. Everything else on the checklist is done: cargo 13 suites 0 failed,
+`tests/test_cli.py` 685 passed, the divergence register current, the benchmarks re-run with the README
+regenerated, the smoke install passing from the branch, and the version sources agreeing (5.5k
+`tests/test_version.py` asserts all three).
+
+**Not done, and said plainly.** `cargo deny` is not installed here, so the licence scan is the one in
+`tests/test_dependency_licences.py` (no copyleft crate, AGPL on our own); and `docs/third-party.md`,
+which the checklist names, does not exist - the third-party position lives in `NOTICE` and
+`docs/licensing.md`. The DOI/Zenodo step is external and untouched.
