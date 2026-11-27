@@ -183,6 +183,10 @@ table.to_dict()                          # JSON-able, for a report or a DataFram
   systems with its 95% interval, from the same resamples as `PairedTest` (so the same p-value), plus
   `detectable()` / `required_n()` - how big a gap this corpus can see, and how many segments a target
   gap needs.
+- **Assertions and a pytest plugin, for your own suite.** `swadesh.testing.assert_bleu_at_least(hyps,
+  refs, 30)` fails with the metric's own line; `pytest --swadesh-report scores.json` records every
+  score recorded through the `swadesh_record` fixture, loaded automatically via the `pytest11` entry
+  point.
 - **Exact tokenizers.** `swadesh.tokenize(lines, "13a")` returns sacreBLEU's tokenization, in parallel.
 - **In the browser.** The CLI compiles to a roughly 349 KB WebAssembly module; `docs/playground/`
   is a static page that runs it.

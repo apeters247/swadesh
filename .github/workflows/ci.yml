@@ -55,6 +55,8 @@ jobs:
           python -m pip install dist/*.whl "sacrebleu==2.6.0" "numpy>=2,<3" pytest hypothesis
       - name: Differential suite
         run: python -m pytest tests/test_differential.py -v
+      - name: pytest plugin
+        run: python -m pytest tests/test_pytest_plugin.py -v
       - name: Sum-semantics check
         run: python tools/check_sum_semantics.py
 

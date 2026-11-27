@@ -5697,3 +5697,28 @@ the same seed and resample count; swapping the systems negates `delta` and keeps
 parity` green.
 
 **Next.** Shortlist s4 (pytest plugin + GitHub Action), s1 (`evaluate.load`), s3 (mecab/spm decision).
+
+## 2026-11-27 (continued) - shortlist s4: the pytest plugin and the assertions
+
+**Attempted.** A team wants "this system must not drop below 30 BLEU" and "record what each system
+scored in the job log" from its own pytest run. Both are one line of glue everyone rewrites.
+
+**What was built.** `python/swadesh/testing.py`: `assert_score_at_least` / `assert_score_at_most` plus
+`assert_bleu_at_least`, `assert_chrf_at_least` and `assert_ter_at_most` (TER counts errors, so it gets
+the "at most" form), each raising `AssertionError` with the metric's own formatted line.
+`python/swadesh/pytest_plugin.py`: a `swadesh_record` fixture, a `--swadesh-report PATH` JSON dump and
+a terminal summary, registered through a `pytest11` entry point in `pyproject.toml`. Spec:
+`docs/spec/pytest-plugin.md` (73ab3a6).
+
+**The Action already existed.** `.github/workflows/ci.yml` runs the Rust tests, clippy and the
+differential suite across Linux/macOS/Windows x Python 3.10-3.14 x numpy 1/2; a `pytest plugin` step
+is added to the differential job so the new code is exercised on every push. `release.yml` is
+untouched.
+
+**Verified.** `tests/test_pytest_plugin.py` (2 tests): the helpers return the score on success and
+raise with the name, the bound and the score line on failure; a real pytest subprocess with the
+plugin loaded records two systems and writes the JSON list. Two float assertions in the test were
+wrong (`100.00000000000004` is BLEU's perfect score, not `100.0`) and were fixed with the same
+tolerance the rest of the suite uses.
+
+**Next.** Shortlist s1 (`evaluate.load` compatibility) and s3 (mecab/spm dependency decision).

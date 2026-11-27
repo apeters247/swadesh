@@ -42,6 +42,9 @@ Documentation = "https://github.com/apeters247/swadesh/blob/master/docs/guide.md
 swadesh = "swadesh.cli:main"
 swadesh-mcp = "swadesh.mcp_server:main"
 
+[project.entry-points.pytest11]
+swadesh = "swadesh.pytest_plugin"
+
 [tool.maturin]
 manifest-path = "crates/swadesh-py/Cargo.toml"
 python-source = "python"
