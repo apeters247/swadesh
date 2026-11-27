@@ -5822,3 +5822,31 @@ attempt a duplicate upload.
 `uv publish` through `UV_PUBLISH_TOKEN` so it never appears in a process argument list. It arrived through
 a chat message, so it is in this session's transcript and should be rotated once the project's trusted
 publisher is configured.
+
+## 2026-11-27 (continued) - Homebrew and crates.io are live
+
+**Homebrew.** The tap is published: `apeters247/homebrew-tap`, with `Formula/swadesh.rb` at the layout
+Homebrew expects, built from the `v0.1.0` tarball (`sha256 06b15207…8ceea`, computed twice) with
+`std_cargo_args(path: "crates/swadesh-cli")` and `depends_on "rust" => :build`. There is no Homebrew on
+troy-1, so the formula's steps were executed directly instead: the tarball was extracted,
+`cargo build --release -p swadesh-cli` produced the 3.6 MB binary (the same command `cargo install` runs,
+and `Cargo.lock` is in the tarball so `--locked` works), `--version` printed `swadesh 2.6.0`, and a
+two-line corpus produced JSON containing `"name": "BLEU"` - both `assert_match` lines. What remains
+unverified is brew's own layer (install, test, audit, style), which needs a machine with Homebrew. One
+cosmetic false alarm: the tap's raw URL 404'd for about a minute after the first push - CDN propagation
+for a new repository, not a wrong path, confirmed by listing the codeload tarball.
+
+**crates.io.** `swadesh-core 0.1.0` published with a token (stored at `~/.config/swadesh/crates-token`,
+mode 600, passed as `CARGO_REGISTRY_TOKEN` so it never appears in an argument list). `swadesh-cli` stayed
+`publish = false` on purpose. Verified from the registry, not the upload log: the API reports version
+0.1.0, `license: AGPL-3.0-or-later`, the keywords, categories and repository; and a scratch
+`cargo new` + `cargo add swadesh-core` builds against the registry copy.
+
+**A field that looked wrong and was not.** The crates.io *crate-level* JSON reports `license: null`,
+which reads alarmingly for an AGPL crate. The `version` object reports `AGPL-3.0-or-later` correctly, and
+the packaged `Cargo.toml` carries the resolved `license = "AGPL-3.0-or-later"` - the crate-level summary
+field is simply not the licence. No re-publish was needed, and that is worth remembering before anyone
+files it as a bug.
+
+**Both tokens should be rotated** once the trusted publisher is configured on PyPI: they arrived through
+chat messages and are therefore in session transcripts.

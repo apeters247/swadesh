@@ -14,11 +14,15 @@ release checklist in `PLAN.md` §9.
 - the wasm build on npm (once WS3.4 lands) and a Docker image;
 - the docs site built from `docs/` (WS2.8).
 
-## Released: 0.1.0 on PyPI, 2026-11-27
+## Released: 0.1.0 on PyPI and crates.io, 2026-11-27
 
 Published by hand with a project token (`uv publish`), because trusted publishing needs the publisher
 configured on the PyPI side first. The project now exists, so a trusted publisher can be added to
 <https://pypi.org/manage/project/swadesh/settings/publishing/> for later versions.
+
+`swadesh-core 0.1.0` is on crates.io too, published with a token the same way (`CARGO_REGISTRY_TOKEN`
+from a 600 file, so it never appears in an argument list). A scratch `cargo add swadesh-core` project
+builds against the registry copy. `swadesh-cli` stays `publish = false`.
 
 Verified against the index, not the branch: `uv pip install --python <fresh venv> swadesh==0.1.0` pulls the
 manylinux wheel, scores 37.99178428257963 for the two-line sample, and `swadesh --version` prints

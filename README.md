@@ -3,6 +3,7 @@
 [![PyPI](https://img.shields.io/pypi/v/swadesh.svg)](https://pypi.org/project/swadesh/)
 [![licence: AGPL-3.0-or-later](https://img.shields.io/badge/licence-AGPL--3.0--or--later-blue.svg)](LICENSE)
 [![python: 3.10-3.14](https://img.shields.io/badge/python-3.10--3.14-blue.svg)](pyproject.toml)
+[![crates.io](https://img.shields.io/crates/v/swadesh-core.svg)](https://crates.io/crates/swadesh-core)
 
 **sacreBLEU, bit for bit, in Rust.** BLEU, chrF, chrF++ and TER with the same scores, the same signatures
 and the same CLI, and much faster: up to 316× on a 24-thread desktop and 11–36× on one core (measured 2026-11-26).
@@ -219,7 +220,8 @@ table.to_dict()                          # JSON-able, for a report or a DataFram
 - **Free-threaded Python.** The extension declares `gil_used = false`; on CPython 3.14t with the
   GIL disabled, concurrent threads score in parallel and stay bit-exact. (sacreBLEU's own `lxml`
   import re-enables the GIL unless you run with `PYTHON_GIL=0`.)
-- **Rust crate.** `swadesh-core` gives tokenizers, statistics and score arithmetic for Rust programs.
+- **Rust crate.** `cargo add swadesh-core` gives tokenizers, statistics and score arithmetic to Rust
+  programs ([docs.rs/swadesh-core](https://docs.rs/swadesh-core)).
 
 ## Coverage
 

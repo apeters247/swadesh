@@ -91,9 +91,15 @@ install, source build, `tools/smoke_install.sh`).
    cargo new /tmp/addme && cd /tmp/addme && cargo add swadesh-core && cargo build
    ```
 
-Metadata is already in place — `description`, `keywords`, `categories`, `license.workspace`
+**Status, 2026-11-27: published.** `swadesh-core 0.1.0` is on crates.io. Verified from the registry
+rather than the upload log: the API reports version 0.1.0, `license: AGPL-3.0-or-later` (on the *version*
+object — the crate-level summary field reads null and is not the licence), the keywords, the categories
+and the repository, and a scratch `cargo new` project with `cargo add swadesh-core` builds against it.
+docs.rs redirects to the builds page while it compiles.
+
+Metadata was already in place — `description`, `keywords`, `categories`, `license.workspace`
 (`AGPL-3.0-or-later`), `repository` — and `cargo package -p swadesh-core` builds the 1.44 MB `.crate`
-and compiles it, so the publish is not expected to surprise.
+and compiles it, so the publish did not surprise.
 
 `swadesh-cli` is deliberately not published. If you change your mind, remove `publish = false` from its
 manifest and publish it **after** core is live: cargo resolves dependencies while packaging, so it cannot
