@@ -5850,3 +5850,25 @@ files it as a bug.
 
 **Both tokens should be rotated** once the trusted publisher is configured on PyPI: they arrived through
 chat messages and are therefore in session transcripts.
+
+## 2026-11-27 (continued) - Homebrew validated on a real Mac, and what it caught
+
+**Getting there.** The Mac mini answers on the tailnet (port 22), but troy-1's keys were rejected for
+every username tried - and SSH reports "no such user" and "key rejected" identically, so that was two
+unknowns at once. The subtlety: the account is `andrewpeters` (the display name is "Andrew Peters"), and
+Homebrew was installed all along at `/opt/homebrew` but is not on the PATH of a non-interactive shell, so
+`command -v brew` said MISSING. Both were resolved by probing rather than by asking.
+
+**First run.** `tools/homebrew_check.sh` over Tailscale: tap, install (compiling from source, pulling
+`rust` as a build dependency) and `brew test` all passed, and the installed binary printed
+`swadesh 2.6.0` and scored BLEU 38.0 / chrF2 61.9. `brew audit --new --strict` and `brew style` both
+failed, on the same two things: the description must hyphenate "command-line", and the file needed a final
+newline. Two one-line fixes, in the tap and in this repository's copy of the formula.
+
+**Second run.** All five checks pass; the tap reports "2 files inspected, no offenses detected". A note
+for next time: Homebrew auto-updated from 6.0.12 to 7.0.17 between the two runs, and GitHub's raw URLs
+served a cached copy of the script for several minutes after the push - the Mac ran the previous version
+of `homebrew_check.sh` on the second run and still passed.
+
+**Also changed.** The check script stopped passing `--build-from-source`: Homebrew 6 warns "building from
+source is not supported!" for it, and a formula with no bottle compiles from source anyway.

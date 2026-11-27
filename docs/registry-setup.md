@@ -132,8 +132,16 @@ be packaged before its sibling exists on the registry.
    *not* verified here: Homebrew itself (the formula's Ruby syntax, `std_cargo_args(path:)` and
    `brew audit`), which needs a machine with brew.
 
-5. The tap is live: <https://github.com/apeters247/homebrew-tap> (`cc8720d`), with `Formula/swadesh.rb`
-   at the layout Homebrew expects. `brew install apeters247/tap/swadesh` now works for anyone. What has
+5. The tap is live: <https://github.com/apeters247/homebrew-tap>, with `Formula/swadesh.rb` at the
+   layout Homebrew expects. `brew install apeters247/tap/swadesh` works for anyone.
+
+   **Validated on a Mac, 2026-11-27.** `tools/homebrew_check.sh` was run over Tailscale on the Mac mini
+   (`andrewpeters@Andrews-Mac-mini.local`, macOS 26.5.1, arm64, Homebrew 7.0.17): tap, install, `brew
+   test`, `brew audit --new --strict`, `brew style` - **all five PASS**, ending
+   `ALL HOMEBREW CHECKS PASSED`, and the installed binary printed `swadesh 2.6.0` and scored a two-line
+   corpus with all four metrics. The first run failed audit and style on two things, both fixed in the
+   tap: the description had to say "command-line" rather than "command line", and the file needed a final
+   newline. What has
    *not* been run, because troy-1 has no Homebrew, is brew's own validation - do this once on a Mac:
 
    ```bash

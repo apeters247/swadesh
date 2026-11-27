@@ -66,6 +66,9 @@ Verified from the working tree, so the upload is the only step left:
 - `tools/smoke_install.sh wheel` passes: import-as-sacrebleu, `patch()`, the console script,
   `swadesh.verify`, and the MCP server import.
 
+**Homebrew is validated on a Mac** (2026-11-27): `tools/homebrew_check.sh` over Tailscale on the Mac
+mini, all five checks pass (tap, install, test, audit --strict, style), and the installed binary scores.
+
 **Still needs a human.** There is no PyPI token, no `~/.pypirc` and no `gh` on this host, and
 `release.yml` publishes only from a `v*` tag via trusted publishing. So: add the pending publisher (the
 four fields in the section below), push the tag, then re-run `tools/smoke_install.sh` against the
