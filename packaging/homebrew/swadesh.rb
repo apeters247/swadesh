@@ -1,5 +1,5 @@
 class Swadesh < Formula
-  desc "Bit-exact sacreBLEU BLEU/chrF/chrF++/TER command line, in Rust"
+  desc "Bit-exact sacreBLEU BLEU/chrF/chrF++/TER command-line, in Rust"
   homepage "https://github.com/apeters247/swadesh"
   url "https://github.com/apeters247/swadesh/archive/refs/tags/v0.1.0.tar.gz"
   sha256 "06b15207b4eeaf3944c775fdfe93d94651aa2b3273ef26acf2fc15e04b88ceea"

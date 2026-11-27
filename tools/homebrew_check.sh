@@ -3,8 +3,10 @@
 #
 #   tools/homebrew_check.sh
 #
-# It taps, installs from source (there are no bottles yet), runs brew's own checks, then proves the
-# installed binary works. Every step is reported; the exit code is non-zero if any step failed, so it can
+# It taps, installs (there are no bottles, so this compiles from source), runs brew's own checks, then
+# proves the installed binary works. `--build-from-source` is deliberately not passed: Homebrew 6 warns
+# "building from source is not supported!" for it, while a formula with no bottle builds from source
+# anyway. Every step is reported; the exit code is non-zero if any step failed, so it can
 # be pasted into a release log as-is.
 set -uo pipefail
 
@@ -28,7 +30,7 @@ run() {
 echo "host: $(sw_vers -productVersion 2>/dev/null) $(uname -m), brew $(brew --version | head -1)"
 
 run brew tap "$TAP"
-run brew install --build-from-source "$TAP/$FORMULA"
+run brew install "$TAP/$FORMULA"
 run brew test "$FORMULA"
 run brew audit --new --strict "$FORMULA"
 run brew style "$TAP"
