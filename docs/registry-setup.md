@@ -67,11 +67,15 @@ install, source build, `tools/smoke_install.sh`).
 
 1. Sign in at <https://crates.io> with GitHub as `apeters247`.
 2. *Account settings* → *API Tokens* → *New token*, scopes `publish-new` and `publish-update`.
-3. Log in locally (writes `~/.cargo/credentials.toml`):
+3. Log in locally. `cargo login <token>` writes `~/.cargo/credentials.toml` (mode 600), and from then on
+   `cargo publish` reads it. On troy-1 this has to be done as the user who will publish:
 
    ```bash
-   cargo login <the token>
+   sudo -u kpeters -H bash -lc 'cargo login <the token>'
    ```
+
+   `cargo publish --dry-run -p swadesh-core` verifies the package and stops before the upload, so it is
+   the right check to run *before* the token exists — it passed on 2026-11-27 without one.
 
 4. Dry run, then publish:
 
