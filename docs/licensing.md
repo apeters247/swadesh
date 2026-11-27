@@ -7,6 +7,22 @@ swadesh is dual-licensed.
 | Community | GNU Affero General Public License v3 or later | free | `LICENSE` |
 | Commercial | negotiated per use; free below the revenue threshold | free / paid | `LICENSE.commercial` |
 | Adapter modules | Apache License 2.0 | free | `LICENSE-Apache-2.0` |
+| Rust crates (`swadesh-core`, `swadesh-cli`, `swadesh-wasm`) | Apache License 2.0 **or** MIT | free, no conditions | `crates/swadesh-core/LICENSE-APACHE`, `LICENSE-MIT` |
+
+## The Rust crates are permissive on purpose
+
+`swadesh-core` is the library a Rust program would depend on, and the Rust ecosystem's norm is a
+permissive dual grant (Apache-2.0 OR MIT, the same combination `rustc` itself uses). Keeping the crate
+under the AGPL would have meant that almost every project with a licence scanner could not take it,
+regardless of merit — the dependency would put the AGPL on their whole binary.
+
+So the crate is permissive and the Python package is not. That split is deliberate: the package is what
+embeds the extension, is what a closed product would ship, and is where the dual licence has work to do.
+One file in the crate, the TER shift search, is derived from an Apache-2.0 source and carries its
+attribution in `crates/swadesh-core/NOTICE` and at the top of the file.
+
+`swadesh-core` 0.1.0 is still on crates.io under the AGPL, because a published version's licence cannot
+be changed; 0.1.1 is the same code under the permissive grant.
 
 ## What AGPL means in practice
 

@@ -1,6 +1,11 @@
 swadesh
 Copyright (c) 2026 Andrew Peters. Licensed under the GNU Affero General Public License, version 3 or
-later (see `LICENSE`); a commercial licence is available (see `LICENSE.commercial`). Contributions
+later (see `LICENSE`); a commercial licence is available (see `LICENSE.commercial`).
+
+The Rust crates `crates/swadesh-core`, `crates/swadesh-cli` and `crates/swadesh-wasm` are licensed
+under the Apache License 2.0 or the MIT licence, at your option (see `crates/swadesh-core/LICENSE-APACHE`
+and `LICENSE-MIT`, and that crate's `NOTICE` for the one Apache-2.0-derived file). The AGPL and the
+commercial licence apply to the Python package and to the repository's contents other than the crates. Contributions
 are assigned to this holder under `CLA.md`, so the holder named here is the licensor for both the
 AGPL and the commercial licence.
 

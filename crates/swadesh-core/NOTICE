@@ -1,0 +1,24 @@
+swadesh-core
+Copyright (c) 2026 Andrew Peters
+
+This crate is licensed under the Apache License, Version 2.0 (see LICENSE-APACHE) or the MIT licence
+(see LICENSE-MIT), at your option.
+
+## Attribution that travels with the crate
+
+The crate as a whole is original to this project, written from published specifications and from
+black-box measurement of sacreBLEU's observable output (`docs/spec/` in the repository records each
+one). One file is the disclosed exception:
+
+* `src/ter_clean.rs`, the candidate-budget and shift-selection semantics of the TER shift search, is
+  derived from sacreBLEU's `sacrebleu/metrics/lib_ter.py`, Copyright 2020 Memsource, licensed under
+  the Apache License, Version 2.0. That derivation was made on the copyright holder's instruction
+  after black-box probing showed the published algorithm did not reproduce the oracle.
+
+If you take this crate under the MIT option, that file's Apache-2.0 attribution obligations still
+travel with it: keep this notice and `LICENSE-APACHE` alongside any redistribution. Taking the crate
+under Apache-2.0 satisfies them by construction, which is why the dual grant is offered.
+
+The generated tables in `src/tables.rs` are built by `tools/gen_tables.py` from the running CPython's
+Unicode database and the `regex` module's property data. Python's Unicode data is distributed under
+the Unicode License Agreement; the `regex` crate is MIT/Apache-2.0.

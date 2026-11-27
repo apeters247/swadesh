@@ -1,3 +1,7 @@
+// Portions of the TER shift search are derived from sacreBLEU's `sacrebleu/metrics/lib_ter.py`,
+// Copyright 2020 Memsource, under the Apache License 2.0. See NOTICE and LICENSE-APACHE in this
+// crate's root. The rest of the file is original, written from `docs/spec/ter.md`.
+//
 //! TER (translation edit rate) with TERCOM-style shifts.
 //!
 //! Specification: `docs/spec/ter.md`. Written from Snover et al. 2006 and from black-box

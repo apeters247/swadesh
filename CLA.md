@@ -1,9 +1,10 @@
 swadesh — Contributor Licence Agreement
 
 swadesh is dual-licensed: AGPL-3.0-or-later for the community (see `LICENSE`) and a paid commercial
-licence for the cases the AGPL does not cover (see `LICENSE.commercial`). Dual licensing only works
-if the copyright holder has the right to license every contribution under both. This agreement is
-how a contributor grants that right.
+licence for the cases the AGPL does not cover (see `LICENSE.commercial`). The Rust crates
+(`crates/swadesh-core`, `crates/swadesh-cli`, `crates/swadesh-wasm`) are additionally offered under
+Apache-2.0 OR MIT. All of that only works if the copyright holder has the right to license every
+contribution under those terms. This agreement is how a contributor grants that right.
 
 By submitting a contribution to this project — a pull request, a patch, or any other change you
 offer for inclusion — you agree to the following. If you are submitting on behalf of an employer,

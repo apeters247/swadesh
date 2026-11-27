@@ -4,9 +4,11 @@ description = "Bit-exact, parallel sacreBLEU (BLEU, chrF, chrF++) in Rust"
 readme = "README.md"
 keywords = ["bleu", "chrf", "sacrebleu", "machine-translation", "evaluation"]
 categories = ["text-processing", "science"]
-version.workspace = true
+# Its own version, because 0.1.0 is on crates.io under the AGPL and a published version's licence
+# cannot change. 0.1.1 is the same code under the permissive grant.
+version = "0.1.1"
 edition.workspace = true
-license.workspace = true
+license = "Apache-2.0 OR MIT"
 repository.workspace = true
 
 [dependencies]

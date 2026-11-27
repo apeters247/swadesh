@@ -3,7 +3,7 @@ name = "swadesh-cli"
 description = "Standalone sacreBLEU-compatible BLEU and chrF command line (no Python needed)"
 version.workspace = true
 edition.workspace = true
-license.workspace = true
+license = "Apache-2.0 OR MIT"
 repository.workspace = true
 publish = false
 
@@ -16,7 +16,7 @@ name = "swadesh"
 path = "src/main.rs"
 
 [dependencies]
-swadesh-core = { version = "0.1.0", path = "../swadesh-core", default-features = false }
+swadesh-core = { version = "0.1.1", path = "../swadesh-core", default-features = false }
 # The downloader (PLAN.md D-2): fetching a test set's archive, verifying its md5, unpacking it. Off
 # by default nowhere - it is in `default` - but `--no-default-features` keeps the binary free of
 # third-party crates, which is what `crates/swadesh-wasm` builds and what a cache-only build wants.

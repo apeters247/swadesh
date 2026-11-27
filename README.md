@@ -262,4 +262,9 @@ swadesh is dual-licensed:
   modified version) as a network service without publishing that service's source. **Free below
   USD 5 million annual revenue**, paid above it; see `LICENSE.commercial`.
 
-`docs/licensing.md` sets out which side of that line a given use falls on.
+**The Rust crates are permissive.** `swadesh-core`, `swadesh-cli` and `swadesh-wasm` are
+**Apache-2.0 OR MIT**, so a Rust program can depend on them without any AGPL obligation
+(`cargo add swadesh-core`). The AGPL and the commercial licence apply to the Python package, which is
+what embeds the extension.
+
+`docs/licensing.md` sets out which side of those lines a given use falls on.

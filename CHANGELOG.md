@@ -3,6 +3,15 @@
 All notable changes to swadesh are listed here. Versions follow semantic versioning. swadesh 0.x is
 pinned to sacreBLEU 2.6.0 (`swadesh.SACREBLEU_COMPAT_VERSION`).
 
+## swadesh-core 0.1.1 — 2026-11-27
+
+The crate only. **Licence change: `swadesh-core` is now Apache-2.0 OR MIT** instead of
+AGPL-3.0-or-later, so Rust programs can depend on it without AGPL obligations. The code is unchanged;
+crates.io cannot change the licence of a published version, which is why this is 0.1.1 rather than an
+edit to 0.1.0. The crate now ships `LICENSE-APACHE`, `LICENSE-MIT` and a `NOTICE` naming the one
+Apache-2.0-derived file (the TER shift search, Copyright 2020 Memsource), and that attribution is also
+at the top of `src/ter_clean.rs`.
+
 ## 0.1.0 — 2026-11-27
 
 First release. BLEU, chrF, chrF++ and TER match sacreBLEU 2.6.0 exactly, in a drop-in Python package
