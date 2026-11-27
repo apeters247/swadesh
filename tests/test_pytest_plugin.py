@@ -45,9 +45,17 @@ def test_the_plugin_records_and_writes_a_report(tmp_path):
             assert 1 + 1 == 2
         '''
     ))
+    # An installed wheel registers the plugin through the `pytest11` entry point, so asking for it
+    # again with -p is a duplicate registration and pytest exits 3. Pass -p only where nothing else
+    # would load it (an editable install made before the entry point existed).
+    import importlib.metadata as _md
+
+    via_entry_point = any("swadesh" in (ep.value or "") for ep in _md.entry_points(group="pytest11"))
+    plugin_args = [] if via_entry_point else ["-p", "swadesh.pytest_plugin"]
+
     report = tmp_path / "report.json"
     proc = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", "-p", "swadesh.pytest_plugin",
+        [sys.executable, "-m", "pytest", "-q", *plugin_args,
          "--swadesh-report", str(report), "test_scores.py"],
         cwd=str(tmp_path), capture_output=True, text=True,
         env=dict(os.environ, PYTHONPATH=os.pathsep.join(sys.path)),

@@ -1,6 +1,5 @@
 # swadesh
 
-[![ci](https://github.com/apeters247/swadesh/actions/workflows/ci.yml/badge.svg)](https://github.com/apeters247/swadesh/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/swadesh.svg)](https://pypi.org/project/swadesh/)
 [![licence: AGPL-3.0-or-later](https://img.shields.io/badge/licence-AGPL--3.0--or--later-blue.svg)](LICENSE)
 [![python: 3.10-3.14](https://img.shields.io/badge/python-3.10--3.14-blue.svg)](pyproject.toml)
