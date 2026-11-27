@@ -1,5 +1,9 @@
 # swadesh
 
+[![ci](https://github.com/apeters247/swadesh/actions/workflows/ci.yml/badge.svg)](https://github.com/apeters247/swadesh/actions/workflows/ci.yml)
+[![licence: AGPL-3.0-or-later](https://img.shields.io/badge/licence-AGPL--3.0--or--later-blue.svg)](LICENSE)
+[![python: 3.10-3.14](https://img.shields.io/badge/python-3.10--3.14-blue.svg)](pyproject.toml)
+
 **sacreBLEU, bit for bit, in Rust.** BLEU, chrF, chrF++ and TER with the same scores, the same signatures
 and the same CLI, and much faster: up to 316× on a 24-thread desktop and 11–36× on one core (measured 2026-11-26).
 
@@ -195,6 +199,13 @@ table.to_dict()                          # JSON-able, for a report or a DataFram
 - **Exact tokenizers.** `swadesh.tokenize(lines, "13a")` returns sacreBLEU's tokenization, in parallel.
 - **In the browser.** The CLI compiles to a roughly 349 KB WebAssembly module; `docs/playground/`
   is a static page that runs it.
+- **A container image.** `packaging/docker/Dockerfile.source` builds from this repository (multi-stage,
+  no Rust in the final image); verified at 295 MB with the CLI's output byte-identical to the host.
+  `Dockerfile.pypi` is the no-Rust variant for after the release.
+- **Drop-in for the evaluation stacks you already run.** `import swadesh; swadesh.patch()` redirects
+  `sacrebleu.*`, and the three shapes lm-evaluation-harness, lighteval and COMET use are covered. On
+  lm-eval's own metric functions, measured: BLEU 34.7x, chrF 74.0x, chrF++ 77.7x, TER 638x, every
+  number identical (`docs/integrations.md`).
 - **Standalone binary.** `crates/swadesh-cli` is an executable with no Python, for CI pipelines and
   agents. It implements every sacreBLEU flag and is byte-identical to the sacreBLEU 2.6.0 CLI on
   `tests/test_cli.py` (685 passed, 0 failed) and on the parity harness's CLI section (76 passed, one

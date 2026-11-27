@@ -35,6 +35,32 @@ Verified from the working tree, so the upload is the only step left:
 four fields in the section below), push the tag, then re-run `tools/smoke_install.sh` against the
 *published* artefacts before announcing anything. The launch copy is in `docs/launch-posts.md`.
 
+## Phase 1 status (2026-11-27)
+
+Distribution work that does not need a credential:
+
+- **lm-evaluation-harness**: verified on its own metric functions, 34.7x (BLEU) to 638x (TER), every
+  number identical, including the multi-reference path. Three ways to apply it (a two-line patch, a
+  `sitecustomize` for the CLI, or two env-gated lines upstream) are in `docs/integrations.md`.
+- **lighteval**: its call shape (attribute lookup inside a method) and its `trg_lang=` constructor
+  argument are verified against the patched class; not executed inside lighteval (torch).
+- **COMET / NeMo / fairseq**: the hard dependency on sacreBLEU is verified from PyPI metadata; the
+  mechanism is the same and unexecuted (torch, or a GPU box).
+- **Container**: `packaging/docker/` builds from this repository and is verified byte-for-byte against
+  the host CLI at 295 MB.
+- **`patch()` reach** is now a regression test (`tests/test_regressions.py`), so the integration claim
+  cannot rot silently.
+
+Still needing a human or an account:
+
+1. **PyPI** - the pending publisher and the `v*` tag (see above). Nothing else in the release is
+   unverified.
+2. **crates.io** - `swadesh-core`'s metadata is complete and `cargo package --list` is clean; publishing
+   needs a crates.io token. `swadesh-py` stays `publish = false` (it is the PyO3 extension).
+3. **Homebrew** - write the formula after the release, because it pins the published sdist's sha256.
+4. **Upstream PRs** - the two env-gated lines for lm-eval are drafted in `docs/integrations.md`; propose
+   them only after the two-liner has users.
+
 ## Before a tag exists
 
 Run every item in `PLAN.md` §9: the suites green, the divergence register current, licence and notice
