@@ -93,6 +93,9 @@ How this works is described in [docs/how-its-exact.md](docs/how-its-exact.md).
 
 Hypotheses are perturbed WMT22 en-de references (word drops, swaps and reversals, fixed seed).
 Every swadesh result below was checked `==` against sacreBLEU 2.6.0 on the same machine.
+Reproduce them, or run the same comparison on your own files, with
+[`bench/REPRODUCE.md`](bench/REPRODUCE.md): `bench/bench.py` for the WMT22 corpus, `bench/bench_own.py`
+for yours.
 Times are best of 3 (BLEU/chrF corpus) or a single run (TER, sentence-level, bootstrap).
 Source: [`bench/results/SUMMARY.md`](bench/results/SUMMARY.md) · reproduce with `bench/get_data.sh && python bench/bench.py`.
 
