@@ -59,8 +59,16 @@ Still needing a human or an account:
 
 1. **PyPI** - the pending publisher and the `v*` tag (see above). Nothing else in the release is
    unverified.
-2. **crates.io** - `swadesh-core`'s metadata is complete and `cargo package --list` is clean; publishing
-   needs a crates.io token. `swadesh-py` stays `publish = false` (it is the PyO3 extension).
+2. **crates.io** - verified as far as a token-less machine can:
+   - `swadesh-core` packages *and verifies by building*: `cargo package -p swadesh-core` produces
+     `target/package/swadesh-core-0.1.0.crate` (1.44 MB). Needs only a crates.io token.
+   - `swadesh-cli` had a real publish blocker: its path dependency carried no `version`, which
+     crates.io requires, so `cargo package` refused it outright. Both workspace crates now declare
+     `version = "0.1.0"` alongside the path.
+   - Ordering matters: even with `--no-verify`, cargo resolves dependencies while packaging, so
+     `swadesh-cli` can only be packaged **after** `swadesh-core` is on crates.io. Publish core first,
+     then the CLI (then `cargo package -p swadesh-cli` verifies).
+   - `swadesh-py` stays `publish = false` (it is the PyO3 extension; maturin builds it).
 3. **Homebrew** - write the formula after the release, because it pins the published sdist's sha256.
 4. **Upstream PRs** - the two env-gated lines for lm-eval are drafted in `docs/integrations.md`; propose
    them only after the two-liner has users.

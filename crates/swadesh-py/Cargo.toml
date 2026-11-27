@@ -10,7 +10,7 @@ name = "_swadesh"
 crate-type = ["cdylib"]
 
 [dependencies]
-swadesh-core = { path = "../swadesh-core" }
+swadesh-core = { version = "0.1.0", path = "../swadesh-core" }
 swadesh-cli = { path = "../swadesh-cli" }
 pyo3 = { version = "*", features = ["extension-module", "abi3-py310"] }
 rayon = "1"
