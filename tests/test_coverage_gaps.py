@@ -5,6 +5,7 @@ import time, before any test calls ``swadesh.patch()``, so they stay original.
 """
 import asyncio
 import io
+import json
 import logging
 import os
 import contextlib
@@ -255,6 +256,53 @@ def test_python_tokenization_path_corpus_and_sentence(python_tokenization_path, 
 SEED_HYPS = ["the cat sat on the mat", "a dog barked loudly in the yard",
              "prices rose by three percent"]
 SEED_REFS = [["the cat is on the mat", "a dog barked in the yard", "prices rose by 3 percent"]]
+
+
+def test_compare_is_the_pieces_assembled():
+    """`swadesh.compare()` reports the same scores, intervals and p-values as the machinery it wraps.
+
+    The p-value check is the point: it is compared against `PairedTest` run directly, so `compare`
+    cannot drift into a second significance implementation.
+    """
+    base = ["The cat sat on the mat.", "A dog barked loudly.", "Prices rose by 3.2% in October."]
+    new = ["The cat is on the mat.", "A dog barked.", "Prices rose by 3%."]
+    refs = [["The cat is on the mat.", "The dog barked.", "Prices increased 3.2% in October."]]
+
+    result = swadesh.compare([("base", base), ("new", new)], refs, n_samples=200)
+    # The metric names are the metrics' own (`chrF2++`), which is what the CLI prints.
+    assert result.metrics == ["BLEU", "chrF2++"]
+    assert result.baseline == "base"
+    assert result.row("base").is_baseline and not result.row("new").is_baseline
+    assert result.row("base").p_values == {}, "the baseline carries no p-value"
+
+    # The score is a plain corpus score; the interval and the p-value come from the paired resample.
+    assert result.row("base").scores["BLEU"] == swadesh.BLEU().corpus_score(base, refs).score
+    _sig, scores = swadesh.PairedTest([("base", base), ("new", new)], {"BLEU": swadesh.BLEU()}, refs,
+                                      test_type="bs", n_samples=200)()
+    assert result.row("new").p_values["BLEU"] == float(scores["BLEU"][1].p_value)
+    assert result.row("new").intervals["BLEU"] == float(scores["BLEU"][1].ci)
+    assert 0.0 <= result.row("new").p_values["BLEU"] <= 1.0
+
+    # The table names the baseline, carries a header per metric, and the ranking is by score.
+    table = result.table()
+    assert "Baseline: base" in table and "BLEU (μ ± 95% CI)" in table and "p (BLEU)" in table
+    assert len(table.splitlines()) == 3, table
+    assert set(result.ranking()) == {"base", "new"}
+    assert result.best() in {"base", "new"}
+    assert isinstance(result.meaningful(), list)
+    assert json.loads(json.dumps(result.to_dict()))["systems"][0]["system"] == "base"
+
+    # A mapping works as well as a list of pairs, and a single system needs no pairing.
+    same = swadesh.compare({"base": base, "new": new}, refs, n_samples=200)
+    assert same.row("new").p_values == result.row("new").p_values
+    alone = swadesh.compare([("only", base)], refs, n_samples=100)
+    assert alone.rows[0].p_values == {} and alone.row("only").intervals["BLEU"] >= 0
+    assert alone.ranking() == ["only"]
+
+    with pytest.raises(ValueError):
+        swadesh.compare([("a", base)], refs, baseline="nope")
+    with pytest.raises(ValueError):
+        swadesh.compare([], refs)
 
 
 def test_seed_from_the_process(monkeypatch):

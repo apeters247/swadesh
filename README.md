@@ -146,11 +146,21 @@ with swadesh.strict():                    # or SWADESH_STRICT=1
 # A reproducible bootstrap interval, from the process; its own signature says which seed
 with swadesh.seed(7):                     # or SACREBLEU_SEED=7
     BLEU().corpus_score(hyps, [refs], n_bootstrap=1000)   # ...|bs:1000|seed:7|...
+
+# Every system scored and paired in one call: scores, intervals, p-values, a ranking
+from swadesh import compare
+table = compare({"base": base_hyps, "new": new_hyps}, [refs])   # print(table)
+table.best()                             # best system by the first metric
+table.meaningful(alpha=0.05)             # systems that differ from the baseline
+table.to_dict()                          # JSON-able, for a report or a DataFrame
 ```
 
 - **MCP server for agents.** `pip install "swadesh[mcp]"`, then `claude mcp add swadesh -- swadesh-mcp`.
   Agents get `corpus_score` (with sacreBLEU signatures and optional bootstrap CIs), `sentence_scores`,
   `mbr_select` and `tokenize` tools, all returning sacreBLEU-identical numbers.
+- **`compare()` for a system table.** The paired-test pieces assembled: per-system score, bootstrap
+  interval, p-value against the baseline and a ranking, in text or as a dict. Every number comes from
+  the same kernels and resamplers, so a `compare()` line is reproducible from its signature.
 - **Exact tokenizers.** `swadesh.tokenize(lines, "13a")` returns sacreBLEU's tokenization, in parallel.
 - **In the browser.** The CLI compiles to a roughly 349 KB WebAssembly module; `docs/playground/`
   is a static page that runs it.

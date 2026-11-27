@@ -5502,3 +5502,32 @@ exactly, and a non-bootstrapped signature carries neither `bs:` nor `seed:`.
 **Note on the paired report.** Its numbers depend on the seed, and neither implementation prints a
 seed field there - parity forbids adding one - so a paired p-value is reproduced by re-running under
 the same seed, not by copying one from the report. That is now stated in `swadesh.seed`'s docstring.
+
+## 2026-11-27 (continued) - feature 6 of 8: `swadesh.compare()`
+
+**Attempted.** "One call returning per-system scores, paired-bootstrap p-values, confidence intervals
+and a ranking table. Every piece exists (`PairedTest`, `estimate_ci`, the native resamplers); today a
+user has to assemble it, and the assembly is exactly where sacreBLEU's APIs are most awkward."
+
+**Measured first.** Assembling it is even easier than the estimate suggested, because `PairedTest()`'s
+result already carries all four per system and metric: the CLI's paired table prints
+`score (μ ± 95% CI)` straight from `Result.score`, `Result.mean` and `Result.ci`, and the p-value from
+`Result.p_value`. So `compare()` needs no new statistics at all - which is the property worth having,
+because a second significance implementation would be a second thing to keep bit-exact.
+
+**What was built.** `python/swadesh/compare.py`: `compare(systems, references, metrics=None,
+test_type="bs", n_samples=1000, baseline=None, n_jobs=1)` -> a `Comparison` with `.rows` (a `Row` per
+system: scores, means, intervals, p-values), `.table()` (`Baseline: name` marking the baseline, a
+column per metric, a p-column per metric), `.ranking()`, `.best()`, `.meaningful(alpha)`, `.to_dict()`
+and `__str__` = `table()`. A mapping or a list of pairs both work, the order is preserved, the first
+system is the baseline unless `baseline=` says otherwise, and a single system is scored with its own
+bootstrap interval and no p-values. Exported as `swadesh.compare`.
+
+**Verified.** `test_compare_is_the_pieces_assembled` compares the p-value and the interval against
+`PairedTest` run directly (so the two cannot drift apart), checks the baseline carries no p-value, the
+score equals a plain `corpus_score`, the table has one row per system plus a header, ranking is by
+score, `to_dict()` survives `json.dumps`, a dict input matches a list input, a single system needs no
+pairing, and an unknown baseline or an empty system list raises.
+
+**Next.** Feature 2 (one-pass `evaluate()`), 3 (`explain()`), 4 (streaming), 5 (`n_jobs`), then the
+shortlist.
