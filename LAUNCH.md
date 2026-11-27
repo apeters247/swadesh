@@ -65,6 +65,16 @@ Still needing a human or an account:
 4. **Upstream PRs** - the two env-gated lines for lm-eval are drafted in `docs/integrations.md`; propose
    them only after the two-liner has users.
 
+## Names, checked 2026-11-27
+
+All four are unclaimed, so no rename is needed at the last minute:
+
+| registry | name | status |
+|---|---|---|
+| PyPI | `swadesh` | 404, free |
+| crates.io | `swadesh-core`, `swadesh-cli` | 404, free |
+| npm | `swadesh` (the wasm build) | 404, free |
+
 ## Before a tag exists
 
 Run every item in `PLAN.md` §9: the suites green, the divergence register current, licence and notice
