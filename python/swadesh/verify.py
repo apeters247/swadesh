@@ -4,7 +4,8 @@
 
 Runs both implementations (corpus BLEU / chrF / chrF++, every sentence score,
 statistics and signatures) and reports any difference. Exit code 0 means every
-value was identical, 1 means a mismatch was found (please report it!).
+value was identical, 1 means a mismatch was found (please report it!), 2 means
+sacreBLEU is not installed, which this comparison cannot do without.
 """
 
 from __future__ import annotations
@@ -13,9 +14,20 @@ import argparse
 import sys
 import time
 
-import sacrebleu
-
 import swadesh
+
+try:
+    import sacrebleu
+except ModuleNotFoundError:
+    # This command is the README's call to action, so a missing oracle has to read as an
+    # instruction rather than a traceback.
+    print(
+        "swadesh.verify compares swadesh against sacreBLEU, which is not installed here.\n"
+        'Install it first:  pip install "swadesh[sacrebleu]"',
+        file=sys.stderr,
+    )
+    # 2, not 1: exit 1 already means "a mismatch was found", which this is not.
+    sys.exit(2)
 
 
 def _read(path):

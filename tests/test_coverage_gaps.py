@@ -411,6 +411,36 @@ def test_paired_difference_is_the_paired_test_keeping_the_sign():
     assert "baseline" in repr(d) and "system" in repr(d)
 
 
+def test_verify_explains_when_sacrebleu_is_absent(tmp_path):
+    """`python -m swadesh.verify` is the README's call to action: missing oracle must not traceback."""
+    import subprocess
+
+    ref = tmp_path / "ref.txt"
+    hyp = tmp_path / "hyp.txt"
+    ref.write_text("the cat sat on the mat\na dog barked\n", encoding="utf-8")
+    hyp.write_text("the cat is on the mat\na dog barked\n", encoding="utf-8")
+
+    # Block the import at the front of the machine's meta path, without touching the real env.
+    (tmp_path / "sitecustomize.py").write_text(
+        "import sys\n"
+        "class _NoSacrebleu:\n"
+        "    def find_spec(self, name, path=None, target=None):\n"
+        "        if name == 'sacrebleu' or name.startswith('sacrebleu.'):\n"
+        "            raise ModuleNotFoundError('blocked by the test')\n"
+        "        return None\n"
+        "sys.meta_path.insert(0, _NoSacrebleu())\n",
+        encoding="utf-8",
+    )
+    proc = subprocess.run(
+        [sys.executable, "-m", "swadesh.verify", "-r", str(ref), "-i", str(hyp)],
+        capture_output=True, text=True,
+        env=dict(os.environ, PYTHONPATH=str(tmp_path)),
+    )
+    assert proc.returncode == 2, (proc.returncode, proc.stdout, proc.stderr)
+    assert "swadesh[sacrebleu]" in proc.stderr
+    assert "Traceback" not in proc.stderr
+
+
 def test_evaluate_matches_the_individual_calls():
     """`evaluate()` is one call over the same metrics, not a second implementation.
 

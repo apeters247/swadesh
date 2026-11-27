@@ -14,6 +14,27 @@ release checklist in `PLAN.md` §9.
 - the wasm build on npm (once WS3.4 lands) and a Docker image;
 - the docs site built from `docs/` (WS2.8).
 
+## Status, 2026-11-27 (troy-1)
+
+Verified from the working tree, so the upload is the only step left:
+
+- `uv build` produces `dist/swadesh-0.1.0.tar.gz` and a `cp310-abi3` wheel. The wheel carries the
+  `.so`, the three console scripts, the four licence files and `NOTICE`.
+- The wheel installs into a clean venv *without* sacreBLEU, imports, scores, and the standalone CLI
+  runs there.
+- `python -m swadesh.verify` with no sacreBLEU now prints an instruction and exits **2** (it used to
+  traceback, which read badly for the README's own call to action); with sacreBLEU installed it prints
+  `ALL IDENTICAL` and exits 0.
+- The sdist builds from source: `uv pip install --no-cache dist/swadesh-0.1.0.tar.gz` takes ~20 s with a
+  warm cargo cache and the resulting module scores.
+- `tools/smoke_install.sh wheel` passes: import-as-sacrebleu, `patch()`, the console script,
+  `swadesh.verify`, and the MCP server import.
+
+**Still needs a human.** There is no PyPI token, no `~/.pypirc` and no `gh` on this host, and
+`release.yml` publishes only from a `v*` tag via trusted publishing. So: add the pending publisher (the
+four fields in the section below), push the tag, then re-run `tools/smoke_install.sh` against the
+*published* artefacts before announcing anything. The launch copy is in `docs/launch-posts.md`.
+
 ## Before a tag exists
 
 Run every item in `PLAN.md` §9: the suites green, the divergence register current, licence and notice

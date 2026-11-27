@@ -38,6 +38,35 @@ and a standalone Rust CLI.
   own error lines), and gzip input by name.
 - **An MCP server** (`swadesh-mcp`) and a WebAssembly build of the CLI for the browser.
 
+- **`swadesh.strict()`** (or `SWADESH_STRICT=1`): refuse sacreBLEU's silent truncation instead of
+  publishing a number computed from the wrong segments - it raises `LengthMismatchError` naming both
+  lengths.
+- **`swadesh.seed()` / `set_seed()`**: the bootstrap seed settable in-process (the `SACREBLEU_SEED`
+  environment variable stays the fallback), and every metric signature prints the seed actually used.
+- **`swadesh.compare(systems, refs)`**: per-system score, bootstrap interval, paired p-value and a
+  ranking, in text or as a dict - the paired-test pieces assembled, every number from the same kernels.
+- **`swadesh.evaluate(hyps, refs, metrics=[...])`**: several metrics in one call, keyed by each metric's
+  own name. (The shared-tokenization speed saving once planned for it did not survive measurement; the
+  number is unchanged and documented in `docs/feature-ideas.md`.)
+- **`TER.explain(hyps, refs)`**: the parts behind each segment's TER - accepted shifts, final edit
+  distance, the alignment's match/sub/ins/del counts, and which reference won. Same search, no second
+  implementation (`docs/spec/ter-explain.md`).
+- **`swadesh.Accumulator(metric)`**: score a corpus as it arrives, with one statistics row of state, so
+  the peak memory does not grow with the corpus size and the number is still bit-identical to
+  `corpus_score` (`keep_rows=True` adds bootstrapped intervals).
+- **`swadesh.n_jobs(k)` / `set_n_jobs()` / `get_n_jobs()`**: set the worker-thread count of the native
+  kernels. They are already parallel; the score is identical at every count (measured 9x for TER at 16
+  cores, `docs/spec/n_jobs.md`).
+- **`swadesh.paired_difference(...)`**: the signed gap between two systems with its 95% interval, from
+  the same resamples as `PairedTest` (so the same p-value), plus `detectable()` and `required_n()` for a
+  power estimate (`docs/spec/paired-difference.md`).
+- **`swadesh.testing` and a pytest plugin**: `assert_bleu_at_least(hyps, refs, 30)`-style assertions that
+  fail with the metric's own line, and `--swadesh-report scores.json` recording every score from the
+  `swadesh_record` fixture, loaded through the `pytest11` entry point.
+- **A HuggingFace `evaluate` module**: `pip install "swadesh[hf]"`, then
+  `evaluate.load(".../swadesh/evaluate_module.py")`. Loading by name would need a Hub publication, which
+  this project does not do (`docs/spec/hf-evaluate.md`).
+
 ### Known limitations
 
 - Exactness holds **one interpreter at a time**: sacreBLEU's own corpus scores differ in the last bits
