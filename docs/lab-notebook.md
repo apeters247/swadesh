@@ -5872,3 +5872,42 @@ of `homebrew_check.sh` on the second run and still passed.
 
 **Also changed.** The check script stopped passing `--build-from-source`: Homebrew 6 warns "building from
 source is not supported!" for it, and a formula with no bottle compiles from source anyway.
+
+## 2026-11-27 (continued) - the crate goes permissive, and a target for it
+
+**Decision.** `swadesh-core` was AGPL, which made it unusable for almost any Rust program: an AGPL
+dependency puts the AGPL on the whole binary, and most projects' licence scanners reject it before
+anyone reads the code. So `swadesh-core`, `swadesh-cli` and `swadesh-wasm` are now **Apache-2.0 OR MIT**
+(the dual grant `rustc` itself uses), while the Python package keeps AGPL-3.0-or-later and the commercial
+licence. The package is what embeds the extension and what a closed product would ship, so that is where
+the dual licence still has work to do.
+
+**Disclosed obligation, carried.** `ter_clean.rs`'s shift search is derived from sacreBLEU's Apache-2.0
+`lib_ter.py` (Copyright 2020 Memsource), disclosed in the root NOTICE since 2026-11-24. Apache-2.0 permits
+relicensing but requires the attribution to travel with the distribution, so the crate now ships its own
+`LICENSE-APACHE`, `LICENSE-MIT` and `NOTICE`, and the attribution also sits at the top of the file. The
+NOTICE says plainly that taking the crate under the MIT option still carries that file's Apache
+obligations - which is why the dual grant is offered rather than MIT alone.
+
+**0.1.1, not an edit to 0.1.0**, because crates.io cannot change a published version's licence. The code
+is unchanged; the workspace stays on 0.1.0 for the other crates and the Python package. `cargo package`
+ships 59 files including the three licence documents, the licence field reads `Apache-2.0 OR MIT` with no
+manifest warning, `cargo test --release --workspace` is green, and the registry reports 0.1.1 with that
+licence. A fresh `cargo add swadesh-core` resolves 0.1.1 and builds.
+
+**Target for a dependency.** `LibreTranslate/LTEngine` is Rust, AGPL-3.0 (so a permissive crate needs no
+negotiation), 216 stars, active - and its README has an unchecked roadmap item: "Create comparative
+benchmarks between LTEngine and proprietary software". That is the hook. The proposal is an issue first,
+not a PR, because their crate is a server and a benchmark is a feature.
+
+To make the proposal concrete rather than hopeful, the whole integration was written and run against the
+published crate: 50 lines that read ref/hyp files, sum the statistics rows and score them, printing
+
+    BLEU 37.9918   chrF 61.9252   chrF++ 64.3703   TER 16.6667
+
+which is exactly what the shipped CLI prints for the same two files. That is `docs/upstream/ltengine-bench.rs`,
+and the proposal with its ready-to-paste issue is `docs/upstream/ltengine.md`.
+
+**What is not done.** The issue cannot be opened from here: there is no GitHub token or `gh` on this
+host, and pushing to another account's repository is not something to improvise. That step is the
+owner's.

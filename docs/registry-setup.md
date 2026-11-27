@@ -91,10 +91,14 @@ install, source build, `tools/smoke_install.sh`).
    cargo new /tmp/addme && cd /tmp/addme && cargo add swadesh-core && cargo build
    ```
 
-**Status, 2026-11-27: published.** `swadesh-core 0.1.0` is on crates.io. Verified from the registry
-rather than the upload log: the API reports version 0.1.0, `license: AGPL-3.0-or-later` (on the *version*
-object — the crate-level summary field reads null and is not the licence), the keywords, the categories
-and the repository, and a scratch `cargo new` project with `cargo add swadesh-core` builds against it.
+**Status, 2026-11-27: published; 0.1.1 is current and permissive.** `swadesh-core` is on crates.io.
+0.1.1 is the same code as 0.1.0 under **Apache-2.0 OR MIT** — 0.1.0 stays AGPL because a published
+version's licence cannot change. Verified from the registry rather than the upload log: the version
+object reports 0.1.1 with `license: Apache-2.0 OR MIT` (the crate-level summary field reads null and is
+not the licence), the keywords, the categories and the repository; a scratch `cargo new` +
+`cargo add swadesh-core` resolves 0.1.1 and builds; docs.rs compiles it. The crate ships
+`LICENSE-APACHE`, `LICENSE-MIT` and a `NOTICE` naming the one Apache-2.0-derived file (the TER shift
+search).
 docs.rs redirects to the builds page while it compiles.
 
 Metadata was already in place — `description`, `keywords`, `categories`, `license.workspace`
