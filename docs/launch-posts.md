@@ -3,6 +3,10 @@
 Written 2026-11-27. Every number below is one of ours and has a source in the repo; nothing here
 should be posted with a figure that `bench/results/` or `TESTING.md` cannot back.
 
+The blog post is live: **https://huggingface.co/blog/apeters247/swadesh**. Link that, not a draft, and
+keep it identical to `docs/blog-post.md` - the first publish was missing Figure 3, which the text
+promises, so any edit here has to go to the Hub copy as well.
+
 The one claim to lead with, everywhere: **the numbers are identical, and you can check that on your own
 data in one command.** Everything else (speed, memory, the features) is secondary and only matters
 because the first is true.
@@ -138,7 +142,8 @@ Never argue that a benchmark is wrong. Ask for the input pair and reproduce it.
 
 ## Assets
 
-- blog post (Markdown, Hub format): `docs/blog-post.md`; thumbnail `docs/img/thumbnail.png` (1300x650)
+- blog post: https://huggingface.co/blog/apeters247/swadesh (source: `docs/blog-post.md`); thumbnail
+  `docs/img/thumbnail.png` (1300x650)
 - figures: `docs/img/fig1-thread-scaling.png`, `fig2-size-scaling.png`, `fig3-interpreter-drift.png`
 - reproducible benchmarks: `bench/bench.py`, `bench/results/`
 - the release notes: `CHANGELOG.md` 0.1.0
