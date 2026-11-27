@@ -75,10 +75,9 @@ This is the part that decides everything else, so let me be precise. Writing
 \\( f_{\text{s}} \\) for swadesh's corpus score and \\( f_{\text{o}} \\) for sacreBLEU's, the property
 I need is
 
-\\[ \forall x:\quad f_{\text{s}}(x) \;{=}_{\text{IEEE}} \; f_{\text{o}}(x) \\]
+\\[ \forall x:\quad f_{\text{swadesh}}(x) \;=\; f_{\text{sacreBLEU}}(x) \qquad\text{(the same IEEE-754 double)} \\]
 
-where \\( {=}_{\text{IEEE}} \\) is exact equality of the IEEE-754 double that comes out, not
-approximate equality. "Within a tolerance" is not a weaker version of this property; it is a
+where the equality is of the IEEE-754 double that comes out, exactly — not approximate equality. "Within a tolerance" is not a weaker version of this property; it is a
 different, much weaker claim, and it does not do what I need. Two reasons:
 
 1. **Comparability is transitive and history is long.** If my scorer can differ in the last bit, then
@@ -113,17 +112,17 @@ The reason exactness is achievable at all is that all three metrics have the sam
 
 **BLEU** is a clipped n-gram precision with a brevity penalty:
 
-\\[ \mathrm{BLEU} = \mathrm{BP}\cdot\exp\!\left(\sum_{n=1}^{N} w_n \log p_n\right), \qquad
-\mathrm{BP} = \min\!\left(1,\; e^{\,1 - r/c}\right) \\]
+\\[ \mathrm{BLEU} = \mathrm{BP}\cdot\exp\left(\sum_{n=1}^{N} w_n \log p_n\right), \qquad
+\mathrm{BP} = \min\left(1,\; e^{1 - r/c}\right) \\]
 
 with \\( p_n \\) the clipped \\( n \\)-gram precision over the corpus
-\\( p_n = \dfrac{\sum_{g} \min\!\big(c_g^{(h)}, \max_j c_g^{(r_j)}\big)}{\sum_g c_g^{(h)}} \\),
+\\( p_n = \dfrac{\sum_{g} \min\big(c_g^{(h)}, \max_j c_g^{(r_j)}\big)}{\sum_g c_g^{(h)}} \\),
 \\( c \\) the hypothesis length, \\( r \\) the reference length, and \\( w_n = 1/N \\).
 
 **chrF** is a character n-gram F-score:
 
-\\[ \mathrm{chrF}_\beta = (1+\beta^2)\,\frac{\mathrm{CHRP}\cdot\mathrm{CHRR}}
-{\beta^2\,\mathrm{CHRP} + \mathrm{CHRR}} \\]
+\\[ \mathrm{chrF}_\beta = (1+\beta^2)\frac{\mathrm{CHRP}\cdot\mathrm{CHRR}}
+{\beta^2\mathrm{CHRP} + \mathrm{CHRR}} \\]
 
 with character precision/recall \\( \mathrm{CHRP}, \mathrm{CHRR} \\) computed exactly like \\( p_n \\)
 but over character n-grams. chrF++ appends word 1- and 2-grams to the same counts.
@@ -134,8 +133,7 @@ but over character n-grams. chrF++ appends word 1- and 2-grams to the same count
 
 where \\( S \\) is the number of accepted phrasal shifts, \\( E \\) is the Levenshtein edit distance
 after those shifts, and \\( \bar{L} \\) is the average reference length. The distance is the usual
-dynamic program \\( D(i,j) = \min\{D(i{-}1,j)+1,\; D(i,j{-}1)+1,\; D(i{-}1,j{-}1) +
-[u_i \neq v_j]\} \\), and each candidate shift is accepted only when it strictly reduces it,
+dynamic program \\( D(i,j) = \min\lbrace D(i-1,j)+1,\; D(i,j-1)+1,\; D(i-1,j-1) + [u_i \neq v_j]\rbrace \\), and each candidate shift is accepted only when it strictly reduces it,
 \\( \Delta = D(h,r) - D(\mathrm{shift}(h),r) > 0 \\), under TERCOM's own search limits (blocks of at
 most 10 words, moves of at most 50 positions, 1000 candidates per segment).
 
@@ -184,7 +182,7 @@ Two subtleties make this work in practice:
   matrices, bootstrap resampling — are ports too, and are tested for `==` against sacreBLEU's own
   results rather than assumed correct. Bootstrap resampling, for instance, draws the same indices
   from numpy's PCG64 stream and reproduces numpy's float32 summation order:
-  \\( \widehat\theta_b = g\!\left(\sum_{i \in I_b} s_i\right) \\) in float32, with \\( I_b \\)
+  \\( \widehat\theta_b = g\left(\sum_{i \in I_b} s_i\right) \\) in float32, with \\( I_b \\)
   the \\( b \\)-th resample's indices.
 
 ## Does it agree on real model output?
@@ -371,12 +369,12 @@ Three of those deserve a sentence, because they come from real use rather than f
 
 - **`paired_difference`** exists because `PairedTest` computes a distribution of per-resample
   differences, uses \\( |d| \\) for the p-value, and then throws the sign away. Keeping the sign gives
-  you the *size* of the gap and its interval: \\( p = \frac{1 + \#\{b : d_b^* > d\}}{B+1} \\) is
+  you the *size* of the gap and its interval: \\( p = \frac{1 + \sum_b \mathbf{1}[d_b^* > d]}{B+1} \\) is
   unchanged (a test pins it against `PairedTest` on the same seed), and the interval is the
   \\( \lfloor B/40 \rfloor \\)-th order statistic of the signed differences. From the same spread you
   get the power estimate
-  \\( n^\star = n\left((z_{1-\alpha/2} + z_{\text{power}})\,\widehat{\mathrm{SE}}\big/\Delta\right)^2 \\)
-  and the detectable effect \\( \Delta^\star = z\,\widehat{\mathrm{SE}} \\) — i.e. "how many segments
+  \\( n^\star = n\left((z_{1-\alpha/2} + z_{\text{power}})\widehat{\mathrm{SE}}\big/\Delta\right)^2 \\)
+  and the detectable effect \\( \Delta^\star = z\widehat{\mathrm{SE}} \\) — i.e. "how many segments
   do I need before a 1.0-BLEU gap is a result?"
 - **`Accumulator`** answers the memory question the stress tests raised: the statistics are additive
   rows, so a corpus can be scored as it arrives with one row of state, and the number is still
