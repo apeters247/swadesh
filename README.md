@@ -138,6 +138,10 @@ reward = chrf_reward(ref_column="reference")                    # completions=[.
 # Native bootstrap CIs and paired significance tests (identical p-values)
 BLEU().corpus_score(hyps, [refs], n_bootstrap=1000)
 swadesh.PairedTest([("base", base), ("new", new)], {"BLEU": BLEU(references=[refs])}, None, test_type="bs")()
+
+# Refuse the silent truncation instead of publishing a number from the wrong segments
+with swadesh.strict():                    # or SWADESH_STRICT=1
+    BLEU().corpus_score(hyps, [refs])     # LengthMismatchError if the streams differ in length
 ```
 
 - **MCP server for agents.** `pip install "swadesh[mcp]"`, then `claude mcp add swadesh -- swadesh-mcp`.
@@ -145,11 +149,11 @@ swadesh.PairedTest([("base", base), ("new", new)], {"BLEU": BLEU(references=[ref
   `mbr_select` and `tokenize` tools, all returning sacreBLEU-identical numbers.
 - **Exact tokenizers.** `swadesh.tokenize(lines, "13a")` returns sacreBLEU's tokenization, in parallel.
 - **In the browser.** The CLI compiles to a roughly 349 KB WebAssembly module; `docs/playground/`
-  is a static page that runs it. CLI parity is not complete yet, as the CLI row of `TESTING.md`
-  records.
-- **Standalone binary.** `crates/swadesh-cli` is a 891 KB executable (726 KB stripped) with no Python,
-  for CI pipelines and agents. `-m bleu` and `-m ter` are byte-identical to the sacreBLEU CLI on
-  WMT22 data; the CLI comparison suite still has failing cases, listed in `TESTING.md`.
+  is a static page that runs it.
+- **Standalone binary.** `crates/swadesh-cli` is an executable with no Python, for CI pipelines and
+  agents. It implements every sacreBLEU flag and is byte-identical to the sacreBLEU 2.6.0 CLI on
+  `tests/test_cli.py` (685 passed, 0 failed) and on the parity harness's CLI section (76 passed, one
+  registered divergence: the exit code for an unbuilt tokenizer).
 - **Free-threaded Python.** The extension declares `gil_used = false`; on CPython 3.14t with the
   GIL disabled, concurrent threads score in parallel and stay bit-exact. (sacreBLEU's own `lxml`
   import re-enables the GIL unless you run with `PYTHON_GIL=0`.)

@@ -5451,3 +5451,30 @@ adversarial alphabet and 500 examples each: `sentence_scores` equals the loop of
 on a three-sentence corpus agrees too (`[16.6667, 33.3333, 50.0]` both ways).
 
 **Next.** Feature 7 (`strict=True`) and 8 (seeds in every signature), then the rest of the list.
+
+## 2026-11-27 (continued) - feature 7 of 8: `strict=True` input validation
+
+**Attempted.** The second of the eight: sacreBLEU truncates silently when a reference stream is
+shorter than the hypothesis list, so a one-element stream against six hypotheses yields a score from
+the first segment. Parity requires reproducing that; publishing a number from it does not.
+
+**A constraint that shaped the design.** `strict` cannot be a constructor argument: `test_parity.py`
+compares constructor signatures and unknown-keyword errors with sacreBLEU's, and `corpus_score`'s
+signature is compared too. So the mode is a **context manager** (`swadesh.strict()`), plus
+`set_strict(True/False/None)` for a process-wide default and `SWADESH_STRICT=1` for pipelines that
+cannot add a `with`. No call signature changed, so parity is untouched.
+
+**What was built.** `metrics.py` gains `LengthMismatchError`, the `_STRICT` contextvar, `strict()`,
+`set_strict()` and a check inside `_truncate` - the one function every native path funnels through -
+which raises with the lengths named (`hypotheses: 6, reference 0: 1`) instead of cutting the streams.
+`__init__.py` exports `strict`, `set_strict` and `LengthMismatchError`.
+
+**Verified.** Two tests in `tests/test_coverage_gaps.py`: the default still equals sacreBLEU's score
+exactly; `strict()` raises for BLEU, CHRF and TER, corpus and sentence level, with the lengths in the
+message; a nested `strict(False)` asks for one sacreBLEU-behaviour call and the block restores the
+default on exit; matching streams never raise (including a `None` second reference); and the
+environment variable and `set_strict()` both work.
+
+**Also fixed on the way.** Two README bullets and the `TESTING.md` parity row still claimed the CLI
+was not at parity ("the CLI comparison suite still has failing cases", "448 passed"). They now say
+what the suites say: 685 passed and the one registered divergence.

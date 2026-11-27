@@ -31,7 +31,10 @@ from .metrics import (  # noqa: F401
     NATIVE_TOKENIZERS,
     TER,
     TERScore,
+    LengthMismatchError,
     mbr,
+    set_strict,
+    strict,
 )
 
 __version__ = "0.1.0"

@@ -252,6 +252,63 @@ def test_python_tokenization_path_corpus_and_sentence(python_tokenization_path, 
     assert str(s_ours) == str(s_theirs)
 
 
+def test_strict_mode_raises_instead_of_truncating(monkeypatch):
+    """`swadesh.strict()` refuses the truncation sacreBLEU performs silently.
+
+    A one-element reference stream against six hypotheses produces a score from the first segment
+    under sacreBLEU; that is reproduced by default (parity), and refused inside `strict()`, with the
+    lengths named. The mode is a context manager, so it cannot change any call's signature.
+    """
+    monkeypatch.delenv("SWADESH_STRICT", raising=False)
+    hyps = ["a", "b", "c", "d", "e", "f"]
+    refs = [["a"]]
+
+    # Default: sacreBLEU's own behaviour, to the last bit.
+    assert swadesh.BLEU().corpus_score(hyps, refs).score == REF_BLEU().corpus_score(hyps, refs).score
+
+    with pytest.raises(swadesh.LengthMismatchError) as caught:
+        with swadesh.strict():
+            swadesh.BLEU().corpus_score(hyps, refs)
+    message = str(caught.value)
+    assert "hypotheses: 6" in message and "reference 0: 1" in message, message
+
+    for call in (lambda: swadesh.CHRF().corpus_score(hyps, refs),
+                 lambda: swadesh.CHRF().sentence_scores(hyps, refs),
+                 lambda: swadesh.TER().corpus_score(hyps, refs),
+                 lambda: swadesh.TER().sentence_scores(hyps, refs)):
+        with pytest.raises(swadesh.LengthMismatchError):
+            with swadesh.strict():
+                call()
+
+    # A nested `strict(False)` asks for sacreBLEU's behaviour for one call, and the block restores
+    # the default on exit.
+    with swadesh.strict():
+        with swadesh.strict(False):
+            assert swadesh.BLEU().corpus_score(hyps, refs).score == REF_BLEU().corpus_score(hyps, refs).score
+    assert swadesh.BLEU().corpus_score(hyps, refs).score == REF_BLEU().corpus_score(hyps, refs).score
+
+    # Matching streams never raise, strict or not, and a second reference may be None.
+    with swadesh.strict():
+        assert swadesh.BLEU().corpus_score(["a", "b"], [["a", "b"]]) is not None
+        assert swadesh.TER().corpus_score(["a b", "c d"], [["a b", None], ["x", "c d"]]) is not None
+
+
+def test_strict_mode_from_the_environment(monkeypatch):
+    """`SWADESH_STRICT` is the process-wide switch, for pipelines that cannot add a `with`."""
+    monkeypatch.setenv("SWADESH_STRICT", "1")
+    with pytest.raises(swadesh.LengthMismatchError):
+        swadesh.BLEU().corpus_score(["a", "b"], [["a"]])
+    monkeypatch.setenv("SWADESH_STRICT", "0")
+    assert swadesh.BLEU().corpus_score(["a", "b"], [["a"]]).score == \
+        REF_BLEU().corpus_score(["a", "b"], [["a"]]).score
+    swadesh.set_strict(True)
+    try:
+        with pytest.raises(swadesh.LengthMismatchError):
+            swadesh.BLEU().corpus_score(["a", "b"], [["a"]])
+    finally:
+        swadesh.set_strict(None)
+
+
 def test_python_tokenization_path_pairwise(python_tokenization_path):
     ours = swadesh.BLEU(tokenize="intl").pairwise(H)
     theirs = np.array([[REF_BLEU(tokenize="intl").sentence_score(c, [d]).score for d in H] for c in H])

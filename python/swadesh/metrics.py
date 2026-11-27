@@ -14,9 +14,12 @@ no reference) are not guessed at: they go through the Python statistics loop
 exception is sacreBLEU's, not an artefact of the Rust layer.
 """
 
+import contextlib
+import contextvars
 import json as _json
 import math
 import logging
+import os
 import statistics as _statistics
 from typing import Any, List, Optional, Sequence
 
@@ -143,13 +146,68 @@ class _RefCache:
         return min((len(s) for s in self.streams), default=0)
 
 
+class LengthMismatchError(ValueError):
+    """Strict mode's error: the streams are not the same length.
+
+    sacreBLEU quietly truncates to the shortest stream, so a 1-element reference against 6
+    hypotheses produces a score computed from the first segment only. That is the right behaviour to
+    reproduce (`docs/parity-report.md`), and the wrong behaviour to publish a number from, which is
+    what `swadesh.strict()` is for.
+    """
+
+
+#: `None` means "ask the environment"; `strict()` sets it for the duration of a block.
+_STRICT = contextvars.ContextVar("swadesh_strict", default=None)
+
+
+def _strict_on() -> bool:
+    value = _STRICT.get()
+    if value is not None:
+        return bool(value)
+    return os.environ.get("SWADESH_STRICT", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+@contextlib.contextmanager
+def strict(on: bool = True):
+    """Raise instead of truncating while the block runs.
+
+        with swadesh.strict():
+            metric.corpus_score(hyps, refs)   # LengthMismatchError if the streams differ
+
+    Off by default, because sacreBLEU truncates and the numbers have to match. `strict(False)`
+    inside a strict block is the way to ask for one call of sacreBLEU's behaviour.
+    """
+    token = _STRICT.set(bool(on))
+    try:
+        yield
+    finally:
+        _STRICT.reset(token)
+
+
+def set_strict(on: Optional[bool]):
+    """Set the process-wide default: `True`, `False`, or `None` to go back to `SWADESH_STRICT`."""
+    _STRICT.set(None if on is None else bool(on))
+
+
+def _length_mismatch(hypotheses, streams) -> "LengthMismatchError":
+    parts = [f"hypotheses: {len(hypotheses)}"] + [f"reference {i}: {len(s)}" for i, s in enumerate(streams)]
+    n = min([len(hypotheses)] + [len(s) for s in streams])
+    return LengthMismatchError(
+        "stream lengths differ (" + ", ".join(parts) + f"); sacreBLEU truncates to {n} and scores "
+        f"the first {n} segments. Fix the input, or call swadesh.strict(False) / set SWADESH_STRICT=0 "
+        f"to keep sacreBLEU's truncation."
+    )
+
+
 def _normalize_refs(references) -> List[Sequence[Optional[str]]]:
     return [list(s) if not isinstance(s, list) else s for s in references]
 
 
 def _truncate(hypotheses, streams):
-    """Mirror sacreBLEU's ``zip(hypotheses, zip(*references))`` truncation."""
+    """Mirror sacreBLEU's ``zip(hypotheses, zip(*references))`` truncation, unless strict."""
     n = min([len(hypotheses)] + [len(s) for s in streams])
+    if _strict_on() and (n != len(hypotheses) or any(len(s) != n for s in streams)):
+        raise _length_mismatch(hypotheses, streams)
     if n != len(hypotheses):
         hypotheses = hypotheses[:n]
     if any(len(s) != n for s in streams):
