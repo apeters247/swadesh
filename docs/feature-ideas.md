@@ -95,7 +95,7 @@ Five smaller additions proposed alongside the eight above.
 
 | | item | status |
 |---|---|---|
-| s1 | `evaluate.load("swadesh")` compatibility (HuggingFace `evaluate`) | pending |
+| s1 | HuggingFace `evaluate` module (`evaluate.load(<path>)`) | shipped 2026-11-27 |
 | s2 | Paired CI on the *difference* + power analysis (`swadesh.paired_difference`) | shipped 2026-11-27 |
 | s3 | Native `ja-mecab` / `sentencepiece` tokenizers | pending (dependency decision) |
 | s4 | A pytest plugin + a GitHub Action | shipped 2026-11-27 (Action already existed; the plugin is new) |

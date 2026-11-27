@@ -5722,3 +5722,32 @@ wrong (`100.00000000000004` is BLEU's perfect score, not `100.0`) and were fixed
 tolerance the rest of the suite uses.
 
 **Next.** Shortlist s1 (`evaluate.load` compatibility) and s3 (mecab/spm dependency decision).
+
+## 2026-11-27 (continued) - shortlist s1: the HuggingFace `evaluate` module
+
+**Attempted.** `evaluate.load("swadesh")` compatibility. Constraint found up front:
+`evaluate.load(<name>)` resolves the name on the HF Hub, and this project publishes nothing there, so
+by-name loading cannot work from the library alone. The shipping form is
+`evaluate.load("<path>/evaluate_module.py")`, which `evaluate` supports for a local file.
+
+**What was built.** `python/swadesh/hf_metric.py`: `compute(predictions, references, metric="bleu")`
+with **no** HuggingFace import - it transposes HF's per-prediction reference lists into swadesh's
+stream layout, maps `bleu`/`chrf`/`chrf++`/`ter` to the metric classes, and returns the metric's own
+name plus its signature. `python/swadesh/evaluate_module.py`: the `EvaluationModule` subclass
+(imports `datasets`/`evaluate`), the file a user points `evaluate.load` at. An optional
+`swadesh[hf]` extra pulls `evaluate`; nothing outside that one file imports it. Spec:
+`docs/spec/hf-evaluate.md` (c0be151).
+
+**Verified for real.** In the main venv `tests/test_hf_metric.py` is 2 passed, 1 skipped (no
+`evaluate`). A throwaway uv venv with `evaluate==0.4.6` + `sacrebleu==2.6.0` runs all three:
+`evaluate.load("/home/kpeters/swadesh/python/swadesh/evaluate_module.py")` returns a `Swadesh` module
+and `compute(...)` gives `{"BLEU": 37.99..., "signature": "nrefs:1|case:mixed|eff:no|tok:13a|..."}`
+and `{"TER": 16.67, ...}`, equal to `corpus_score`.
+
+**Two traps hit.** (1) `uv` refused to run with "failed to open /home/andrew/uv.toml" because the
+inherited cwd was `/home/andrew`; `cd /tmp` and `--no-config` fix it. (2) `import evaluate` resolved
+`/tmp/evaluate.py` - an earlier staged copy of `swadesh/evaluate.py` sitting in `/tmp` - because `/tmp`
+was the cwd. Running from the repo fixed it; it is why every staged file is written with an
+unambiguous name where it could be imported.
+
+**Next.** Shortlist s3: the native `ja-mecab`/`sentencepiece` decision (measure and report).

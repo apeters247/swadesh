@@ -31,6 +31,9 @@ keywords = ["bleu", "chrf", "sacrebleu", "machine-translation", "evaluation", "n
 mcp = ["mcp>=2"]
 sacrebleu = ["sacrebleu==2.6.0"]
 test = ["sacrebleu==2.6.0", "pytest", "hypothesis"]
+# The HuggingFace `evaluate` module (swadesh/evaluate_module.py). Optional: only that file imports
+# the HuggingFace stack, and the library itself never does.
+hf = ["evaluate"]
 
 [project.urls]
 Homepage = "https://github.com/apeters247/swadesh"

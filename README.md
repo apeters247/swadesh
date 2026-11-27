@@ -187,6 +187,10 @@ table.to_dict()                          # JSON-able, for a report or a DataFram
   refs, 30)` fails with the metric's own line; `pytest --swadesh-report scores.json` records every
   score recorded through the `swadesh_record` fixture, loaded automatically via the `pytest11` entry
   point.
+- **HuggingFace `evaluate`.** `pip install "swadesh[hf]"`, then
+  `evaluate.load(".../swadesh/evaluate_module.py")` gives BLEU / chrF / chrF++ / TER through the
+  community's standard loader. Loading *by name* needs a Hub publication, which this project does not
+  do; the path form is the one that works.
 - **Exact tokenizers.** `swadesh.tokenize(lines, "13a")` returns sacreBLEU's tokenization, in parallel.
 - **In the browser.** The CLI compiles to a roughly 349 KB WebAssembly module; `docs/playground/`
   is a static page that runs it.
