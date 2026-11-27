@@ -252,6 +252,70 @@ def test_python_tokenization_path_corpus_and_sentence(python_tokenization_path, 
     assert str(s_ours) == str(s_theirs)
 
 
+SEED_HYPS = ["the cat sat on the mat", "a dog barked loudly in the yard",
+             "prices rose by three percent"]
+SEED_REFS = [["the cat is on the mat", "a dog barked in the yard", "prices rose by 3 percent"]]
+
+
+def test_seed_from_the_process(monkeypatch):
+    """`swadesh.seed()` is the in-process seed, and every signature reports the one in effect.
+
+    Reproducibility is the point: two runs inside the same seed give the same numbers and say so in
+    their own signature line, and a different seed says something different.
+    """
+    monkeypatch.delenv("SACREBLEU_SEED", raising=False)
+
+    def run(value):
+        with swadesh.seed(value):
+            m = swadesh.BLEU()
+            score = m.corpus_score(SEED_HYPS, SEED_REFS, n_bootstrap=200)
+            return str(m.get_signature()), str(score)
+
+    sig7a, text7a = run(7)
+    sig7b, text7b = run(7)
+    assert "seed:7" in sig7a
+    assert (sig7a, text7a) == (sig7b, text7b), "the same seed must reproduce the same interval"
+    sig8, text8 = run(8)
+    assert "seed:8" in sig8
+    assert text8 != text7a, "a different seed must move the resampled interval"
+
+    # The environment is the fallback; a block overrides it, and leaving the block restores it.
+    monkeypatch.setenv("SACREBLEU_SEED", "99")
+    m = swadesh.BLEU()
+    m.corpus_score(SEED_HYPS, SEED_REFS, n_bootstrap=100)
+    assert "seed:99" in str(m.get_signature())
+    with swadesh.seed(7):
+        m = swadesh.BLEU()
+        m.corpus_score(SEED_HYPS, SEED_REFS, n_bootstrap=100)
+        assert "seed:7" in str(m.get_signature())
+    m = swadesh.BLEU()
+    m.corpus_score(SEED_HYPS, SEED_REFS, n_bootstrap=100)
+    assert "seed:99" in str(m.get_signature())
+
+    # The default is still sacreBLEU's 12345, and it still agrees with sacreBLEU exactly.
+    monkeypatch.delenv("SACREBLEU_SEED", raising=False)
+    ours = swadesh.BLEU().corpus_score(SEED_HYPS, SEED_REFS, n_bootstrap=100)
+    theirs = REF_BLEU().corpus_score(SEED_HYPS, SEED_REFS, n_bootstrap=100)
+    assert str(ours) == str(theirs)
+    plain = swadesh.BLEU()
+    plain.corpus_score(SEED_HYPS, SEED_REFS)          # no bootstrap: no bs: and no seed:
+    assert str(plain.get_signature()) == "nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0"
+
+    # `PairedTest` captures the seed when it is constructed, so the block has to wrap the constructor.
+    with swadesh.seed(5):
+        paired = swadesh.PairedTest([("a", SEED_HYPS), ("b", list(reversed(SEED_HYPS)))],
+                                    {"bleu": swadesh.BLEU()}, SEED_REFS, test_type="bs", n_samples=50)
+    assert paired._seed == 5
+
+    swadesh.set_seed(11)
+    try:
+        m = swadesh.BLEU()
+        m.corpus_score(SEED_HYPS, SEED_REFS, n_bootstrap=50)
+        assert "seed:11" in str(m.get_signature())
+    finally:
+        swadesh.set_seed(None)
+
+
 def test_strict_mode_raises_instead_of_truncating(monkeypatch):
     """`swadesh.strict()` refuses the truncation sacreBLEU performs silently.
 

@@ -142,6 +142,10 @@ swadesh.PairedTest([("base", base), ("new", new)], {"BLEU": BLEU(references=[ref
 # Refuse the silent truncation instead of publishing a number from the wrong segments
 with swadesh.strict():                    # or SWADESH_STRICT=1
     BLEU().corpus_score(hyps, [refs])     # LengthMismatchError if the streams differ in length
+
+# A reproducible bootstrap interval, from the process; its own signature says which seed
+with swadesh.seed(7):                     # or SACREBLEU_SEED=7
+    BLEU().corpus_score(hyps, [refs], n_bootstrap=1000)   # ...|bs:1000|seed:7|...
 ```
 
 - **MCP server for agents.** `pip install "swadesh[mcp]"`, then `claude mcp add swadesh -- swadesh-mcp`.

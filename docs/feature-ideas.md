@@ -62,6 +62,7 @@ exist.
 |---|---|---|
 | 1 | `TER.sentence_scores` and `TER.pairwise` | 2026-11-27 |
 | 7 | `strict=True` input validation (`swadesh.strict()`, `SWADESH_STRICT`) | 2026-11-27 |
+| 8 | Seeds in every signature (`swadesh.seed()`, `set_seed()`) | 2026-11-27 |
 
 ## Not proposed
 

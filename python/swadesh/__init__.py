@@ -37,6 +37,8 @@ from .metrics import (  # noqa: F401
     strict,
 )
 
+from .significance import seed, set_seed  # noqa: F401  (the bootstrap seed, in process)
+
 __version__ = "0.1.0"
 SACREBLEU_COMPAT_VERSION = COMPAT_VERSION
 

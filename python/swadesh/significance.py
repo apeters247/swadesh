@@ -15,6 +15,7 @@ read (`_metric_kind`), so swadesh's own metric classes qualify exactly as sacreB
 from __future__ import annotations
 
 import contextlib
+import contextvars
 import logging
 import os
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -30,9 +31,48 @@ from . import _swadesh
 sacrelogger = logging.getLogger("sacrebleu")
 
 
-def _seed_from_env() -> Tuple[str, Optional[int]]:
-    seed = os.environ.get("SACREBLEU_SEED", "12345")
-    return seed, (None if seed.lower() == "none" else int(seed))
+#: `None` means "ask the environment"; `seed()` sets it for the duration of a block.
+_SEED = contextvars.ContextVar("swadesh_seed", default=None)
+
+
+def _current_seed() -> Tuple[str, Optional[int]]:
+    """The seed in effect: `swadesh.seed(...)`, else `SACREBLEU_SEED`, else 12345.
+
+    Returned as `(text, value)`: the text is what a signature prints, and the value is `None` for the
+    string `"none"`, which asks numpy for an entropy draw (sacreBLEU's behaviour; only the CLI
+    refuses that, because a CLI result has to be reproducible from its own output line).
+    """
+    value = _SEED.get()
+    if value is None:
+        value = os.environ.get("SACREBLEU_SEED", "12345")
+    text = str(value).strip().lower()
+    return text, (None if text == "none" else int(text))
+
+
+@contextlib.contextmanager
+def seed(value):
+    """Draw every bootstrap inside the block from `value` (an int, or `"none"` for entropy).
+
+        with swadesh.seed(7):
+            score = BLEU().corpus_score(hyps, refs, n_bootstrap=1000)
+            # its signature says `seed:7`, and re-running with the same value reproduces it
+
+    Every path that reports a seed reports *this* one: `corpus_score(n_bootstrap=)`, the metric
+    signatures, and `PairedTest` (which captures it at construction). Outside the block the value
+    falls back to `SACREBLEU_SEED`, then to 12345 - sacreBLEU's default. The paired report itself
+    prints no seed field, in either implementation, so its numbers are reproduced by re-running with
+    the same seed, not by copying one from the report.
+    """
+    token = _SEED.set(value)
+    try:
+        yield
+    finally:
+        _SEED.reset(token)
+
+
+def set_seed(value):
+    """Process-wide default: an int, `"none"`, or `None` to go back to `SACREBLEU_SEED`."""
+    _SEED.set(value)
 
 
 def _resampled_sums(stats, idxs: np.ndarray) -> np.ndarray:
@@ -52,7 +92,7 @@ def _resampled_sums(stats, idxs: np.ndarray) -> np.ndarray:
 
 def _bootstrap_resample(stats, metric, n_samples: int = 1000):
     """Drop-in for ``sacrebleu.significance._bootstrap_resample``."""
-    seed, _seed = _seed_from_env()
+    seed, _seed = _current_seed()
     n = len(stats)
     if _seed is not None and 0 <= _seed < 2**128 and n > 0:
         # Native draw: exact emulation of numpy's default_rng(seed).choice(...)
@@ -376,8 +416,8 @@ class _PairedTestBase:
         if self._fn is None:
             raise ValueError("the paired test needs the matching resampler")
 
-        seed = os.environ.get("SACREBLEU_SEED", "12345")
-        self._seed = None if seed.lower() == "none" else int(seed)
+        _seed_text, seed_value = _current_seed()
+        self._seed = seed_value
         self.n_jobs = n_jobs
         self.references = references
         self.named_systems = named_systems

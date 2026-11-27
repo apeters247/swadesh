@@ -5478,3 +5478,27 @@ environment variable and `set_strict()` both work.
 **Also fixed on the way.** Two README bullets and the `TESTING.md` parity row still claimed the CLI
 was not at parity ("the CLI comparison suite still has failing cases", "448 passed"). They now say
 what the suites say: 685 passed and the one registered divergence.
+
+## 2026-11-27 (continued) - feature 8 of 8: seeds in every signature
+
+**Measured first.** The seed was reachable only through `SACREBLEU_SEED`: `significance._seed_from_env`
+read the variable, and `PairedTest.__init__` read it a second time for itself. Every signature that
+reports a bootstrap already reported the seed (`...|bs:50|seed:12345|...`) and matched sacreBLEU's
+byte for byte, for BLEU, chrF and TER. So the gap was not the *reporting*; it was that a library user
+had to set a process-wide environment variable to reproduce an interval, and had no way to ask for a
+seeded draw in one call.
+
+**What was built.** One source of truth, `significance._current_seed()`: a contextvar set by
+`swadesh.seed(value)` (a context manager) or `swadesh.set_seed(value)`, falling back to
+`SACREBLEU_SEED`, then to sacreBLEU's 12345. Both call sites now use it, so `PairedTest` captures the
+seed at construction (as sacreBLEU does) and every metric signature prints the seed that was actually
+used. `"none"` still means numpy's entropy draw, which sacreBLEU allows and the CLI refuses.
+
+**Verified.** `test_seed_from_the_process`: two runs inside `swadesh.seed(7)` produce the same
+interval and both say `seed:7`; `seed:8` moves it; `SACREBLEU_SEED=99` is the fallback and a block
+overrides it, restoring 99 on exit; with no seed at all the bootstrap still equals sacreBLEU's
+exactly, and a non-bootstrapped signature carries neither `bs:` nor `seed:`.
+
+**Note on the paired report.** Its numbers depend on the seed, and neither implementation prints a
+seed field there - parity forbids adding one - so a paired p-value is reproduced by re-running under
+the same seed, not by copying one from the report. That is now stated in `swadesh.seed`'s docstring.
