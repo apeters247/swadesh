@@ -16,7 +16,8 @@ with `SWADESH_DATA=bench/data` (they default to `/var/www/llmeval/bench/data`).
 <p align="center"><img src="docs/img/benchmark.svg" alt="swadesh vs sacreBLEU on 100k segments: BLEU 117x, chrF 314x, chrF++ 283x faster, identical scores" width="720"></p>
 
 ```bash
-pip install swadesh
+# not on PyPI yet - install from the repository
+pip install "git+https://github.com/apeters247/swadesh"
 ```
 
 The library needs only NumPy. BLEU, chrF, chrF++, TER and the paired significance tests all run
