@@ -22,7 +22,7 @@ Rust. The rest stays in sacreBLEU's Python.
 | Tokenization for `ja-mecab`, `ko-mecab`, `spm`, `flores*`, `spBLEU-1K` | sacreBLEU's Python, then native matching | Only the five tokenizers in the row above are in Rust |
 | Lowercasing | Rust for most text; CPython's `str.lower()` for the rest (`lib.rs`, `text`) | See [section 3.7](#37-strlower-delegation-for-unstable-blocks) |
 | n-gram extraction and matching; BLEU and chrF sufficient statistics | Rust (`stats.rs`, `ngram.rs`, `lib.rs`) | Per-segment work |
-| Corpus score: `compute_bleu`, chrF F-score, `BLEUScore`/`CHRFScore` objects, signatures, formatting | sacreBLEU's Python | Runs once per corpus. Keeps `sum()` and float formatting identical by construction |
+| Corpus score: `compute_bleu`, chrF F-score, `BLEUScore`/`CHRFScore` objects, signatures, formatting | swadesh's port of sacreBLEU's Python (`base.py`, `metrics.py`) | Runs once per corpus. Keeps `sum()` and float formatting identical by construction |
 | Sentence scores in batch (`sentence_scores`, `pairwise`, `mbr`, rewards) | Rust port of `compute_bleu` and the chrF F-score; BLEU's log-mean uses an emulated `sum()` | Called once per segment, so the Python path would dominate |
 | Single `sentence_score` | Native statistics, then sacreBLEU's Python for the score | Same arithmetic as corpus scoring |
 | Bootstrap resample sums | Rust (`resample.rs`) over the same `float32` values, without building sacreBLEU's sampled tensor | The tensor is the memory cost |
@@ -31,13 +31,17 @@ Rust. The rest stays in sacreBLEU's Python.
 | Confidence interval, p-value, `Result` | sacreBLEU's Python | Runs once per test |
 
 The consequence is that the score arithmetic you see in a corpus result is
-sacreBLEU's own code. swadesh only has to produce the same integer statistics.
-For the batch paths, the score arithmetic is a port, and it is tested for `==`
-against sacreBLEU's `sentence_score`.
+sacreBLEU's, operation for operation. swadesh only has to produce the same integer
+statistics. For the batch paths, the score arithmetic is a port, and it is tested
+for `==` against sacreBLEU's `sentence_score`.
 
-The Python classes subclass sacreBLEU's `BLEU` and `CHRF` (`python/swadesh/metrics.py`).
-`_extract_corpus_statistics` is the method swapped for the native version. Its
-output is the matrix that sacreBLEU's `_aggregate_and_compute` already consumes.
+The metric layer is that port: `python/swadesh/base.py` carries `Score`, `Metric`
+and `Signature`, and `metrics.py` builds `BLEU`, `CHRF` and `TER` on it, so the
+classes **do not** inherit from sacreBLEU and `import swadesh` works with sacreBLEU
+absent (the earlier design did subclass `sacrebleu.BLEU`; it was ported so the
+library could stand alone). `_extract_corpus_statistics` is the method the native
+version replaces; its output is the matrix the ported `_aggregate_and_compute`
+consumes.
 
 ## 2. Testing
 

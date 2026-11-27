@@ -3,9 +3,11 @@
 swadesh is a Rust implementation of sacreBLEU 2.6.0's BLEU, chrF and chrF++
 scoring, with a Python package that drops into existing sacreBLEU code. Its
 scores are checked for exact equality (`==`) against sacreBLEU 2.6.0 on the same
-interpreter. The Python classes subclass sacreBLEU's own. The per-segment
-statistics and the batch sentence scores are native. Corpus scores, signatures
-and score formatting still come from sacreBLEU's Python code. See
+interpreter. The metric classes are swadesh's own -- a port of sacreBLEU's Python,
+so the library needs no sacreBLEU installed -- and the per-segment statistics and
+the batch sentence scores are native. Corpus scores, signatures and score
+formatting are that port's own code, kept line-for-line identical to sacreBLEU's.
+See
 [how-its-exact.md](how-its-exact.md) for the details.
 
 Contents
