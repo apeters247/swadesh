@@ -203,9 +203,10 @@ table.to_dict()                          # JSON-able, for a report or a DataFram
   no Rust in the final image); verified at 295 MB with the CLI's output byte-identical to the host.
   `Dockerfile.pypi` is the no-Rust variant for after the release.
 - **Drop-in for the evaluation stacks you already run.** `import swadesh; swadesh.patch()` redirects
-  `sacrebleu.*`, and the three shapes lm-evaluation-harness, lighteval and COMET use are covered. On
-  lm-eval's own metric functions, measured: BLEU 34.7x, chrF 74.0x, chrF++ 77.7x, TER 638x, every
-  number identical (`docs/integrations.md`).
+  `sacrebleu.*`; the call shapes lm-evaluation-harness, lighteval and fairseq use are covered, and a
+  class bound before the patch is the one shape that is not. On lm-eval's own metric functions,
+  measured: BLEU 34.7x, chrF 74.0x, chrF++ 77.7x, TER 638x, every number identical
+  (`docs/integrations.md`).
 - **Standalone binary.** `crates/swadesh-cli` is an executable with no Python, for CI pipelines and
   agents. It implements every sacreBLEU flag and is byte-identical to the sacreBLEU 2.6.0 CLI on
   `tests/test_cli.py` (685 passed, 0 failed) and on the parity harness's CLI section (76 passed, one

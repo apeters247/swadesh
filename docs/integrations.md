@@ -25,7 +25,8 @@ at call time, so they pick up the replaced class.
 | `sacrebleu.BLEU(...)` — lighteval | **yes** | attribute looked up at call time |
 | `sacrebleu.corpus_bleu(hyps, refs)` — lm-eval, COMET | **yes** | the compat function's global lookup |
 | `sacrebleu.metrics.BLEU(...)` | **yes** | |
-| `from sacrebleu.metrics import BLEU` *before* the patch | **no** | the name is bound at import time; patch before that import, or import `swadesh` instead |
+| `from sacrebleu import corpus_bleu` *before* the patch — fairseq's example scripts | **yes** | a bound *function* still looks its class up at call time: measured 1.0881 s -> 0.0076 s, 144.1x, identical |
+| `from sacrebleu.metrics import BLEU` *before* the patch | **no** | a bound *class* is the one case that escapes; patch before that import, or import `swadesh` instead |
 
 Every shape returns the identical number either way, which is the point: patching cannot change a
 result, only where it is computed.
@@ -96,23 +97,38 @@ does: `sacrebleu.BLEU(trg_lang="zh")` after the patch returns the same
 `BLEU = 43.01 100.0/80.0/50.0/16.7 (BP = 0.846 ...)` as before, through a class whose module is
 `swadesh.metrics`. `tokenize=`, `lowercase=` and `effective_order=` were checked the same way.
 
-## COMET (Unbabel) — dependency verified, mechanism expected, not executed
+## COMET (Unbabel) — there is nothing to accelerate, and the dependency is a red herring
 
-`unbabel-comet` 2.2.7 declares `sacrebleu>=2.0.0,<3.0.0` as a hard requirement (PyPI metadata), and
-uses it for chrF in its scoring helpers. Same call shape as lm-eval. Not executed here because COMET
-needs torch and a model download; the next step is a 10-minute run on a GPU box:
+`unbabel-comet` 2.2.7 does declare `sacrebleu>=2.0.0,<3.0.0` as a hard requirement (PyPI metadata), so
+it looked like a target. Reading the installed package (2.2.7, `--no-deps`) settles it differently:
 
-```python
-import swadesh; swadesh.patch()
-from comet import download_model, load_from_checkpoint
-# score a batch, compare the chrF column against a sacreBLEU-side run
-```
+- the **only** imports are in `comet/cli/score.py` and `comet/cli/compare.py`, both
+  `from sacrebleu.utils import get_reference_files, get_source_file` - the `-d/--sacrebleu_dataset`
+  convenience for fetching a test set;
+- there is no `chrf`/`CHRF` anywhere in the package. Its metrics are `RegressionMetrics`,
+  `MCCMetric` and `WMTKendall`, all torch.
 
-## fairseq, NeMo — dependency verified, both legacy-ish
+So `patch()` has nothing to reach: COMET's numbers come from a model, and patching would change nothing
+(and no number). COMET belongs in the *ecosystem* column, not the integration column - the right ask
+there is not a patch but a docs line recommending swadesh for the BLEU/chrF baselines that get reported
+next to a COMET score.
 
-`fairseq` 0.12.2 requires `sacrebleu>=1.4.12`; `nemo-toolkit` pulls it in its `asr`/`tts`/`all` extras
-(PyPI metadata). Both call `sacrebleu.corpus_bleu`-style compat functions, so the mechanism should
-hold; neither has been run here.
+## fairseq — both of its paths verified
+
+`fairseq` 0.12.2 requires `sacrebleu>=1.4.12`, and it reaches sacreBLEU two different ways. Both are
+covered:
+
+- `fairseq/scoring/bleu.py` does `import sacrebleu` inside the scorer's constructor and keeps the
+  module, then calls through it - a module attribute at call time (row 2 of the table).
+- `fairseq/examples/translation_moe/score.py` does `from sacrebleu import corpus_bleu as _corpus_bleu`
+  at import time. That is the bound-function case, measured 1.0881 s -> 0.0076 s on 20,000 segments
+  (144.1x) with an identical score.
+
+## NeMo — dependency verified, usage not inspected
+
+`nemo-toolkit` 3.0.0 pulls sacrebleu in its `asr`, `tts`, `speechlm2` and `all` extras (PyPI metadata).
+Not inspected and not run: the package is large and its metric paths are ASR-side (WER/BLEU on speech
+outputs). Treat the mechanism as expected, not as verified.
 
 ## What this does not reach
 
@@ -124,8 +140,8 @@ hold; neither has been run here.
 
 ## Order of work
 
-1. lm-eval two-liner and sitecustomize recipe: document (done here), ask their maintainers to link it
-   in the harness docs.
+1. lm-eval two-liner and sitecustomize recipe: documented here; ask their maintainers to link it in
+   the harness docs.
 2. lighteval: run one task with the patch, then the same two-line PR.
-3. COMET: the chrF column on a GPU box, then the same.
-4. Only then: the upstream PRs, each with a number.
+3. NeMo: inspect and run one ASR scoring path before claiming anything.
+4. Only then the upstream PRs, each with a number. COMET is not in this list any more - see above.

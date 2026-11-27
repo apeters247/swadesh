@@ -44,8 +44,12 @@ Distribution work that does not need a credential:
   `sitecustomize` for the CLI, or two env-gated lines upstream) are in `docs/integrations.md`.
 - **lighteval**: its call shape (attribute lookup inside a method) and its `trg_lang=` constructor
   argument are verified against the patched class; not executed inside lighteval (torch).
-- **COMET / NeMo / fairseq**: the hard dependency on sacreBLEU is verified from PyPI metadata; the
-  mechanism is the same and unexecuted (torch, or a GPU box).
+- **fairseq**: both of its paths verified - the scorer imports the module and calls through it
+  (module attribute), and `examples/translation_moe/score.py` binds the function
+  (`from sacrebleu import corpus_bleu`), which measured 144.1x faster after the patch, identical.
+- **COMET**: inspected and *not* a target. Its only sacrebleu imports are the `-d/--sacrebleu_dataset`
+  helpers in its CLI; it has no chrF and its metrics are torch. Nothing to accelerate.
+- **NeMo**: dependency verified from metadata; usage not inspected.
 - **Container**: `packaging/docker/` builds from this repository and is verified byte-for-byte against
   the host CLI at 295 MB.
 - **`patch()` reach** is now a regression test (`tests/test_regressions.py`), so the integration claim
