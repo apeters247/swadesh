@@ -5751,3 +5751,32 @@ was the cwd. Running from the repo fixed it; it is why every staged file is writ
 unambiguous name where it could be imported.
 
 **Next.** Shortlist s3: the native `ja-mecab`/`sentencepiece` decision (measure and report).
+
+## 2026-11-27 (continued) - shortlist s3: the mecab/sentencepiece decision, measured then declined
+
+**Attempted.** Port `ja-mecab` / `ko-mecab` / `spm` / `spm32k` natively, to drop the last sacreBLEU
+dependency for those configurations.
+
+**Measured, and the measurement decided it.**
+
+* The native API refuses those names (`ValueError: unsupported native tokenizer "ja-mecab"`); the
+  metric classes delegate to sacreBLEU's tokenizer.
+* `~/venv311` has no `mecab`/`ipadic`/`sentencepiece`, so the *reference* cannot run them there -
+  there is nothing to measure a port against, and the clean-room rule forbids implementing unmeasured
+  oracle behaviour.
+* In a throwaway venv with `mecab-python3==1.0.12` + `ipadic==1.0.0` the fallback is already exact:
+  `swadesh.BLEU(tokenize="ja-mecab")` equals `sacrebleu.BLEU(tokenize="ja-mecab")` on identical input
+  (both `100.00 100.0/100.0/100.0/100.0`) and on a reworded reference (both `65.80370064762461`). The
+  reference segmentation `こんにちは 世界 。 私 の 名前 は アンドリュー です 。` is an ipadic artefact.
+* That is the crux: a byte-exact port would have to pin a specific dictionary and MeCab's Viterbi
+  behaviour and stay exact across dictionary upgrades - the `tokenizer.perl` class of problem this
+  project does not touch - and `spm` adds a model file whose bytes matter.
+
+**Decision: do not implement natively.** Parity cannot be promised; the dependency is already optional
+and already exact; `mecab-python3` is tri-licensed and `sentencepiece` pulls a C++ toolchain into
+every wheel; and it is unverifiable in the project's own environment. Written up as
+`docs/tokenizer-dependency-decision.md`, with the four conditions under which the decision would
+change. No code changed, so no spec: this is a decision record, not a phase.
+
+**That closes the five-item shortlist** (s1 evaluate adapter, s2 paired difference, s3 decided, s4
+pytest plugin, s5 the accumulator). All eight numbered features shipped before it.

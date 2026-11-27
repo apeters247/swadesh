@@ -97,7 +97,7 @@ Five smaller additions proposed alongside the eight above.
 |---|---|---|
 | s1 | HuggingFace `evaluate` module (`evaluate.load(<path>)`) | shipped 2026-11-27 |
 | s2 | Paired CI on the *difference* + power analysis (`swadesh.paired_difference`) | shipped 2026-11-27 |
-| s3 | Native `ja-mecab` / `sentencepiece` tokenizers | pending (dependency decision) |
+| s3 | Native `ja-mecab` / `sentencepiece` tokenizers | **decided: not native** 2026-11-27 (`docs/tokenizer-dependency-decision.md`) |
 | s4 | A pytest plugin + a GitHub Action | shipped 2026-11-27 (Action already existed; the plugin is new) |
 | s5 | Streaming accumulator | shipped as item 4 |
 
