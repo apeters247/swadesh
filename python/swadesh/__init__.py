@@ -40,6 +40,7 @@ from .metrics import (  # noqa: F401
 from .significance import seed, set_seed  # noqa: F401  (the bootstrap seed, in process)
 from .compare import Comparison, compare  # noqa: F401  (the system table)
 from .evaluate import evaluate  # noqa: F401  (one call, several metrics)
+from .accumulator import Accumulator  # noqa: F401  (streaming corpus scoring)
 
 __version__ = "0.1.0"
 SACREBLEU_COMPAT_VERSION = COMPAT_VERSION

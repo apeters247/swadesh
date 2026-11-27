@@ -173,6 +173,9 @@ table.to_dict()                          # JSON-able, for a report or a DataFram
 - **`TER.explain()` for the parts behind the number.** One dict per segment - the accepted shifts,
   the final Levenshtein distance, the alignment's match/sub/ins/del counts and which reference won -
   all from the same search `corpus_score` runs, so `explain()[i]["ter"] == sentence_scores()[i]`.
+- **`Accumulator` for a corpus that does not fit in memory.** `add(hyp, refs)` per segment, `score()`
+  whenever you like; the state is one statistics row, so the peak does not grow with the corpus size,
+  and the number is bit-identical to `corpus_score` (`keep_rows=True` adds bootstrapped CIs).
 - **Exact tokenizers.** `swadesh.tokenize(lines, "13a")` returns sacreBLEU's tokenization, in parallel.
 - **In the browser.** The CLI compiles to a roughly 349 KB WebAssembly module; `docs/playground/`
   is a static page that runs it.

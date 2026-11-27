@@ -298,6 +298,53 @@ def test_ter_explain_is_the_sentence_score_broken_apart():
             swadesh.TER().explain(hyps, [["only one"]])
 
 
+def test_accumulator_is_corpus_score_in_constant_memory():
+    """A streamed score is `corpus_score`; the state is one row wide, whatever the corpus size."""
+    hyps = ["the cat sat on the mat", "a dog barked at the moon",
+            "prices rose by 3.2% in October", "she sells sea shells",
+            "the quick brown fox jumps over the lazy dog", "edition twelve is out now"]
+    refs = [["the cat is on the mat", "a dog barked at the moon",
+             "prices increased 3.2% in October", "she sells seashells",
+             "the quick brown fox jumped over a lazy dog", "edition 12 is out now"]]
+    for metric in (swadesh.BLEU(), swadesh.CHRF(), swadesh.CHRF(word_order=2), swadesh.TER()):
+        whole = metric.corpus_score(hyps, refs)
+        acc = swadesh.Accumulator(metric)
+        for i, h in enumerate(hyps):
+            acc.add(h, [s[i] for s in refs])
+        assert str(acc.score()) == str(whole)
+        assert acc.n_segments == len(hyps)
+
+    # Incremental `add` == one `add_corpus` == a different segmentation of the same stream.
+    a = swadesh.Accumulator(swadesh.BLEU())
+    for i, h in enumerate(hyps):
+        a.add(h, [refs[0][i]])
+    b = swadesh.Accumulator(swadesh.BLEU()).add_corpus(hyps, refs)
+    c = swadesh.Accumulator(swadesh.BLEU())
+    for i in range(3):
+        c.add_corpus(hyps[i::3], [refs[0][i::3]])
+    assert str(a.score()) == str(b.score()) == str(c.score())
+    assert b._rows is None and len(b._row) == len(a._row) == len(c._row)
+
+    # A bootstrap interval resamples segments, so it needs the rows; the default says so.
+    with pytest.raises(ValueError):
+        b.score(n_bootstrap=100)
+    kept = swadesh.Accumulator(swadesh.BLEU(), keep_rows=True).add_corpus(hyps, refs)
+    with swadesh.seed(7):
+        assert str(kept.score(n_bootstrap=50)) == str(
+            swadesh.BLEU().corpus_score(hyps, refs, n_bootstrap=50))
+    assert len(kept._rows) == len(hyps)
+
+    # An empty accumulator takes the metric's own empty-input path, exactly as sacreBLEU does.
+    with pytest.raises(IndexError):
+        swadesh.Accumulator(swadesh.BLEU()).score()
+
+    # strict mode still checks the lengths, and reset() lets the object be reused.
+    with pytest.raises(swadesh.LengthMismatchError):
+        with swadesh.strict():
+            swadesh.Accumulator(swadesh.BLEU()).add_corpus(["a", "b"], [["x"]])
+    assert a.reset().n_segments == 0
+
+
 def test_evaluate_matches_the_individual_calls():
     """`evaluate()` is one call over the same metrics, not a second implementation.
 

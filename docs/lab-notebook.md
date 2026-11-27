@@ -5606,3 +5606,34 @@ borrow checker rejected - the map's key lifetime must outlive one closure argume
 fix it.)
 
 **Next.** Feature 4 (streaming accumulator), 5 (`n_jobs`), then the shortlist.
+
+## 2026-11-27 (continued) - feature 4 of 8: the streaming `Accumulator`
+
+**Attempted.** Score a corpus as it arrives with memory independent of its size. The stress report
+records the batch peak (sacreBLEU 8.8-19.9 GB at 1M segments; swadesh ~1 GB, still O(n)).
+
+**Spec first.** `docs/spec/accumulator.md`, committed before the module, on the property the whole
+feature rests on: `_aggregate_and_compute` sums the per-segment rows in arrival order with the first
+row's element type (`sum_of_lists`), so a running sum is exactly the batch sum - bit-identical, not
+approximate.
+
+**What was built.** `python/swadesh/accumulator.py`: `Accumulator(metric, keep_rows=False)` with
+`add(hyp, refs)`, `add_corpus(hyps, refs)`, `score(n_bootstrap=1)`, `n_segments` and `reset()`. The
+default holds one row (O(width)); `score()` builds the score with the metric's own `_score_from_row`.
+A bootstrap interval resamples segments - it needs the rows, not the sum - so `keep_rows=True` retains
+them and the default raises `ValueError` naming the setting rather than returning an interval it
+cannot compute. Exported as `swadesh.Accumulator`.
+
+**One real bug, found by the isolated run.** The first draft aliased the running row to
+`_rows[0]` (`self._row = row; self._rows.append(row)`), so the retained first row was the whole
+running sum and the bootstrapped CI came out wrong (`μ = 44.95 ± 15.64` against `42.88 ± 21.97`).
+The streamed point score was unaffected (the sum was still right), which is exactly the kind of bug
+the bootstrap comparison catches and a point-score test would not. Fixed by keeping copies.
+
+**Verified (isolated copy, then in-repo).** For BLEU, chrF, chrF++ and TER: a streamed score equals
+`corpus_score`; incremental `add` equals one `add_corpus` equals a different segmentation of the same
+stream; the default keeps one row whatever the size; a bootstrap under `keep_rows=True` equals
+`corpus_score(..., n_bootstrap=50)` under the same seed; the empty accumulator raises the same
+`IndexError` sacreBLEU raises; `strict()` still checks the lengths; `reset()` reuses the object.
+
+**Next.** Feature 5 (`n_jobs`), then the shortlist.

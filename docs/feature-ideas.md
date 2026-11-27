@@ -49,6 +49,13 @@ the record and its invariants are `docs/spec/ter-explain.md`.
 The stress report records sacreBLEU needing 40-46 GB at 1M segments and OOM-ing on chrF at 19.9 GB;
 swadesh completed that size in 1.04 s, and streaming would make the peak independent of corpus size.
 
+**Shipped 2026-11-27.** `swadesh.Accumulator(metric)` keeps exactly one statistics row: `add(hyp,
+refs)` per segment and `score()` at any point. It rests on `_aggregate_and_compute`'s contract (a
+corpus score is the element-wise sum of the per-segment rows in arrival order), so a streamed score
+is bit-identical to `corpus_score`. Bootstrapped intervals resample segments and so need the rows:
+`keep_rows=True` keeps them, the default holds the sum and `score(n_bootstrap>1)` raises instead of
+returning an interval it cannot compute. Record and invariants: `docs/spec/accumulator.md`.
+
 ## 5. `n_jobs` on every corpus call (1 day)
 
 `PairedTest(n_jobs=)` already exists and the crate has a `parallel` feature (rayon). Extending the
@@ -84,6 +91,7 @@ exist.
 | 6 | `swadesh.compare(systems, refs)` | 2026-11-27 |
 | 2 | `swadesh.evaluate(hyps, refs, metrics=[...])` | 2026-11-27 |
 | 3 | `TER.explain(hyps, refs)` | 2026-11-27 |
+| 4 | `swadesh.Accumulator(metric)` (streaming) | 2026-11-27 |
 
 ## Not proposed
 
