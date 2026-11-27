@@ -147,6 +147,11 @@ with swadesh.strict():                    # or SWADESH_STRICT=1
 with swadesh.seed(7):                     # or SACREBLEU_SEED=7
     BLEU().corpus_score(hyps, [refs], n_bootstrap=1000)   # ...|bs:1000|seed:7|...
 
+# Several metrics in one call, keyed by their own names
+from swadesh import evaluate
+scores = evaluate(hyps, [refs])           # {"BLEU": ..., "chrF2": ..., "TER": ...}
+scores["BLEU"].score, str(scores["chrF2"])
+
 # Every system scored and paired in one call: scores, intervals, p-values, a ranking
 from swadesh import compare
 table = compare({"base": base_hyps, "new": new_hyps}, [refs])   # print(table)
@@ -161,6 +166,10 @@ table.to_dict()                          # JSON-able, for a report or a DataFram
 - **`compare()` for a system table.** The paired-test pieces assembled: per-system score, bootstrap
   interval, p-value against the baseline and a ranking, in text or as a dict. Every number comes from
   the same kernels and resamplers, so a `compare()` line is reproducible from its signature.
+- **`evaluate()` for several metrics at once.** One call, one dict keyed by each metric's own name
+  (`{"BLEU": ..., "chrF2": ..., "TER": ...}`), each number a metric's own `corpus_score`, so nothing
+  new can drift. (The shared-tokenization speed saving once planned for this did not survive
+  measurement; see `docs/feature-ideas.md`.)
 - **Exact tokenizers.** `swadesh.tokenize(lines, "13a")` returns sacreBLEU's tokenization, in parallel.
 - **In the browser.** The CLI compiles to a roughly 349 KB WebAssembly module; `docs/playground/`
   is a static page that runs it.

@@ -258,6 +258,50 @@ SEED_HYPS = ["the cat sat on the mat", "a dog barked loudly in the yard",
 SEED_REFS = [["the cat is on the mat", "a dog barked in the yard", "prices rose by 3 percent"]]
 
 
+def test_evaluate_matches_the_individual_calls():
+    """`evaluate()` is one call over the same metrics, not a second implementation.
+
+    Idea 2's *speed* premise does not hold - chrF is character-based and shares no tokenization with
+    BLEU, and the reference preparation is about 1% of the work (measured; see the module docstring
+    and docs/feature-ideas.md) - so this pins the part that is real: the dict, the metric names, the
+    one length check, and equality with each metric's own `corpus_score`.
+    """
+    hyps = ["The cat sat on the mat.", "A dog barked loudly.", "Prices rose by 3.2% in October."]
+    refs = [["The cat is on the mat.", "The dog barked.", "Prices increased 3.2% in October."]]
+
+    scores = swadesh.evaluate(hyps, refs)
+    assert list(scores) == ["BLEU", "chrF2", "TER"], "the metrics' own names, in the order given"
+    for name, metric in (("BLEU", swadesh.BLEU()), ("chrF2", swadesh.CHRF()), ("TER", swadesh.TER())):
+        single = metric.corpus_score(hyps, refs)
+        assert scores[name].score == single.score
+        assert str(scores[name]) == str(single)
+        assert scores[name].score == metric.corpus_score(hyps, refs).score
+
+    # The result is a dict of score objects, so it formats and attributes like any other score.
+    assert str(scores["BLEU"]).startswith("BLEU = ")
+    assert scores["TER"].score >= 0
+
+    # Classes, instances and a mapping all work, and nothing is reordered.
+    assert list(swadesh.evaluate(hyps, refs, metrics=[swadesh.TER])) == ["TER"]
+    assert list(swadesh.evaluate(hyps, refs, metrics={"anything": swadesh.BLEU()})) == ["BLEU"]
+    assert list(swadesh.evaluate(hyps, refs, metrics=[swadesh.CHRF(word_order=2)])) == ["chrF2++"]
+
+    # One length check for all of them, under strict mode.
+    with pytest.raises(swadesh.LengthMismatchError):
+        with swadesh.strict():
+            swadesh.evaluate(hyps, [["a"]])
+
+    # The bootstrap path is the metrics' own, seed and all: inside one seed block the resampled
+    # interval is identical, and the printed interval proves the bootstrap path ran at all.
+    with swadesh.seed(12345):
+        booted = str(swadesh.evaluate(hyps, refs, metrics=[swadesh.BLEU], n_bootstrap=50)["BLEU"])
+        direct = str(swadesh.BLEU().corpus_score(hyps, refs, n_bootstrap=50))
+    assert booted == direct and "\u03bc =" in booted
+
+    # And it agrees with sacreBLEU exactly.
+    assert swadesh.evaluate(hyps, refs)["BLEU"].score == REF_BLEU().corpus_score(hyps, refs).score
+
+
 def test_compare_is_the_pieces_assembled():
     """`swadesh.compare()` reports the same scores, intervals and p-values as the machinery it wraps.
 

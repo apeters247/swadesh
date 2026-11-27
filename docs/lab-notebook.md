@@ -5531,3 +5531,39 @@ pairing, and an unknown baseline or an empty system list raises.
 
 **Next.** Feature 2 (one-pass `evaluate()`), 3 (`explain()`), 4 (streaming), 5 (`n_jobs`), then the
 shortlist.
+
+## 2026-11-27 (continued) - feature 2 of 8: `swadesh.evaluate()`, and a premise that did not survive
+
+**Attempted.** "One call returning a dict of score objects; sharing one tokenized stream across BLEU
+and chrF removes two of the three tokenization passes, so it is also faster."
+
+**Measured first, and it killed the speed half.** Two runs on 20,000 WMT22 en-de segments, warm, one
+process: 5 systems scored with fresh metrics and references passed each call is **123.6 ms**; the same
+5 systems with the references prepared once and reused is **124.4 ms** - a 1% difference in the wrong
+direction, with identical scores. The reason is structural, not an implementation miss: chrF is
+character-based and never calls BLEU's tokenizer, so there is no tokenized stream to share without
+changing chrF's numbers; each metric's reference preparation is ~1% of its work and the native
+statistics are the rest. The 1,000-segment estimate in the idea (11 + 19 + 8 ms) was the tokenization
+cost of *different* tokenizers, and it cannot be collapsed into one pass.
+
+**What was built.** `python/swadesh/evaluate.py`: `evaluate(hypotheses, references=None, metrics=None,
+n_bootstrap=1)` -> an ordered dict of score objects keyed by each metric's own name
+(`{"BLEU": ..., "chrF2": ..., "TER": ...}`). `metrics` takes classes, instances or a mapping and
+defaults to `[BLEU, CHRF, TER]`. It is deliberately thin: it loops the metrics' own `corpus_score`, so
+there is no second statistics path to keep bit-exact. The module docstring records the measurement
+above and `docs/feature-ideas.md`'s item 2 is marked as measured false.
+
+**Verified.** `test_evaluate_matches_the_individual_calls`: the keys are the metrics' own names in the
+order given (`chrF2++` for `CHRF(word_order=2)`); each score equals the metric's own `corpus_score` and
+formats identically; classes, instances and a mapping all work; one length check raises under
+`swadesh.strict()`; and inside one `swadesh.seed(12345)` block the resampled interval is byte-identical
+to the metric's own bootstrap run. Plus the README snippet. It also agrees with sacreBLEU's BLEU
+exactly.
+
+**One correction during the session.** The first version of the test asserted that the bootstrap
+signature (`bs:50`, `seed:12345`) appears in `str(score)`; it does not - the signature lives on the
+metric (`metric.get_signature()`), and `str(score)` prints the interval as `(mu = ... +/- ...)`. The
+test now pins the interval equality and the printed interval, and the signature assertions stay on the
+metric, where the earlier seed tests put them.
+
+**Next.** Feature 3 (`explain()` on TER), 4 (streaming accumulator), 5 (`n_jobs`), then the shortlist.

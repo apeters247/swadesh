@@ -17,6 +17,18 @@ each metric tokenizes the corpus separately; sharing one tokenized stream across
 `13a`/`intl` users) removes two of the three tokenization passes. On the 1,000-segment corpus that
 is the difference between 11 + 19 + 8 ms and roughly one pass plus the statistics.
 
+**Measured 2026-11-27: the premise is false, and the ergonomic half shipped instead.** The stream
+cannot be shared. chrF is character-based - it never calls BLEU's tokenizer, and handing it BLEU's
+tokenized text would change its score, which is the one thing this package must not do. On 20,000
+WMT22 en-de segments (troy-1, `~/venv311`, one process, warm), 5 systems with BLEU + chrF++ each:
+
+    fresh metric, references passed each call    123.6 ms
+    one metric each, references cached once      124.4 ms     (-1%, the wrong direction)
+
+Reference preparation is about 1% of the work; the native statistics are the whole cost. So idea 2's
+speed claim is withdrawn and `swadesh.evaluate()` ships as the convenience it actually is: one call,
+one dict keyed by each metric's own name, identical numbers.
+
 ## 3. `explain()` on TER (1 day)
 
 TER already computes the alignment and the accepted shifts inside `ter_clean.rs`. Exposing them —
@@ -64,6 +76,7 @@ exist.
 | 7 | `strict=True` input validation (`swadesh.strict()`, `SWADESH_STRICT`) | 2026-11-27 |
 | 8 | Seeds in every signature (`swadesh.seed()`, `set_seed()`) | 2026-11-27 |
 | 6 | `swadesh.compare(systems, refs)` | 2026-11-27 |
+| 2 | `swadesh.evaluate(hyps, refs, metrics=[...])` | 2026-11-27 |
 
 ## Not proposed
 
