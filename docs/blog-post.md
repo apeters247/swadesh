@@ -5,7 +5,7 @@ authors:
 - user: Apeters247
 ---
 
-# A faster scorer I couldn't trust, until it stopped being a different scorer
+# Bit-exact sacreBLEU in Rust: a faster scorer you can swap without changing a number
 
 *swadesh is a drop-in replacement for sacreBLEU, written in Rust. It returns exactly the same numbers
 — every float compares `==`, the signatures and the CLI output are byte-identical — and it is much
@@ -75,7 +75,9 @@ This is the part that decides everything else, so let me be precise. Writing
 \\( f_{\text{s}} \\) for swadesh's corpus score and \\( f_{\text{o}} \\) for sacreBLEU's, the property
 I need is
 
-\\[ \forall x:\quad f_{\text{swadesh}}(x) \;=\; f_{\text{sacreBLEU}}(x) \qquad\text{(the same IEEE-754 double)} \\]
+$$
+\forall x:\quad f_{\text{swadesh}}(x) \;=\; f_{\text{sacreBLEU}}(x) \qquad\text{(the same IEEE-754 double)}
+$$
 
 where the equality is of the IEEE-754 double that comes out, exactly — not approximate equality. "Within a tolerance" is not a weaker version of this property; it is a
 different, much weaker claim, and it does not do what I need. Two reasons:
@@ -112,8 +114,10 @@ The reason exactness is achievable at all is that all three metrics have the sam
 
 **BLEU** is a clipped n-gram precision with a brevity penalty:
 
-\\[ \mathrm{BLEU} = \mathrm{BP}\cdot\exp\left(\sum_{n=1}^{N} w_n \log p_n\right), \qquad
-\mathrm{BP} = \min\left(1,\; e^{1 - r/c}\right) \\]
+$$
+\mathrm{BLEU} = \mathrm{BP}\cdot\exp\left(\sum_{n=1}^{N} w_n \log p_n\right), \qquad
+\mathrm{BP} = \min\left(1,\; e^{1 - r/c}\right)
+$$
 
 with \\( p_n \\) the clipped \\( n \\)-gram precision over the corpus
 \\( p_n = \dfrac{\sum_{g} \min\big(c_g^{(h)}, \max_j c_g^{(r_j)}\big)}{\sum_g c_g^{(h)}} \\),
@@ -121,15 +125,19 @@ with \\( p_n \\) the clipped \\( n \\)-gram precision over the corpus
 
 **chrF** is a character n-gram F-score:
 
-\\[ \mathrm{chrF}_\beta = (1+\beta^2)\frac{\mathrm{CHRP}\cdot\mathrm{CHRR}}
-{\beta^2\mathrm{CHRP} + \mathrm{CHRR}} \\]
+$$
+\mathrm{chrF}_\beta = (1+\beta^2)\frac{\mathrm{CHRP}\cdot\mathrm{CHRR}}
+{\beta^2\mathrm{CHRP} + \mathrm{CHRR}}
+$$
 
 with character precision/recall \\( \mathrm{CHRP}, \mathrm{CHRR} \\) computed exactly like \\( p_n \\)
 but over character n-grams. chrF++ appends word 1- and 2-grams to the same counts.
 
 **TER** is a normalized edit rate with block moves:
 
-\\[ \mathrm{TER} = \frac{S + E}{\bar{L}} \\]
+$$
+\mathrm{TER} = \frac{S + E}{\bar{L}}
+$$
 
 where \\( S \\) is the number of accepted phrasal shifts, \\( E \\) is the Levenshtein edit distance
 after those shifts, and \\( \bar{L} \\) is the average reference length. The distance is the usual
@@ -262,8 +270,10 @@ segments, it does not change the arithmetic.*
 
 The parallel speedup of swadesh *against itself* follows Amdahl's law,
 
-\\[ S(n) = \frac{1}{\sigma + (1-\sigma)/n} \quad\Longrightarrow\quad
-\sigma = \frac{t_n/t_1 - 1/n}{1 - 1/n} \\]
+$$
+S(n) = \frac{1}{\sigma + (1-\sigma)/n} \quad\Longrightarrow\quad
+\sigma = \frac{t_n/t_1 - 1/n}{1 - 1/n}
+$$
 
 with a serial fraction \\( \sigma \\) of **9% (BLEU)**, **8% (chrF++)** and
 **7% (TER)**. That residual is not scoring: it is loading the corpus and marshalling it
