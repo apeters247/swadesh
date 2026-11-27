@@ -1,17 +1,24 @@
 name: release
 
-# Builds wheels and an sdist, and publishes them to PyPI when a `v*` tag is pushed.
+# Builds wheels and an sdist. Publishing is a separate, explicit act.
 #
-# Publishing uses PyPI's trusted publishing (OIDC), so no API token is stored in this repository. Two
-# things must exist on the PyPI side first, per LAUNCH.md: the project `swadesh` with a (pending)
-# trusted publisher naming this repository, this workflow file and the `pypi` environment below.
+# A `v*` tag builds the artefacts for every platform and uploads them to the run; it publishes nothing.
+# To publish, dispatch this workflow with `publish: true` - that job uses PyPI's trusted publishing
+# (OIDC), so no API token is stored in this repository, and it needs the project's trusted publisher to
+# name this repository, this workflow file and the `pypi` environment (docs/registry-setup.md).
 #
-# `workflow_dispatch` builds the artefacts and publishes nothing.
+# The gate exists because 0.1.0 was published by hand: a `v0.1.0` tag would otherwise re-upload files
+# PyPI already has, which it rejects.
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "Upload the built artefacts to PyPI (needs the project's trusted publisher)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -96,8 +103,11 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPI
-    # Only a tag publishes; a manual run just builds.
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Publishing is explicit: dispatch the workflow with `publish: true`. A tag builds the artefacts and
+    # uploads them to the run, but never publishes - 0.1.0 was published by hand, so a v* tag for it
+    # would otherwise be rejected by PyPI as a duplicate upload. (Trusted publishing still needs the
+    # project's publisher configured; see docs/registry-setup.md.)
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
     needs: [wheels-linux, wheels-macos, wheels-windows, sdist]
     runs-on: ubuntu-24.04
     environment: pypi

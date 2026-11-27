@@ -5780,3 +5780,45 @@ change. No code changed, so no spec: this is a decision record, not a phase.
 
 **That closes the five-item shortlist** (s1 evaluate adapter, s2 paired difference, s3 decided, s4
 pytest plugin, s5 the accumulator). All eight numbered features shipped before it.
+
+## 2026-11-27 - 0.1.0 is on PyPI, and the wheel PyPI would not take
+
+**Attempted.** Publish 0.1.0 with the project token, since trusted publishing needs the PyPI side
+configured first.
+
+**First upload failed, and the error was the useful part.** `uv build` on this host produces
+`swadesh-0.1.0-cp310-abi3-linux_x86_64.whl`, and PyPI rejects it:
+
+```
+400 Binary wheel 'swadesh-0.1.0-cp310-abi3-linux_x86_64.whl' has an unsupported platform tag 'linux_x86_64'
+```
+
+`linux_x86_64` is a *local* platform tag; the index only accepts `manylinux_*` / `musllinux_*`. Nothing
+landed from that attempt - the project still 404'd afterwards - so there was no half-published version to
+clean up.
+
+**Fix.** Build the wheel where the manylinux toolchain lives, which is also what CI does:
+
+```bash
+docker run --rm --network=host -v "$PWD:/io" ghcr.io/pyo3/maturin \
+    build --release --manylinux 2014 --out /io/dist-manylinux
+```
+
+That produces `swadesh-0.1.0-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl` (1.8 MB), which
+uploaded together with the sdist on the second attempt.
+
+**Verified against the index, not the tree.** `uv pip install --python <fresh venv> swadesh==0.1.0`
+resolves from PyPI (no `direct_url.json`), scores the two-line sample at 37.99178428257963, and
+`swadesh --version` prints `swadesh 2.6.0`. The JSON API reports version 0.1.0, `AGPL-3.0-or-later`,
+`Requires-Python >=3.10`, and exactly two files.
+
+**Two consequences recorded.** The README's install line is now `pip install swadesh` with a PyPI badge.
+And `release.yml`'s publish job is gated behind `workflow_dispatch` with `publish: true`, because a
+`v0.1.0` tag would otherwise re-upload files PyPI already has and fail; a tag now builds the platform
+artefacts and publishes nothing. The tag was pushed *after* that change, so the run it triggers cannot
+attempt a duplicate upload.
+
+**Token handling.** The token lives in `~/.config/swadesh/pypi-token` (mode 600, directory 700), passed to
+`uv publish` through `UV_PUBLISH_TOKEN` so it never appears in a process argument list. It arrived through
+a chat message, so it is in this session's transcript and should be rotated once the project's trusted
+publisher is configured.

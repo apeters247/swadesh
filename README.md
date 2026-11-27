@@ -1,6 +1,7 @@
 # swadesh
 
 [![ci](https://github.com/apeters247/swadesh/actions/workflows/ci.yml/badge.svg)](https://github.com/apeters247/swadesh/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/swadesh.svg)](https://pypi.org/project/swadesh/)
 [![licence: AGPL-3.0-or-later](https://img.shields.io/badge/licence-AGPL--3.0--or--later-blue.svg)](LICENSE)
 [![python: 3.10-3.14](https://img.shields.io/badge/python-3.10--3.14-blue.svg)](pyproject.toml)
 
@@ -20,8 +21,7 @@ with `SWADESH_DATA=bench/data` (they default to `/var/www/llmeval/bench/data`).
 <p align="center"><img src="docs/img/benchmark.svg" alt="swadesh vs sacreBLEU on 100k segments: BLEU 117x, chrF 314x, chrF++ 283x faster, identical scores" width="720"></p>
 
 ```bash
-# not on PyPI yet - install from the repository
-pip install "git+https://github.com/apeters247/swadesh"
+pip install swadesh
 ```
 
 The library needs only NumPy. BLEU, chrF, chrF++, TER and the paired significance tests all run

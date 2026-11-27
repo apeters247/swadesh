@@ -14,6 +14,38 @@ release checklist in `PLAN.md` §9.
 - the wasm build on npm (once WS3.4 lands) and a Docker image;
 - the docs site built from `docs/` (WS2.8).
 
+## Released: 0.1.0 on PyPI, 2026-11-27
+
+Published by hand with a project token (`uv publish`), because trusted publishing needs the publisher
+configured on the PyPI side first. The project now exists, so a trusted publisher can be added to
+<https://pypi.org/manage/project/swadesh/settings/publishing/> for later versions.
+
+Verified against the index, not the branch: `uv pip install --python <fresh venv> swadesh==0.1.0` pulls the
+manylinux wheel, scores 37.99178428257963 for the two-line sample, and `swadesh --version` prints
+`swadesh 2.6.0`.
+
+**One thing to know before building locally again: PyPI rejects `linux_x86_64` wheels.** A plain
+`uv build` on this host produces
+`swadesh-0.1.0-cp310-abi3-linux_x86_64.whl`, and the upload fails with
+
+```
+400 Binary wheel ... has an unsupported platform tag 'linux_x86_64'
+```
+
+The published wheel was built in the manylinux container instead, which is also what `release.yml` does
+in CI:
+
+```bash
+docker run --rm --network=host -v "$PWD:/io" ghcr.io/pyo3/maturin \
+    build --release --manylinux 2014 --out /io/dist-manylinux
+```
+
+so `dist-manylinux/*.whl` is the file to upload, and `dist/*.whl` from a native build is for local
+testing only.
+
+`release.yml`'s publish job is now gated behind `workflow_dispatch` with `publish: true`, so a `v*` tag
+builds artefacts without trying to re-upload an existing version.
+
 ## Status, 2026-11-27 (troy-1)
 
 Verified from the working tree, so the upload is the only step left:

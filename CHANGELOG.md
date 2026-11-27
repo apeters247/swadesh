@@ -3,7 +3,7 @@
 All notable changes to swadesh are listed here. Versions follow semantic versioning. swadesh 0.x is
 pinned to sacreBLEU 2.6.0 (`swadesh.SACREBLEU_COMPAT_VERSION`).
 
-## 0.1.0 — 2026-11-26
+## 0.1.0 — 2026-11-27
 
 First release. BLEU, chrF, chrF++ and TER match sacreBLEU 2.6.0 exactly, in a drop-in Python package
 and a standalone Rust CLI.

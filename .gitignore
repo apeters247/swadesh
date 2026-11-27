@@ -8,3 +8,5 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 dist/
+# manylinux wheels built in the maturin container (see LAUNCH.md)
+dist-manylinux/
