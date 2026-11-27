@@ -366,6 +366,51 @@ def test_n_jobs_sets_the_thread_count_without_changing_a_score():
     assert swadesh.set_n_jobs(None) >= 1, "None does too"
 
 
+def test_paired_difference_is_the_paired_test_keeping_the_sign():
+    """`paired_difference` = PairedTest's p-value, plus the signed gap and a power estimate."""
+    bl = ["the cat sat on the mat", "a dog barked at the moon", "prices rose by 3.2% in October",
+          "she sells sea shells", "the quick brown fox jumps", "edition twelve is out now",
+          "a zebra galloped past the gate", "twelve editions are out"]
+    sy = ["the cat is on the mat", "a dog barked at the moon", "prices increased 3.2% in October",
+          "she sells seashells", "the quick brown fox jumped", "edition 12 is out now",
+          "a zebra ran past the gate", "12 editions are out"]
+    refs = [[x for x in bl]]
+    with swadesh.seed(12345):
+        d = swadesh.paired_difference(bl, sy, refs, swadesh.BLEU(), n_samples=200)
+    # delta is the plain score difference, signed.
+    assert d.delta == swadesh.BLEU().corpus_score(sy, refs).score - swadesh.BLEU().corpus_score(bl, refs).score
+    assert d.n_segments == len(sy) and d.metric == "BLEU"
+    assert d.ci_low < d.ci_high and d.se >= 0
+
+    # The p-value is PairedTest's own, on the same seed and the same number of resamples.
+    with swadesh.seed(12345):
+        _sig, scores = swadesh.PairedTest([("base", bl), ("new", sy)], {"BLEU": swadesh.BLEU()},
+                                          refs, test_type="bs", n_samples=200)()
+    assert d.p_value == scores["BLEU"][1].p_value
+
+    # Swapping the systems negates the gap and keeps the p-value (the test is on |d|).
+    with swadesh.seed(12345):
+        rev = swadesh.paired_difference(sy, bl, refs, swadesh.BLEU(), n_samples=200)
+    assert rev.delta == -d.delta
+    assert rev.p_value == d.p_value
+
+    # Power: required_n and detectable are inverses at the same se; a bigger gap needs fewer segments.
+    assert abs(d.required_n(d.detectable()) - d.n_segments) <= 1
+    assert d.required_n(2 * abs(d.delta)) <= d.required_n(abs(d.delta))
+    assert isinstance(d.required_n(1.0), int) and d.required_n(1.0) >= 1
+    assert d.required_n(0) == float("inf")
+    assert json.loads(json.dumps(d.to_dict()))["delta"] == d.delta
+
+    # A system against itself: no gap, the floor p-value, an interval that brackets zero.
+    with swadesh.seed(1):
+        same = swadesh.paired_difference(bl, list(bl), refs, swadesh.BLEU(), n_samples=50)
+    assert same.delta == 0
+    assert same.p_value == 1 / 51
+    assert same.ci_low <= 0 <= same.ci_high
+    assert not same.significant()
+    assert "baseline" in repr(d) and "system" in repr(d)
+
+
 def test_evaluate_matches_the_individual_calls():
     """`evaluate()` is one call over the same metrics, not a second implementation.
 

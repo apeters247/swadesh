@@ -37,7 +37,7 @@ from .metrics import (  # noqa: F401
     strict,
 )
 
-from .significance import seed, set_seed  # noqa: F401  (the bootstrap seed, in process)
+from .significance import Difference, paired_difference, seed, set_seed  # noqa: F401  (the seed, and the signed gap)
 from .compare import Comparison, compare  # noqa: F401  (the system table)
 from .evaluate import evaluate  # noqa: F401  (one call, several metrics)
 from .accumulator import Accumulator  # noqa: F401  (streaming corpus scoring)

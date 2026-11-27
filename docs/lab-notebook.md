@@ -5667,3 +5667,33 @@ _changing_a_score`: BLEU and chrF identical at 1 thread and at the default, TER 
 `n_jobs(2)`, the restore on exit.
 
 **Next.** The five-item shortlist.
+
+## 2026-11-27 (continued) - shortlist s2: `paired_difference`, the signed gap and a power estimate
+
+**Attempted.** `PairedTest` builds a distribution of per-resample differences, uses `|d|` for the
+p-value, and discards the sign. Keep the sign: report the gap and its interval from the same draws,
+and use the spread for the "how many segments do I need?" question.
+
+**What was built.** `swadesh.paired_difference(baseline, system, references, metric=None,
+n_samples=1000)` -> a `Difference` with `delta`, `ci_low`/`ci_high` (the same order statistics
+`estimate_ci` uses), `p_value` (**identical** to `PairedTest`'s - only the sign was kept), `se`,
+`n_segments`, `significant(alpha)`, `detectable(power, alpha)`, `required_n(effect, power, alpha)`
+and `to_dict()`. The power numbers are the textbook normal approximation with `statistics.NormalDist`
+(no new dependency): `detectable = z*se`, `required_n = n*(z*se/effect)^2`, documented with its
+i.i.d.-segment assumption. Spec: `docs/spec/paired-difference.md` (d7e4f94).
+
+**One measured correction, spec amended before the code.** `_compute_p_value` is
+`(c+1)/(n_samples+1)`, so the floor p-value is `1/(n+1)`: an identical system against itself with
+`n_samples=50` reports `p = 1/51 = 0.0196`, i.e. below `alpha = 0.05` - the p-value alone calls a
+zero difference significant for any default-sized run. The test reproduces the oracle, so `PairedTest`
+keeps the floor; `Difference.significant` is what changes: it requires the p-value **and** an interval
+that excludes zero, and the identical case has `[0, 0]`. Spec amended (`a3c3077`) before the code, as
+the clean-room rule requires.
+
+**Verified.** New test: `delta` equals the plain score difference; `p_value` equals `PairedTest`'s on
+the same seed and resample count; swapping the systems negates `delta` and keeps the p-value;
+`required_n(detectable()) == n_segments`; a bigger gap needs fewer segments; `required_n(0)` is inf;
+`to_dict()` survives `json.dumps`; a system against itself is not significant. `coverage_gaps +
+parity` green.
+
+**Next.** Shortlist s4 (pytest plugin + GitHub Action), s1 (`evaluate.load`), s3 (mecab/spm decision).

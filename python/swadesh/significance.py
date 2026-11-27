@@ -506,3 +506,124 @@ class PairedTest(_PairedTestBase):
         kwargs.setdefault("ar_test", _paired_ar_test)
         kwargs.setdefault("bs_test", _paired_bs_test)
         super().__init__(*args, **kwargs)
+
+
+class Difference:
+    """The signed paired difference between two systems, with its interval and a power estimate.
+
+    ``delta`` is ``system - baseline`` in the metric's units; ``ci_low``/``ci_high`` are its 95%
+    interval from the same resamples that give ``p_value`` (which is ``PairedTest``'s own). ``se``
+    is the bootstrap standard error of the difference, the input to ``detectable`` and
+    ``required_n``. See ``docs/spec/paired-difference.md``.
+    """
+
+    def __init__(self, metric, delta, ci_low, ci_high, p_value, se, n_segments,
+                 baseline_name="baseline", system_name="system"):
+        self.metric = metric
+        self.delta = delta
+        self.ci_low = ci_low
+        self.ci_high = ci_high
+        self.p_value = p_value
+        self.se = se
+        self.n_segments = n_segments
+        self.baseline_name = baseline_name
+        self.system_name = system_name
+
+    def significant(self, alpha: float = 0.05) -> bool:
+        """Whether the difference is real at ``alpha``: the p-value rejects **and** the interval
+        excludes zero.
+
+        Both, deliberately: the p-value has a floor of ``1 / (n_samples + 1)`` (sacreBLEU's
+        finite-resample correction, kept for parity), so with the default 1000 resamples an identical
+        pair reports ``p ~ 0.001`` and the p-value alone would call a zero difference significant.
+        The interval is ``[0, 0]`` there, so it is the guard. The two agree wherever the difference
+        is real. See ``docs/spec/paired-difference.md``.
+        """
+        return self.p_value < alpha and (self.ci_low > 0.0 or self.ci_high < 0.0)
+
+    @staticmethod
+    def _z(power: float, alpha: float) -> float:
+        from statistics import NormalDist
+
+        normal = NormalDist()
+        return normal.inv_cdf(1.0 - alpha / 2.0) + normal.inv_cdf(power)
+
+    def detectable(self, power: float = 0.8, alpha: float = 0.05) -> float:
+        """The smallest gap this many segments can detect, for a two-sided test at ``alpha``.
+
+        ``z * se`` under the normal approximation (``docs/spec/paired-difference.md``): the effect
+        whose interval just excludes zero with the requested power. An estimate under the
+        i.i.d.-segment assumption, not a guarantee.
+        """
+        return self._z(power, alpha) * self.se
+
+    def required_n(self, effect: float, power: float = 0.8, alpha: float = 0.05):
+        """Segments needed to detect ``effect``, scaling the observed bootstrap error by ``sqrt(n)``.
+
+        Returns ``inf`` for a zero effect (no number of segments detects nothing). An estimate: the
+        ``sqrt(n)`` scaling assumes independent, identically distributed segments, so anything that
+        correlates segments (document-level effects) makes the true requirement larger.
+        """
+        import math
+
+        if effect == 0:
+            return math.inf
+        z = self._z(power, alpha)
+        return max(1, math.ceil(self.n_segments * (z * self.se / abs(effect)) ** 2))
+
+    def to_dict(self) -> Dict[str, object]:
+        return {
+            "metric": self.metric,
+            "baseline": self.baseline_name,
+            "system": self.system_name,
+            "delta": self.delta,
+            "ci_low": self.ci_low,
+            "ci_high": self.ci_high,
+            "p_value": self.p_value,
+            "se": self.se,
+            "n_segments": self.n_segments,
+        }
+
+    def __repr__(self) -> str:
+        return (
+            f"Difference({self.metric}: {self.system_name} - {self.baseline_name} = "
+            f"{self.delta:.4f}, 95% CI [{self.ci_low:.4f}, {self.ci_high:.4f}], "
+            f"p = {self.p_value:.4g}, n = {self.n_segments})"
+        )
+
+
+def paired_difference(baseline, system, references, metric=None, n_samples: int = 1000,
+                      baseline_name: str = "baseline", system_name: str = "system") -> Difference:
+    """The signed paired difference ``system - baseline`` for one metric, with interval and p-value.
+
+    ``baseline`` and ``system`` are hypothesis lists; ``metric`` is a metric instance (default
+    ``BLEU()``). The resample draws and the p-value are ``PairedTest``'s exactly - only the *signed*
+    difference distribution, which the paired test discards in favour of ``|d|``, is kept here.
+    ``docs/spec/paired-difference.md``.
+    """
+    if metric is None:
+        from .metrics import BLEU
+
+        metric = BLEU()
+    bl_stats = metric._extract_corpus_statistics(baseline, references)
+    sys_stats = metric._extract_corpus_statistics(system, references)
+    bl_result = metric._aggregate_and_compute(bl_stats)
+    sys_result = metric._aggregate_and_compute(sys_stats)
+    n = len(system)
+
+    _seed_text, seed = _current_seed()
+    native_seed = isinstance(seed, int) and 0 <= seed < 2 ** 128 and n > 0
+    idxs = None if native_seed else np.random.default_rng(seed).choice(n, size=(n_samples, n), replace=True)
+    scores_bl = _f32_scores(metric, _paired_sums(bl_stats, idxs, seed, n_samples, n))
+    scores_sys = _f32_scores(metric, _paired_sums(sys_stats, idxs, seed, n_samples, n))
+
+    signed = scores_sys - scores_bl
+    order = np.sort(signed)
+    k = len(order) // 40
+    ci_low, ci_high = float(order[k]), float(order[-k - 1])
+    sample_diffs = np.abs(signed)
+    p = _compute_p_value(sample_diffs - sample_diffs.mean(), abs(bl_result.score - sys_result.score))
+    return Difference(
+        bl_result.name, float(sys_result.score - bl_result.score), ci_low, ci_high, p,
+        float(signed.std()), n, baseline_name, system_name,
+    )

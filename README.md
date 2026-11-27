@@ -179,6 +179,10 @@ table.to_dict()                          # JSON-able, for a report or a DataFram
 - **`n_jobs(k)` to choose the thread count.** The corpus kernels are already parallel (measured ~9x
   for TER at 16 cores, and the same score at any count); `swadesh.n_jobs(k)` / `set_n_jobs(k)` sizes
   the pool, for capping CPU use or matching a scheduler's allocation.
+- **`paired_difference()` for the gap, not just the p-value.** The signed difference between two
+  systems with its 95% interval, from the same resamples as `PairedTest` (so the same p-value), plus
+  `detectable()` / `required_n()` - how big a gap this corpus can see, and how many segments a target
+  gap needs.
 - **Exact tokenizers.** `swadesh.tokenize(lines, "13a")` returns sacreBLEU's tokenization, in parallel.
 - **In the browser.** The CLI compiles to a roughly 349 KB WebAssembly module; `docs/playground/`
   is a static page that runs it.

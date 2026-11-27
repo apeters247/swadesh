@@ -89,6 +89,18 @@ BLEU and chrF signatures carry `seed`; every bootstrapped path should, so a repo
 reproducible from its own output line. The RNG (PCG64-compatible) and the seed plumbing already
 exist.
 
+## Shortlist
+
+Five smaller additions proposed alongside the eight above.
+
+| | item | status |
+|---|---|---|
+| s1 | `evaluate.load("swadesh")` compatibility (HuggingFace `evaluate`) | pending |
+| s2 | Paired CI on the *difference* + power analysis (`swadesh.paired_difference`) | shipped 2026-11-27 |
+| s3 | Native `ja-mecab` / `sentencepiece` tokenizers | pending (dependency decision) |
+| s4 | A pytest plugin + a GitHub Action | pending |
+| s5 | Streaming accumulator | shipped as item 4 |
+
 ## Shipped
 
 | | feature | landed |
