@@ -91,6 +91,9 @@ notebook, and `tools/smoke_install.sh` passing for every channel - built from th
 
 ## PyPI trusted publishing (one-time, on the PyPI side)
 
+The full setup for all three registries - PyPI, crates.io and Homebrew - with the exact fields and the
+verification commands is in `docs/registry-setup.md`. The PyPI fields, for reference:
+
 `release.yml`'s `publish-pypi` job publishes on a `v*` tag using PyPI's trusted publishing, so no API
 token is stored in the repository. Before the first tag, on PyPI:
 
