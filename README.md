@@ -20,7 +20,8 @@ with `SWADESH_DATA=bench/data` (they default to `/var/www/llmeval/bench/data`).
 <p align="center"><img src="docs/img/benchmark.svg" alt="swadesh vs sacreBLEU on 100k segments: BLEU 117x, chrF 314x, chrF++ 283x faster, identical scores" width="720"></p>
 
 ```bash
-pip install swadesh
+pip install swadesh                     # the Python package
+brew install apeters247/tap/swadesh     # the standalone CLI, no Python
 ```
 
 The library needs only NumPy. BLEU, chrF, chrF++, TER and the paired significance tests all run
@@ -209,6 +210,8 @@ table.to_dict()                          # JSON-able, for a report or a DataFram
   class bound before the patch is the one shape that is not. On lm-eval's own metric functions,
   measured: BLEU 34.7x, chrF 74.0x, chrF++ 77.7x, TER 638x, every number identical
   (`docs/integrations.md`).
+- **A Homebrew tap.** `brew install apeters247/tap/swadesh` builds the CLI from the tagged source
+  (`Formula/swadesh.rb` in `apeters247/homebrew-tap`), for people who want the binary without Python.
 - **Standalone binary.** `crates/swadesh-cli` is an executable with no Python, for CI pipelines and
   agents. It implements every sacreBLEU flag and is byte-identical to the sacreBLEU 2.6.0 CLI on
   `tests/test_cli.py` (685 passed, 0 failed) and on the parity harness's CLI section (76 passed, one

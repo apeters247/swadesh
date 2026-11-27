@@ -126,7 +126,9 @@ be packaged before its sibling exists on the registry.
    *not* verified here: Homebrew itself (the formula's Ruby syntax, `std_cargo_args(path:)` and
    `brew audit`), which needs a machine with brew.
 
-5. On a machine with Homebrew:
+5. The tap is live: <https://github.com/apeters247/homebrew-tap> (`cc8720d`), with `Formula/swadesh.rb`
+   at the layout Homebrew expects. `brew install apeters247/tap/swadesh` now works for anyone. What has
+   *not* been run, because troy-1 has no Homebrew, is brew's own validation - do this once on a Mac:
 
    ```bash
    brew install --build-from-source apeters247/tap/swadesh
