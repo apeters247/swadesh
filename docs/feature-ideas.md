@@ -56,6 +56,12 @@ BLEU and chrF signatures carry `seed`; every bootstrapped path should, so a repo
 reproducible from its own output line. The RNG (PCG64-compatible) and the seed plumbing already
 exist.
 
+## Shipped
+
+| | feature | landed |
+|---|---|---|
+| 1 | `TER.sentence_scores` and `TER.pairwise` | 2026-11-27 |
+
 ## Not proposed
 
 * Anything that changes a score. Parity is the product; the value here is that these features sit on

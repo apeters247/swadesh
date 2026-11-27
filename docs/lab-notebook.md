@@ -5431,3 +5431,23 @@ regenerated, the smoke install passing from the branch, and the version sources 
 `tests/test_dependency_licences.py` (no copyleft crate, AGPL on our own); and `docs/third-party.md`,
 which the checklist names, does not exist - the third-party position lives in `NOTICE` and
 `docs/licensing.md`. The DOI/Zenodo step is external and untouched.
+
+## 2026-11-27 - feature 1 of 8: `TER.sentence_scores` and `TER.pairwise`
+
+**Attempted.** The first of the eight `docs/feature-ideas.md` proposals. TER was the one metric
+without the batch shapes BLEU and CHRF have, so the three were not interchangeable in a multi-metric
+harness and MBR could not use TER at all.
+
+**What was built.** Both methods on `swadesh.TER`, reusing what was already there rather than adding a
+kernel: `ter_stats` - the batched call `_extract_corpus_statistics` already makes - returns one row
+per segment, and `_score_from_row` turns a row into a score by the same rule the bootstrap paths use.
+`pairwise` scores every pair as one row of a *single* batched call (`n*m` segments, one reference
+each) instead of a Python loop of `sentence_score`; with `references=None` the candidates are scored
+against each other, so the diagonal is 0 and `swadesh.mbr(candidates, TER())` works.
+
+**Verified.** Two hypothesis-driven differential tests in `tests/test_differential_long.py`, over the
+adversarial alphabet and 500 examples each: `sentence_scores` equals the loop of sacreBLEU's own
+`sentence_score`, and `pairwise` equals the explicit double loop element for element. A manual check
+on a three-sentence corpus agrees too (`[16.6667, 33.3333, 50.0]` both ways).
+
+**Next.** Feature 7 (`strict=True`) and 8 (seeds in every signature), then the rest of the list.

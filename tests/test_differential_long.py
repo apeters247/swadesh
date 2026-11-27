@@ -7,7 +7,7 @@ import random
 
 import pytest
 import sacrebleu
-from hypothesis import HealthCheck, given, settings
+from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 
 import swadesh
@@ -121,6 +121,35 @@ def test_chrf_sentence_scores(data, hyps):
     m = sacrebleu.CHRF(**kw)
     theirs = [m.sentence_score(h, [r[i] for r in refs]).score for i, h in enumerate(hyps)]
     assert ours == theirs
+
+
+@FAST
+@given(data=st.data(), hyps=corpus())
+def test_ter_sentence_scores(data, hyps):
+    """`TER.sentence_scores` is the loop of `sentence_score`, in one batched pass."""
+    refs = _refs_like(hyps, data, data.draw(st.integers(1, 2)), allow_none=False)
+    kw = dict(normalized=data.draw(st.booleans()), no_punct=data.draw(st.booleans()),
+              asian_support=data.draw(st.booleans()), case_sensitive=data.draw(st.booleans()))
+    # TER divides by the reference length, so an empty segment is its error path on both sides.
+    assume(all(h.strip() for h in hyps))
+    assume(all(r is not None and r.strip() for stream in refs for r in stream))
+    ours = swadesh.TER(**kw).sentence_scores(hyps, refs)
+    m = sacrebleu.TER(**kw)
+    theirs = [m.sentence_score(h, [r[i] for r in refs]).score for i, h in enumerate(hyps)]
+    assert ours == theirs
+
+
+@FAST
+@given(data=st.data(), hyps=corpus())
+def test_ter_pairwise(data, hyps):
+    """`TER.pairwise(candidates)` is `sentence_score(a, [b])` for every pair, diagonal included."""
+    assume(all(h.strip() for h in hyps))
+    kw = dict(normalized=data.draw(st.booleans()), case_sensitive=data.draw(st.booleans()))
+    ours = swadesh.TER(**kw).pairwise(hyps)
+    m = sacrebleu.TER(**kw)
+    theirs = [[m.sentence_score(a, [b]).score for b in hyps] for a in hyps]
+    assert ours.tolist() == theirs
+    assert ours.shape == (len(hyps), len(hyps))
 
 
 def test_ref_cache_and_compat():

@@ -1224,3 +1224,37 @@ class TER(_FastMixin, _NativeMetric):
         else:
             score = 0.0
         return TERScore(100 * score, total_edits, sum_ref_lengths)
+
+    def sentence_scores(self, hypotheses: Sequence[str], references: Sequence[Sequence[str]]) -> List[float]:
+        """Sentence-level TER for every segment, in one batched pass.
+
+        ``references`` uses the *corpus* layout (a list of reference streams). Returns exactly
+        ``[self.sentence_score(h, [r[i] for r in references]).score ...]``: the statistics come from
+        the same kernel the corpus path uses, one row per segment, and each row is turned into a
+        score by the same rule `_score_from_row` applies to a bootstrap row.
+        """
+        streams = _normalize_refs(references)
+        hypotheses, streams = _truncate(hypotheses, streams)
+        rows = self._extract_corpus_statistics(hypotheses, streams)
+        _set_num_refs_like_loop(self, streams, len(hypotheses))
+        return [self._score_from_row(row).score for row in rows]
+
+    def pairwise(self, candidates: Sequence[str], references: Optional[Sequence[str]] = None) -> np.ndarray:
+        """TER matrix ``M[i, j] = sentence_score(candidates[i], [references[j]]).score``.
+
+        With ``references=None`` the candidates are scored against each other (MBR / consensus
+        decoding), so the diagonal is 0 and ``swadesh.mbr(candidates, TER())`` works.
+
+        Every pair is one row of a single batched kernel call - ``n * m`` segments, each with exactly
+        one reference - rather than a Python loop of ``sentence_score`` calls.
+        """
+        refs = candidates if references is None else references
+        cands, refs_l = list(candidates), list(refs)
+        n, m = len(cands), len(refs_l)
+        if n == 0 or m == 0:
+            return np.empty((n, m), dtype=np.float64)
+        hyps = [c for c in cands for _ in range(m)]
+        one_ref_per_pair = [[r for _ in cands for r in refs_l]]
+        rows = self._extract_corpus_statistics(hyps, one_ref_per_pair)
+        scores = np.array([self._score_from_row(row).score for row in rows], dtype=np.float64)
+        return scores.reshape(n, m)
