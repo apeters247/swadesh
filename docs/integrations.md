@@ -47,6 +47,10 @@ Scope, stated plainly: this is the harness's *metric layer*, called directly on 
 full `lm_eval` run needs a model, `datasets` and torch, which is why the verification used a
 `--no-deps` install and drove the functions the harness calls.
 
+The harness's multi-reference path (`_sacreformat` with a list of references per segment, which is how
+WMT-style multi-ref corpora arrive) was checked the same way: 3,000 segments with two references each,
+BLEU 5.590394, chrF 42.694656, chrF++ 41.898980 - identical before and after the patch.
+
 ### Three ways to apply it, in increasing order of commitment
 
 **1. Two lines in your own runner** (works today, no fork):

@@ -1,0 +1,41 @@
+# swadesh in a container, built from the public repository.
+#
+#   docker build -f packaging/docker/Dockerfile.source -t swadesh:latest .
+#   docker run --rm -i swadesh:latest -m bleu chrf < hyp.txt  ref.txt
+#   echo "the cat sat" | docker run --rm -i swadesh:latest -m bleu ref.txt
+#
+# Both stages use the same Python base on purpose: the venv's interpreter is a symlink into the base
+# image, so a different runtime base would copy a dangling link. Swap SWADESH_SPEC for
+# `swadesh==x.y.z` once the package is on PyPI - that build needs no Rust stage at all, which is why
+# there is a separate Dockerfile.pypi for it.
+
+FROM python:3.12-slim-bookworm AS build
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends build-essential curl git \
+ && rm -rf /var/lib/apt/lists/*
+
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+  | sh -s -- -y --profile minimal --default-toolchain stable
+
+ARG SWADESH_SPEC=git+https://github.com/apeters247/swadesh
+RUN python -m venv /opt/venv \
+ && /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
+ && /opt/venv/bin/pip install --no-cache-dir "$SWADESH_SPEC"
+
+# A missing or stale .so fails the build here, not the first run.
+RUN /opt/venv/bin/python -c "import swadesh; print(swadesh.__version__, swadesh.BLEU().corpus_score(['a b c'], [['a b c']]).score)"
+
+
+FROM python:3.12-slim-bookworm AS runtime
+
+COPY --from=build /opt/venv /opt/venv
+ENV PATH=/opt/venv/bin:$PATH \
+    PYTHONUNBUFFERED=1
+
+# The CLI is the compiled Rust code run in-process: no sacreBLEU, no Python arg parser.
+ENTRYPOINT ["swadesh"]
+CMD ["--version"]

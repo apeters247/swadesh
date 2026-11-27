@@ -1,0 +1,18 @@
+# swadesh from PyPI: no build stage, no Rust toolchain.
+#
+#   docker build -f packaging/docker/Dockerfile.pypi -t swadesh:0.1.0 .
+#   docker run --rm -i swadesh:0.1.0 -m bleu chrf < hyp.txt  ref.txt
+#
+# Use this once the package is published. Until then it will fail at `pip install swadesh`, which is
+# the honest behaviour: the source-built image is Dockerfile.source.
+
+FROM python:3.12-slim-bookworm
+
+ARG SWADESH_VERSION=0.1.0
+RUN pip install --no-cache-dir --upgrade pip \
+ && pip install --no-cache-dir "swadesh==${SWADESH_VERSION}" \
+ && python -c "import swadesh; print(swadesh.__version__, swadesh.BLEU().corpus_score(['a b c'], [['a b c']]).score)"
+
+ENV PYTHONUNBUFFERED=1
+ENTRYPOINT ["swadesh"]
+CMD ["--version"]
