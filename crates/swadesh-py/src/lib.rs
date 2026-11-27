@@ -4,13 +4,14 @@ use std::borrow::Cow;
 
 use pyo3::exceptions::{PyValueError, PyZeroDivisionError};
 use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyFloat, PyList, PyString};
+use pyo3::types::{PyBytes, PyDict, PyFloat, PyList, PyString};
 
 use swadesh_core::score::{py_sum, PyNum};
 use swadesh_core::unicode::py_rstrip;
 use swadesh_core::{
-    bleu_corpus_stats, chrf_corpus_stats, chrf_f_score, compute_bleu, ter_corpus_stats, BleuConfig,
-    BleuScoreConfig, ChrfConfig, Smooth, SumMode, TerConfig, TerError, Tokenizer,
+    bleu_corpus_stats, chrf_corpus_stats, chrf_f_score, compute_bleu, ter_corpus_stats,
+    ter_explain_corpus, BleuConfig, BleuScoreConfig, ChrfConfig, Smooth, SumMode, TerConfig,
+    TerError, Tokenizer,
 };
 
 /// Hypotheses and per-segment references, borrowed from Python where possible.
@@ -700,6 +701,66 @@ fn _py_sum<'py>(py: Python<'py>, items: &Bound<'py, PyList>, mode: Option<&str>)
     })
 }
 
+/// Per-segment TER explanations: the parts of each `TER.sentence_score`.
+///
+/// One dict per segment - `edits`, `shifts`, `distance`, `ref_len` (the average, TER's
+/// denominator), `best_ref`, `best_ref_len`, `hyp_len`, `n_refs`, `counts`
+/// (`matches`/`substitutions`/`insertions`/`deletions`) and `accepted_shifts`
+/// (each `hyp_start`/`ref_start`/`len`, in working-sequence coordinates).
+#[pyfunction]
+#[pyo3(signature = (hyps, refs, normalized, no_punct, asian_support, case_sensitive))]
+#[allow(clippy::too_many_arguments)]
+fn ter_explain<'py>(
+    py: Python<'py>,
+    hyps: &Bound<'py, PyAny>,
+    refs: &Bound<'py, PyAny>,
+    normalized: bool,
+    no_punct: bool,
+    asian_support: bool,
+    case_sensitive: bool,
+) -> PyResult<Bound<'py, PyList>> {
+    let cfg = TerConfig { normalized, no_punct, asian_support, case_sensitive };
+    let hyp_objs = as_objs(hyps)?;
+    let ref_objs = ref_streams(refs)?;
+    let (hyps_t, refs_t) = ter_load(&hyp_objs, &ref_objs, !case_sensitive)?;
+    let hs: Vec<&str> = hyps_t.iter().map(|s| s.as_ref()).collect();
+    let rs: Vec<Vec<&str>> = refs_t.iter().map(|v| v.iter().map(|s| s.as_ref()).collect()).collect();
+    let rows = py
+        .detach(|| ter_explain_corpus(&cfg, &hs, &rs))
+        .map_err(|e| match e {
+            TerError => PyZeroDivisionError::new_err("division by zero"),
+        })?;
+    let out = PyList::empty(py);
+    for r in &rows {
+        let d = PyDict::new(py);
+        d.set_item("edits", r.edits)?;
+        d.set_item("shifts", r.shifts)?;
+        d.set_item("distance", r.edits - r.shifts as i64)?;
+        d.set_item("ref_len", r.avg_ref_len)?;
+        d.set_item("best_ref", r.best_ref)?;
+        d.set_item("best_ref_len", r.best_ref_len)?;
+        d.set_item("hyp_len", r.hyp_len)?;
+        d.set_item("n_refs", r.n_refs)?;
+        let counts = PyDict::new(py);
+        counts.set_item("matches", r.counts.matches)?;
+        counts.set_item("substitutions", r.counts.substitutions)?;
+        counts.set_item("insertions", r.counts.insertions)?;
+        counts.set_item("deletions", r.counts.deletions)?;
+        d.set_item("counts", counts)?;
+        let shifts = PyList::empty(py);
+        for s in &r.accepted {
+            let sd = PyDict::new(py);
+            sd.set_item("hyp_start", s.hyp_start)?;
+            sd.set_item("ref_start", s.ref_start)?;
+            sd.set_item("len", s.len)?;
+            shifts.append(sd)?;
+        }
+        d.set_item("accepted_shifts", shifts)?;
+        out.append(d)?;
+    }
+    Ok(out)
+}
+
 /// Run the command line in-process, returning `(exit_code, stdout, stderr)`.
 ///
 /// The CLI writes to any `Write`, so it is captured here rather than run as a subprocess: the
@@ -736,6 +797,7 @@ fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(bleu_stats, m)?)?;
     m.add_function(wrap_pyfunction!(chrf_stats, m)?)?;
     m.add_function(wrap_pyfunction!(ter_stats, m)?)?;
+    m.add_function(wrap_pyfunction!(ter_explain, m)?)?;
     m.add_function(wrap_pyfunction!(estimate_ci, m)?)?;
     m.add_function(wrap_pyfunction!(ter_preprocess, m)?)?;
     m.add_function(wrap_pyfunction!(bleu_sentence_scores, m)?)?;

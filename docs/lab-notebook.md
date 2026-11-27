@@ -5567,3 +5567,42 @@ test now pins the interval equality and the printed interval, and the signature 
 metric, where the earlier seed tests put them.
 
 **Next.** Feature 3 (`explain()` on TER), 4 (streaming accumulator), 5 (`n_jobs`), then the shortlist.
+
+## 2026-11-27 (continued) - feature 3 of 8: `TER.explain()`, the parts the number hides
+
+**Attempted.** The TER search already computes the accepted shifts and the final alignment inside
+`ter_clean.rs` and then throws them away, keeping only `edits` and the reference length. Idea 3
+exposes them per segment.
+
+**Spec first.** `docs/spec/ter-explain.md` was committed on its own before the kernel
+(`40fd91b`), as the clean-room rule requires: it fixes the record's fields and the invariants the
+tests assert. No oracle source is involved - this is swadesh's own surface.
+
+**What was built.**
+
+* Rust: `ter_clean.rs` grew `AcceptedShift`, `EditCounts`, `TerExplanation`, `explain_pair` and
+  `explain_segment`, and `SegmentExplanation`. `best_shift` now returns which shift it accepted (it
+  already knew). `translation_edit_rate` is now a thin wrapper over `explain_pair(.., collect=false)`
+  so there is exactly one shift loop; with `collect` off the fast path gains no allocation. The
+  per-reference id numbering was factored into `number_pair`, shared by `ter_segment` and
+  `explain_segment`.
+* `swadesh-core::ter_explain_corpus` runs the segments in parallel like `ter_corpus_stats`.
+* PyO3: `ter_explain` returns one dict per segment; `TER.explain()` recomputes `ter` with the metric's
+  own `_score_from_row`, so it cannot disagree with `sentence_scores`.
+
+**Verified.** `cargo test --release --workspace` 13 suites green, including two new inline tests:
+every case checks `explain`'s `edits`/`ref_len` against `ter_segment` on the same input, plus
+`edits == shifts + distance`, `distance == sub + ins + del`, `len(accepted_shifts) == shifts`, and
+the multi-reference rule (mean length, minimum-edit `best_ref`). Python:
+`test_ter_explain_is_the_sentence_score_broken_apart` checks `ter == sentence_scores[i]` and
+`== sacreBLEU's sentence_score`, the same invariants, the cached-references path and the strict
+length check. The measured example that motivated the field: `"on the mat the cat sat"` against
+`"the cat sat on the mat"` is `edits: 1, shifts: 1, distance: 0, matches: 6` - one block moved,
+nothing else wrong, TER `16.7`.
+
+**One build error, fixed.** The Rust test called `SegmentExplanation::distance()` before it existed;
+added it. (And `number_pair`'s first draft captured `ids` in a closure spanning both calls, which the
+borrow checker rejected - the map's key lifetime must outlive one closure argument; the inline loops
+fix it.)
+
+**Next.** Feature 4 (streaming accumulator), 5 (`n_jobs`), then the shortlist.

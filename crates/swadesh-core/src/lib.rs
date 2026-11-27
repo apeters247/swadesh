@@ -87,3 +87,27 @@ pub fn ter_corpus_stats(cfg: &TerConfig, hyps: &[&str], refs: &[Vec<&str>]) -> R
         .collect::<Result<_, _>>()?;
     Ok(rows.into_iter().flatten().collect())
 }
+
+/// Per-segment TER explanations (see `ter_clean::explain_segment`), in input order.
+pub fn ter_explain_corpus(
+    cfg: &TerConfig,
+    hyps: &[&str],
+    refs: &[Vec<&str>],
+) -> Result<Vec<ter_clean::SegmentExplanation>, TerError> {
+    #[cfg(feature = "parallel")]
+    {
+        use rayon::prelude::*;
+        par::install(|| {
+            (0..hyps.len())
+                .into_par_iter()
+                .map(|i| ter_clean::explain_segment(cfg, hyps[i], &refs[i]))
+                .collect::<Result<_, _>>()
+        })
+    }
+    #[cfg(not(feature = "parallel"))]
+    {
+        (0..hyps.len())
+            .map(|i| ter_clean::explain_segment(cfg, hyps[i], &refs[i]))
+            .collect::<Result<_, _>>()
+    }
+}

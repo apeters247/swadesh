@@ -1316,3 +1316,44 @@ class TER(_FastMixin, _NativeMetric):
         rows = self._extract_corpus_statistics(hyps, one_ref_per_pair)
         scores = np.array([self._score_from_row(row).score for row in rows], dtype=np.float64)
         return scores.reshape(n, m)
+
+    def explain(self, hypotheses: Sequence[str],
+                references: Optional[Sequence[Sequence[str]]] = None) -> List[Any]:
+        """Per-segment breakdown of TER: the edits, the shifts and what is left wrong.
+
+        One dict per segment, in input order:
+
+        * ``ter`` - the same number ``sentence_scores(...)[i]`` gives, in percent
+        * ``edits`` - ``shifts + distance``, the numerator of TER for the segment
+        * ``shifts`` - how many word-block shifts the search accepted
+        * ``distance`` - the final banded Levenshtein distance, ``edits - shifts``
+        * ``ref_len`` - mean reference length in tokens, TER's denominator
+        * ``best_ref`` / ``best_ref_len`` - the reference the edits came from (fewest edits)
+        * ``hyp_len`` - hypothesis token count
+        * ``n_refs`` - how many references the segment had
+        * ``counts`` - the final alignment's ``matches``/``substitutions``/``insertions``/``deletions``
+        * ``accepted_shifts`` - one ``{hyp_start, ref_start, len}`` per accepted shift, in the
+          working sequence's coordinates at the moment it was applied (shifts reorder the tokens,
+          so these are not offsets into the original segmentation)
+
+        Analysis, not a second scorer: every number comes from the same native search that
+        ``corpus_score`` and ``sentence_scores`` run, and ``ter`` is recomputed with the same
+        ``_score_from_row`` rule, so it equals ``sentence_scores`` exactly. There is no Python
+        fallback - the native kernel is required, as the numbers *are* the native search. A segment
+        with no references raises ``ZeroDivisionError``, as ``sentence_score`` does.
+        """
+        cache = self._resolve_refs(references)
+        hyps, streams = _truncate(hypotheses, cache.streams)
+        # The oracle preprocesses each reference twice; mirror `_extract_corpus_statistics`.
+        streams = [[None if x is None else self._preprocess_segment(x) for x in s]
+                   for s in streams]
+        rows = _swadesh.ter_explain(
+            hyps, streams, bool(self.normalized), bool(self.no_punct),
+            bool(self.asian_support), bool(self.case_sensitive),
+        )
+        out: List[Any] = []
+        for row in rows:
+            d = dict(row)
+            d["ter"] = self._score_from_row([d["edits"], d["ref_len"]]).score
+            out.append(d)
+        return out

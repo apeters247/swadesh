@@ -36,6 +36,12 @@ TER already computes the alignment and the accepted shifts inside `ter_clean.rs`
 score badly", which is what users actually want when a system underperforms. sacreBLEU offers only
 the number.
 
+**Shipped 2026-11-27.** `TER.explain(hyps, refs)` returns one dict per segment: `ter` (identical to
+`sentence_scores`), `edits`, `shifts`, `distance`, `ref_len` (the mean length), `best_ref`/
+`best_ref_len`, `hyp_len`, `n_refs`, `counts` (match/sub/ins/del of the final alignment) and
+`accepted_shifts`. One Rust pass over the same search, no second implementation, no Python fallback;
+the record and its invariants are `docs/spec/ter-explain.md`.
+
 ## 4. Streaming accumulator (1-2 days)
 
 `Accumulator.add(hypothesis, references)` with `.score()` at any point. The statistics are additive
@@ -77,6 +83,7 @@ exist.
 | 8 | Seeds in every signature (`swadesh.seed()`, `set_seed()`) | 2026-11-27 |
 | 6 | `swadesh.compare(systems, refs)` | 2026-11-27 |
 | 2 | `swadesh.evaluate(hyps, refs, metrics=[...])` | 2026-11-27 |
+| 3 | `TER.explain(hyps, refs)` | 2026-11-27 |
 
 ## Not proposed
 

@@ -652,18 +652,18 @@ struct Scratch {
 
 /// Find the best shift of `hyp` toward `refs`, or `None` when no shift reduces the distance.
 ///
-/// Returns `(gain, shifted_hypothesis, candidates_evaluated)`.
+/// Returns `(gain, shifted_hypothesis, candidates_evaluated, winning_shift)`.
 fn best_shift(
     hyp: &[u32],
     refs: &[u32],
     scratch: &mut Scratch,
     mut used: usize,
-) -> (i64, Vec<u32>, usize) {
+) -> (i64, Vec<u32>, usize, Option<AcceptedShift>) {
     let trace = trace_align(refs, hyp, &mut scratch.ops);
     distance_row(refs, hyp, &mut scratch.row);
     let before = scratch.row[refs.len()];
 
-    let mut best: Option<(i64, usize, i64, i64, Vec<u32>)> = None;
+    let mut best: Option<(i64, usize, i64, i64, i64, Vec<u32>)> = None;
 
     for (s_h, s_r, len) in shifted_pairs(hyp, refs) {
         // Only shift a block the hypothesis got wrong, toward a block the reference got wrong.
@@ -708,10 +708,10 @@ fn best_shift(
             let key = (before - cost, len, -(s_h as i64), -idx);
             let better = match &best {
                 None => true,
-                Some((score, l, ns, ni, _)) => key > (*score, *l, *ns, *ni),
+                Some((score, l, ns, ni, _, _)) => key > (*score, *l, *ns, *ni),
             };
             if better {
-                best = Some((key.0, key.1, key.2, key.3, scratch.shifted.clone()));
+                best = Some((key.0, key.1, key.2, key.3, s_r as i64, scratch.shifted.clone()));
             }
         }
         // Tercom checks the candidate budget once per matching block, not once per candidate, so
@@ -724,23 +724,94 @@ fn best_shift(
     }
 
     match best {
-        Some((gain, _, _, _, words)) => (gain, words, used),
-        None => (0, hyp.to_vec(), used),
+        Some((gain, len, ns, _ni, s_r, words)) => (
+            gain,
+            words,
+            used,
+            Some(AcceptedShift { hyp_start: (-ns) as usize, ref_start: s_r as usize, len }),
+        ),
+        None => (0, hyp.to_vec(), used, None),
+    }
+}
+
+/// One accepted shift, in the working sequence's coordinates at the moment it was applied.
+///
+/// The coordinates are *working* coordinates: the search operates on the hypothesis as the earlier
+/// shifts have already rearranged it, so the `k`-th entry is relative to the sequence after the
+/// first `k - 1` shifts, not to the original tokenization. Two runs of the same pair always accept
+/// the same shifts in the same order, so the list is stable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AcceptedShift {
+    pub hyp_start: usize,
+    pub ref_start: usize,
+    pub len: usize,
+}
+
+/// The four operations of the final Levenshtein alignment, counted (spec 4.1's orientation:
+/// rewriting the hypothesis as the reference).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct EditCounts {
+    pub matches: usize,
+    pub substitutions: usize,
+    pub insertions: usize,
+    pub deletions: usize,
+}
+
+/// The parts of one hypothesis-against-one-reference TER (spec 4.3).
+///
+/// `edits = shifts + distance`, where `distance` is the last cell of the banded Levenshtein matrix
+/// after the accepted shifts, and `ref_len` is the reference length in tokens.
+#[derive(Debug, Clone)]
+pub struct TerExplanation {
+    pub edits: i64,
+    pub shifts: usize,
+    pub ref_len: usize,
+    pub hyp_len: usize,
+    pub accepted: Vec<AcceptedShift>,
+    pub counts: EditCounts,
+}
+
+impl TerExplanation {
+    /// The final Levenshtein distance: the edit count with the shifts taken back out.
+    pub fn distance(&self) -> i64 {
+        self.edits - self.shifts as i64
     }
 }
 
 /// `(edits, reference length)` for one hypothesis against one reference (spec 4.3).
 pub fn translation_edit_rate(hyp_words: &[u32], ref_words: &[u32]) -> (i64, usize) {
+    let e = explain_pair(hyp_words, ref_words, false);
+    (e.edits, e.ref_len)
+}
+
+/// The same computation as `translation_edit_rate`, keeping the parts when `collect` is set.
+///
+/// With `collect` off this is the scoring hot path with no extra allocation: the accepted-shift
+/// vector stays empty and the final alignment is not re-read for its operation counts.
+pub fn explain_pair(hyp_words: &[u32], ref_words: &[u32], collect: bool) -> TerExplanation {
     if ref_words.is_empty() {
-        return (hyp_words.len() as i64, 0);
+        let mut counts = EditCounts::default();
+        if collect {
+            // Every hypothesis word is an insertion over an empty reference.
+            counts.insertions = hyp_words.len();
+        }
+        return TerExplanation {
+            edits: hyp_words.len() as i64,
+            shifts: 0,
+            ref_len: 0,
+            hyp_len: hyp_words.len(),
+            accepted: Vec::new(),
+            counts,
+        };
     }
     let mut scratch = Scratch { row: Vec::new(), shifted: Vec::new(), ops: Vec::new() };
     let mut current = hyp_words.to_vec();
-    let mut shifts = 0i64;
+    let mut shifts = 0usize;
+    let mut accepted: Vec<AcceptedShift> = Vec::new();
     let mut spent = 0usize;
 
     loop {
-        let (gain, words, used) = best_shift(&current, ref_words, &mut scratch, spent);
+        let (gain, words, used, winner) = best_shift(&current, ref_words, &mut scratch, spent);
         spent = used;
         // The budget is checked before the reduction, so a beneficial shift found on the iteration
         // that exhausts it is not applied (measured 2026-11-24).
@@ -751,14 +822,68 @@ pub fn translation_edit_rate(hyp_words: &[u32], ref_words: &[u32]) -> (i64, usiz
             break;
         }
         shifts += 1;
+        if collect {
+            if let Some(s) = winner {
+                accepted.push(s);
+            }
+        }
         current = words;
     }
 
     distance_row(ref_words, &current, &mut scratch.row);
-    (shifts + scratch.row[ref_words.len()], ref_words.len())
+    let mut counts = EditCounts::default();
+    if collect {
+        // One more alignment pass, on the final sequence, only to count the operations. The search
+        // already runs `trace_align` once per shift attempt, so this single extra pass is noise.
+        let _ = trace_align(ref_words, &current, &mut scratch.ops);
+        for &o in &scratch.ops {
+            match o {
+                OP_MATCH => counts.matches += 1,
+                OP_SUB => counts.substitutions += 1,
+                OP_INS => counts.insertions += 1,
+                OP_DEL => counts.deletions += 1,
+                _ => {}
+            }
+        }
+    }
+    TerExplanation {
+        edits: shifts as i64 + scratch.row[ref_words.len()],
+        shifts,
+        ref_len: ref_words.len(),
+        hyp_len: hyp_words.len(),
+        accepted,
+        counts,
+    }
 }
 
 // ------------------------------------------------------------------ segment level
+
+/// `[edits, average reference length]` for one segment (spec 5).
+///
+/// Lowercasing happens inside the tokenizer; the caller passes the raw strings.
+/// Number a hypothesis and one reference in a fresh id space, hypothesis words first so a word in
+/// both gets one id.
+///
+/// A separate map per reference is the measured rule: sharing one would renumber the earlier
+/// reference's words.
+fn number_pair(hyp_toks: &[String], ref_toks: &[String]) -> (Vec<u32>, Vec<u32>) {
+    let mut ids: std::collections::HashMap<&str, u32> = std::collections::HashMap::new();
+    let hyp_ids: Vec<u32> = hyp_toks
+        .iter()
+        .map(|t| {
+            let n = ids.len() as u32;
+            *ids.entry(t.as_str()).or_insert(n)
+        })
+        .collect();
+    let ref_ids: Vec<u32> = ref_toks
+        .iter()
+        .map(|t| {
+            let n = ids.len() as u32;
+            *ids.entry(t.as_str()).or_insert(n)
+        })
+        .collect();
+    (hyp_ids, ref_ids)
+}
 
 /// `[edits, average reference length]` for one segment (spec 5).
 ///
@@ -772,28 +897,8 @@ pub fn ter_segment(cfg: &TerConfig, hyp: &str, refs: &[&str]) -> Result<[f64; 2]
     let mut best_edits = i64::MAX;
     let mut total_len = 0f64;
     for r in refs {
-        // Each reference gets its own id space, built from the hypothesis words first so that a
-        // word present in both has one id. Sharing a map across references would renumber the
-        // earlier reference's words.
         let ref_toks = tokenize(cfg, py_rstrip(r));
-        let mut ids: std::collections::HashMap<&str, u32> = std::collections::HashMap::new();
-        let mut numbered: Vec<&str> = hyp_toks.iter().map(String::as_str).collect();
-        numbered.extend(ref_toks.iter().map(String::as_str));
-        let hyp_ids: Vec<u32> = hyp_toks
-            .iter()
-            .map(|t| {
-                let n = ids.len() as u32;
-                *ids.entry(t.as_str()).or_insert(n)
-            })
-            .collect();
-        let ref_ids: Vec<u32> = ref_toks
-            .iter()
-            .map(|t| {
-                let n = ids.len() as u32;
-                *ids.entry(t.as_str()).or_insert(n)
-            })
-            .collect();
-        let _ = numbered;
+        let (hyp_ids, ref_ids) = number_pair(&hyp_toks, &ref_toks);
         let (edits, len) = translation_edit_rate(&hyp_ids, &ref_ids);
         // Measured: edits are the minimum over references (the best reference wins), while the
         // length is their average. Not symmetric, and not the mean of the per-reference rates.
@@ -804,12 +909,127 @@ pub fn ter_segment(cfg: &TerConfig, hyp: &str, refs: &[&str]) -> Result<[f64; 2]
     Ok([best_edits as f64, total_len / k])
 }
 
+/// TER for one segment, broken into the parts of the *winning* reference (spec 5).
+///
+/// The winning reference is the one with the fewest edits (ties keep the first), which is which
+/// reference `ter_segment` took its numerator from; the denominator is still the mean reference
+/// length, exactly as `ter_segment` computes it.
+#[derive(Debug, Clone)]
+pub struct SegmentExplanation {
+    pub best_ref: usize,
+    pub n_refs: usize,
+    /// The winning reference's edits: the numerator of TER.
+    pub edits: i64,
+    /// The winning reference's token count.
+    pub best_ref_len: usize,
+    /// Mean reference token count over every reference: TER's denominator.
+    pub avg_ref_len: f64,
+    pub hyp_len: usize,
+    pub shifts: usize,
+    pub accepted: Vec<AcceptedShift>,
+    pub counts: EditCounts,
+}
+
+impl SegmentExplanation {
+    /// The final Levenshtein distance: the edit count with the shifts taken back out.
+    pub fn distance(&self) -> i64 {
+        self.edits - self.shifts as i64
+    }
+
+    /// TER in `[0, 1]`, before the 100x, with `ter_segment`'s own zero-length rule.
+    pub fn rate(&self) -> f64 {
+        if self.avg_ref_len > 0.0 {
+            self.edits as f64 / self.avg_ref_len
+        } else if self.edits > 0 {
+            1.0
+        } else {
+            0.0
+        }
+    }
+}
+
+/// `ter_segment` broken into its parts; every field comes from the same search.
+pub fn explain_segment(cfg: &TerConfig, hyp: &str, refs: &[&str]) -> Result<SegmentExplanation, TerError> {
+    if refs.is_empty() {
+        return Err(TerError);
+    }
+    let hyp_toks = tokenize(cfg, py_rstrip(hyp));
+    let mut best: Option<(i64, usize, TerExplanation)> = None;
+    let mut total_len = 0f64;
+    for (idx, r) in refs.iter().enumerate() {
+        let ref_toks = tokenize(cfg, py_rstrip(r));
+        let (hyp_ids, ref_ids) = number_pair(&hyp_toks, &ref_toks);
+        let e = explain_pair(&hyp_ids, &ref_ids, true);
+        total_len += e.ref_len as f64;
+        // Minimum edits wins; a tie keeps the earlier reference, as `min` does in `ter_segment`.
+        if best.as_ref().map_or(true, |(edits, _, _)| e.edits < *edits) {
+            best = Some((e.edits, idx, e));
+        }
+    }
+    let (edits, best_ref, e) = best.expect("refs is non-empty");
+    let k = refs.len() as f64;
+    Ok(SegmentExplanation {
+        best_ref,
+        n_refs: refs.len(),
+        edits,
+        best_ref_len: e.ref_len,
+        avg_ref_len: total_len / k,
+        hyp_len: e.hyp_len,
+        shifts: e.shifts,
+        accepted: e.accepted,
+        counts: e.counts,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn words(cfg: &TerConfig, s: &str) -> Vec<String> {
         tokenize(cfg, s)
+    }
+
+    #[test]
+    fn explain_segment_is_ter_segment_with_the_parts_kept() {
+        let cfg = TerConfig::default();
+        let cases = [
+            ("on the mat the cat sat", "the cat sat on the mat"),
+            ("the cat sat on the mat", "the cat is on the mat"),
+            ("a b c d", "a b c d"),
+            ("hello world", ""),
+        ];
+        for (hyp, r) in cases {
+            let refs = [r];
+            let [edits, len] = ter_segment(&cfg, hyp, &refs).unwrap();
+            let e = explain_segment(&cfg, hyp, &refs).unwrap();
+            assert_eq!(e.edits, edits as i64, "edits {hyp:?}/{r:?}");
+            assert_eq!(e.avg_ref_len, len, "ref_len {hyp:?}/{r:?}");
+            assert_eq!(e.edits, e.shifts as i64 + e.distance());
+            assert_eq!(e.accepted.len(), e.shifts);
+            let c = e.counts;
+            assert_eq!(e.distance(), (c.substitutions + c.insertions + c.deletions) as i64);
+        }
+        // A reordering needs a shift, and after it nothing else is wrong.
+        let e = explain_segment(&cfg, "on the mat the cat sat", &["the cat sat on the mat"]).unwrap();
+        assert_eq!(e.shifts, 1);
+        assert_eq!(e.distance(), 0);
+        assert_eq!(e.counts.matches, 6);
+        assert_eq!(e.counts.substitutions + e.counts.insertions + e.counts.deletions, 0);
+    }
+
+    #[test]
+    fn explain_segment_averages_lengths_and_picks_the_best_reference() {
+        let cfg = TerConfig::default();
+        let hyp = "the cat sat on the mat";
+        let refs = ["the cat is on the mat", "a cat sat on a mat"];
+        let e = explain_segment(&cfg, hyp, &refs).unwrap();
+        assert_eq!(e.n_refs, 2);
+        let a = explain_segment(&cfg, hyp, &[refs[0]]).unwrap();
+        let b = explain_segment(&cfg, hyp, &[refs[1]]).unwrap();
+        // The denominator is the mean length; the numerator is the best reference's edits.
+        assert_eq!(e.avg_ref_len, (a.best_ref_len + b.best_ref_len) as f64 / 2.0);
+        assert_eq!(e.edits, a.edits.min(b.edits));
+        assert_eq!(e.best_ref, if a.edits <= b.edits { 0 } else { 1 });
     }
 
     #[test]

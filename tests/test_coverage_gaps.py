@@ -258,6 +258,46 @@ SEED_HYPS = ["the cat sat on the mat", "a dog barked loudly in the yard",
 SEED_REFS = [["the cat is on the mat", "a dog barked in the yard", "prices rose by 3 percent"]]
 
 
+def test_ter_explain_is_the_sentence_score_broken_apart():
+    """`explain()` reports the parts of the same search: edits, shifts, and what is left wrong."""
+    hyps = ["on the mat the cat sat", "the cat sat on the mat", "a zebra galloped past the gate"]
+    refs = [["the cat sat on the mat", "the cat is on the mat", "a zebra ran past the gate"]]
+    ter = swadesh.TER()
+    rows = ter.explain(hyps, refs)
+    scores = ter.sentence_scores(hyps, refs)
+    assert [r["ter"] for r in rows] == scores, "ter is the sentence score, computed the same way"
+    for i, (h, r, s) in enumerate(zip(hyps, rows, scores)):
+        assert r["ter"] == REF_TER().sentence_score(h, [refs[0][i]]).score
+        assert r["edits"] == r["shifts"] + r["distance"]
+        c = r["counts"]
+        assert r["distance"] == c["substitutions"] + c["insertions"] + c["deletions"]
+        assert len(r["accepted_shifts"]) == r["shifts"]
+        assert r["n_refs"] == 1 and r["best_ref"] == 0
+        assert r["best_ref_len"] == len(ter._preprocess_segment(refs[0][i]).split())
+        assert r["hyp_len"] == len(ter._preprocess_segment(h).split())
+
+    # The first pair is a reordering: the search accepts a shift, and the distance is what is left.
+    assert rows[0]["shifts"] >= 1
+    assert rows[0]["distance"] == rows[0]["edits"] - rows[0]["shifts"]
+
+    # Several references: the denominator is their mean length, the numerator the best reference's.
+    two = swadesh.TER().explain(["the cat sat on the mat"],
+                               [["the cat is on the mat"], ["a cat sat on a mat"]])[0]
+    a = swadesh.TER().explain(["the cat sat on the mat"], [["the cat is on the mat"]])[0]
+    b = swadesh.TER().explain(["the cat sat on the mat"], [["a cat sat on a mat"]])[0]
+    assert two["n_refs"] == 2
+    assert two["ref_len"] == (a["best_ref_len"] + b["best_ref_len"]) / 2
+    assert two["edits"] == min(a["edits"], b["edits"])
+    assert two["best_ref"] == (0 if a["edits"] <= b["edits"] else 1)
+
+    # Reference caching and the length check behave like the scoring calls.
+    cached = swadesh.TER(references=refs)
+    assert [r["ter"] for r in cached.explain(hyps)] == scores
+    with pytest.raises(swadesh.LengthMismatchError):
+        with swadesh.strict():
+            swadesh.TER().explain(hyps, [["only one"]])
+
+
 def test_evaluate_matches_the_individual_calls():
     """`evaluate()` is one call over the same metrics, not a second implementation.
 

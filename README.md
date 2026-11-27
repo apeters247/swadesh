@@ -170,6 +170,9 @@ table.to_dict()                          # JSON-able, for a report or a DataFram
   (`{"BLEU": ..., "chrF2": ..., "TER": ...}`), each number a metric's own `corpus_score`, so nothing
   new can drift. (The shared-tokenization speed saving once planned for this did not survive
   measurement; see `docs/feature-ideas.md`.)
+- **`TER.explain()` for the parts behind the number.** One dict per segment - the accepted shifts,
+  the final Levenshtein distance, the alignment's match/sub/ins/del counts and which reference won -
+  all from the same search `corpus_score` runs, so `explain()[i]["ter"] == sentence_scores()[i]`.
 - **Exact tokenizers.** `swadesh.tokenize(lines, "13a")` returns sacreBLEU's tokenization, in parallel.
 - **In the browser.** The CLI compiles to a roughly 349 KB WebAssembly module; `docs/playground/`
   is a static page that runs it.
