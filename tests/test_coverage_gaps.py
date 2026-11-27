@@ -345,6 +345,27 @@ def test_accumulator_is_corpus_score_in_constant_memory():
     assert a.reset().n_segments == 0
 
 
+def test_n_jobs_sets_the_thread_count_without_changing_a_score():
+    """`n_jobs` sizes the native pool; a score is the same at any count."""
+    hyps = ["the cat sat on the mat number %d" % i for i in range(400)]
+    refs = [["the cat is on the mat number %d" % i for i in range(400)]]
+    assert swadesh.get_n_jobs() >= 1
+    default = str(swadesh.BLEU().corpus_score(hyps, refs)) + str(swadesh.CHRF().corpus_score(hyps, refs))
+    try:
+        assert swadesh.set_n_jobs(1) == 1
+        assert swadesh.get_n_jobs() == 1
+        after = str(swadesh.BLEU().corpus_score(hyps, refs)) + str(swadesh.CHRF().corpus_score(hyps, refs))
+        assert after == default, "the thread count must not change a score"
+        with swadesh.n_jobs(2):
+            assert swadesh.get_n_jobs() == 2
+            assert str(swadesh.TER().corpus_score(hyps, refs)) == str(swadesh.TER().corpus_score(hyps, refs))
+        assert swadesh.get_n_jobs() == 1, "the context manager restores the previous count"
+    finally:
+        swadesh.set_n_jobs(0)
+    assert swadesh.get_n_jobs() >= 1, "0 restores the machine default"
+    assert swadesh.set_n_jobs(None) >= 1, "None does too"
+
+
 def test_evaluate_matches_the_individual_calls():
     """`evaluate()` is one call over the same metrics, not a second implementation.
 

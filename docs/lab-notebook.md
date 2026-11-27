@@ -5637,3 +5637,33 @@ stream; the default keeps one row whatever the size; a bootstrap under `keep_row
 `IndexError` sacreBLEU raises; `strict()` still checks the lengths; `reset()` reuses the object.
 
 **Next.** Feature 5 (`n_jobs`), then the shortlist.
+
+## 2026-11-27 (continued) - feature 5 of 8: `n_jobs`, after the premise failed a measurement
+
+**Attempted.** "Extending `n_jobs` to `corpus_score` turns the 24-core machine into roughly a 20x
+corpus scorer."
+
+**Measured first, and the premise was wrong: it is already parallel.** The kernels run on a rayon
+pool (`swadesh-core`'s default `parallel` feature). On troy-1, 40,000 segments x 25 words, `taskset`
+capping the CPUs to emulate the thread count:
+
+    1 CPU    BLEU 0.201s   chrF++ 0.476s   TER 5.964s
+    4 CPUs   BLEU 0.107s   chrF++ 0.138s   TER 2.017s
+    8 CPUs   BLEU 0.043s   chrF++ 0.073s   TER 0.920s
+    16 CPUs  BLEU 0.031s   chrF++ 0.048s   TER 0.648s
+
+about 9x for TER and 6x for BLEU at 16 CPUs, identical scores throughout. (First attempt at this
+benchmark was wrong in a different way: the reference list was built as N one-element streams rather
+than one N-element stream, so `_truncate` cut the corpus to one segment and every thread count looked
+the same. The fix is the corpus layout, not the kernel.)
+
+**What was built.** `swadesh-core::par::set_num_threads` replaces the process's pool; PyO3 exposes
+`set_num_threads`/`num_threads`; `python/swadesh/threads.py` adds `set_n_jobs`, `get_n_jobs` and the
+`n_jobs(k)` context manager. Spec first: `docs/spec/n_jobs.md` (8e79149).
+
+**Verified.** New `_swadesh.abi3.so` (md5 `df0eb44f...`); default 24, `set_n_jobs(1)` -> 1, the
+context manager restores, `0`/`None` restore the default. `test_n_jobs_sets_the_thread_count_without
+_changing_a_score`: BLEU and chrF identical at 1 thread and at the default, TER reproducible inside
+`n_jobs(2)`, the restore on exit.
+
+**Next.** The five-item shortlist.

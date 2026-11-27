@@ -761,6 +761,22 @@ fn ter_explain<'py>(
     Ok(out)
 }
 
+/// How many worker threads the native kernels are using.
+#[pyfunction]
+fn num_threads() -> usize {
+    swadesh_core::par::num_threads()
+}
+
+/// Set the worker-thread count for the native kernels (`0` = the machine default) and return it.
+///
+/// The kernels partition the corpus, so the thread count changes how long a score takes and never
+/// what it is.
+#[pyfunction]
+fn set_num_threads(n: usize) -> usize {
+    swadesh_core::par::set_num_threads(n);
+    swadesh_core::par::num_threads()
+}
+
 /// Run the command line in-process, returning `(exit_code, stdout, stderr)`.
 ///
 /// The CLI writes to any `Write`, so it is captured here rather than run as a subprocess: the
@@ -798,6 +814,8 @@ fn _swadesh(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(chrf_stats, m)?)?;
     m.add_function(wrap_pyfunction!(ter_stats, m)?)?;
     m.add_function(wrap_pyfunction!(ter_explain, m)?)?;
+    m.add_function(wrap_pyfunction!(num_threads, m)?)?;
+    m.add_function(wrap_pyfunction!(set_num_threads, m)?)?;
     m.add_function(wrap_pyfunction!(estimate_ci, m)?)?;
     m.add_function(wrap_pyfunction!(ter_preprocess, m)?)?;
     m.add_function(wrap_pyfunction!(bleu_sentence_scores, m)?)?;

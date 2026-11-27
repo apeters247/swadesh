@@ -62,6 +62,14 @@ returning an interval it cannot compute. Record and invariants: `docs/spec/accum
 same knob to `corpus_score` / `sentence_scores` turns the 24-core machine into roughly a 20x corpus
 scorer, far beyond the single-thread speed-up already measured.
 
+**Shipped 2026-11-27, premise corrected by measurement.** The corpus kernels were *already* parallel
+(`swadesh-core`'s default `parallel` feature). On troy-1, 40,000 segments x 25 words, `taskset`
+capping the CPUs: TER ~9x and BLEU ~6x at 16 CPUs, **identical scores at every count**. So the knob
+does not turn parallelism on; it chooses the thread count, which already defaults to the machine.
+`swadesh.n_jobs(k)` (context manager) / `set_n_jobs(k)` / `get_n_jobs()` size that pool.
+`PairedTest(n_jobs=)` is untouched: it spawns processes, this sizes threads inside one process. Spec:
+`docs/spec/n_jobs.md`.
+
 ## 6. `compare(systems, refs)` (hours to 1 day)
 
 One call returning per-system scores, paired-bootstrap p-values, confidence intervals and a ranking
@@ -92,6 +100,7 @@ exist.
 | 2 | `swadesh.evaluate(hyps, refs, metrics=[...])` | 2026-11-27 |
 | 3 | `TER.explain(hyps, refs)` | 2026-11-27 |
 | 4 | `swadesh.Accumulator(metric)` (streaming) | 2026-11-27 |
+| 5 | `swadesh.n_jobs(k)` (worker-thread count) | 2026-11-27 |
 
 ## Not proposed
 

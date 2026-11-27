@@ -176,6 +176,9 @@ table.to_dict()                          # JSON-able, for a report or a DataFram
 - **`Accumulator` for a corpus that does not fit in memory.** `add(hyp, refs)` per segment, `score()`
   whenever you like; the state is one statistics row, so the peak does not grow with the corpus size,
   and the number is bit-identical to `corpus_score` (`keep_rows=True` adds bootstrapped CIs).
+- **`n_jobs(k)` to choose the thread count.** The corpus kernels are already parallel (measured ~9x
+  for TER at 16 cores, and the same score at any count); `swadesh.n_jobs(k)` / `set_n_jobs(k)` sizes
+  the pool, for capping CPU use or matching a scheduler's allocation.
 - **Exact tokenizers.** `swadesh.tokenize(lines, "13a")` returns sacreBLEU's tokenization, in parallel.
 - **In the browser.** The CLI compiles to a roughly 349 KB WebAssembly module; `docs/playground/`
   is a static page that runs it.

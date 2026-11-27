@@ -14,6 +14,20 @@ mod pool {
 
     static POOL: Mutex<Option<(u32, Arc<rayon::ThreadPool>)>> = Mutex::new(None);
 
+    /// Replace the pool with one of `n` threads; `0` drops it so the next use rebuilds the
+    /// machine default.
+    pub fn set_num_threads(n: usize) {
+        let mut guard = POOL.lock().unwrap_or_else(|p| p.into_inner());
+        if n == 0 {
+            *guard = None;
+        } else {
+            let pool = Arc::new(
+                rayon::ThreadPoolBuilder::new().num_threads(n).build().expect("rayon pool"),
+            );
+            *guard = Some((std::process::id(), pool));
+        }
+    }
+
     pub fn get() -> Arc<rayon::ThreadPool> {
         let pid = std::process::id();
         // The lock is held only to clone an Arc, so a fork can only inherit it
@@ -41,6 +55,22 @@ pub fn install<R: Send, F: FnOnce() -> R + Send>(f: F) -> R {
     #[cfg(not(feature = "parallel"))]
     {
         f()
+    }
+}
+
+/// Set the worker-thread count for parallel helpers (`0` = the machine default).
+///
+/// The corpus kernels partition their work, so this changes how long a score takes and never what
+/// it is. Without the `parallel` feature there is no pool and this is a no-op.
+#[inline]
+pub fn set_num_threads(n: usize) {
+    #[cfg(feature = "parallel")]
+    {
+        pool::set_num_threads(n)
+    }
+    #[cfg(not(feature = "parallel"))]
+    {
+        let _ = n;
     }
 }
 

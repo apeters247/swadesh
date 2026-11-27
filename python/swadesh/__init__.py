@@ -41,6 +41,7 @@ from .significance import seed, set_seed  # noqa: F401  (the bootstrap seed, in 
 from .compare import Comparison, compare  # noqa: F401  (the system table)
 from .evaluate import evaluate  # noqa: F401  (one call, several metrics)
 from .accumulator import Accumulator  # noqa: F401  (streaming corpus scoring)
+from .threads import get_n_jobs, n_jobs, set_n_jobs  # noqa: F401  (worker-thread count)
 
 __version__ = "0.1.0"
 SACREBLEU_COMPAT_VERSION = COMPAT_VERSION
