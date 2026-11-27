@@ -86,6 +86,12 @@ worth proposing only with adoption numbers behind it.
 call time. That is the shape patch() reaches (row 1 of the table above). Not executed inside lighteval
 here: its install pulls torch, and the shape check above is the part that could have failed.
 
+One risk specific to lighteval is cleared: it passes `trg_lang` (`"zh"`, `"ja"`, `"ko"`) to the BLEU
+constructor, so the patched class has to accept it and keep choosing the tokenizer by language. It
+does: `sacrebleu.BLEU(trg_lang="zh")` after the patch returns the same
+`BLEU = 43.01 100.0/80.0/50.0/16.7 (BP = 0.846 ...)` as before, through a class whose module is
+`swadesh.metrics`. `tokenize=`, `lowercase=` and `effective_order=` were checked the same way.
+
 ## COMET (Unbabel) — dependency verified, mechanism expected, not executed
 
 `unbabel-comet` 2.2.7 declares `sacrebleu>=2.0.0,<3.0.0` as a hard requirement (PyPI metadata), and
