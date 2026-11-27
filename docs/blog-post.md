@@ -103,9 +103,13 @@ at most 9 ulps:
 | 3.13 → 3.14 | 0 / 13,455 | 0 | 0 / 7 |
 | 3.10 → 3.14 | 2,132 / 13,455 (15.8%) | 9 | 2 / 7 |
 
-*Figure 3 (below) shows the same thing as a small multiple.* So "the number" is already a function of
-the interpreter. swadesh detects which CPython it is running on and matches that interpreter's
-arithmetic — which is the only way "identical" can mean anything operationally.
+The same drift as a small multiple - the 3.11 → 3.12 boundary is the only step in it:
+
+![Small multiple: sentence BLEU scores differing (of 13,455) and corpus BLEU scores differing (of 7), per pair of CPython versions](https://raw.githubusercontent.com/apeters247/swadesh/master/docs/img/fig3-interpreter-drift.png)
+
+So "the number" is already a function of the interpreter. swadesh detects which CPython it is running on
+and matches that interpreter's arithmetic - which is the only way "identical" can mean anything
+operationally.
 
 ## How BLEU, chrF and TER are actually computed
 
