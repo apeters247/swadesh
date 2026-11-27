@@ -1,0 +1,24 @@
+diff --git a/lm_eval/api/metrics.py b/lm_eval/api/metrics.py
+index 00146f42..732e8d4e 100644
+--- a/lm_eval/api/metrics.py
++++ b/lm_eval/api/metrics.py
+@@ -10,6 +10,19 @@ from typing import Callable, List, Optional, Sequence, TypeVar
+ import numpy as np
+ import sacrebleu
+ 
++if os.environ.get("SWADESH_PATCH"):
++    # Opt-in: route `sacrebleu.*` through swadesh, a bit-identical Rust implementation of the same
++    # metrics (same floats, ~34-638x faster on the BLEU/chrF/TER aggregation below). Off by default:
++    # swadesh is not a dependency of this harness, and the numbers do not change either way.
++    try:
++        import swadesh
++    except ModuleNotFoundError as exc:
++        raise ModuleNotFoundError(
++            "SWADESH_PATCH is set but swadesh is not installed. Install it with `pip install swadesh` "
++            "or unset SWADESH_PATCH."
++        ) from exc
++    swadesh.patch()
++
+ from lm_eval.api.registry import register_aggregation, register_metric
+ 
+ 

@@ -73,7 +73,10 @@ PYTHONPATH=/tmp/swadesh-patch lm_eval --model hf --tasks wmt16-en-ro ...
 Verified: with that on `PYTHONPATH`, `sacrebleu.BLEU` is swadesh's class at startup and lm-eval's
 own `bleu()` runs at ~0.021 s for 20,000 segments instead of ~1.45 s.
 
-**3. Two lines upstream**, only after 1 and 2 have users:
+**3. Two lines upstream**, only after 1 and 2 have users. The patch is written and checked:
+`docs/upstream/lm-eval-swadesh.patch` (applies cleanly to `lm-evaluation-harness` at `d6de8164`) and the
+PR text beside it. Verified against a clone: without the variable `sacrebleu.BLEU` is sacreBLEU's and
+`bleu()` takes 0.132 s; with `SWADESH_PATCH=1` it is swadesh's and takes 0.010 s, on the same 5.105133.
 
 ```python
 # lm_eval/api/metrics.py, top of file
